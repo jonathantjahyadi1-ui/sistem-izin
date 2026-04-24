@@ -11,21 +11,38 @@ from sqlalchemy import func
 # =========================
 # LOAD ENV
 # =========================
-load_dotenv()
-
+if os.getenv("RENDER") is None:
+    load_dotenv()
+    
 app = Flask(__name__)
 
 # =========================
-# FIX DATABASE URL (RENDER)
+# DATABASE CONFIG (FIX SUPABASE + RENDER)
 # =========================
 uri = os.getenv("DATABASE_URL")
 
-if uri and uri.startswith("postgres://"):
+if not uri:
+    raise Exception("DATABASE_URL belum diset di environment!")
+
+if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
+
+# 🔥 WAJIB untuk Supabase
+if "sslmode" not in uri:
+    if "?" in uri:
+        uri += "&sslmode=require"
+    else:
+        uri += "?sslmode=require"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "supersecret")
+
+# 🔥 biar koneksi stabil
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 
 db = SQLAlchemy(app)
 
@@ -61,24 +78,21 @@ class LeaveRequest(db.Model):
 with app.app_context():
     db.create_all()
 
-    # ADMIN DEFAULT
     if not User.query.filter_by(username='Jonathan').first():
-        admin = User(
+        db.session.add(User(
             username='Jonathan',
             password=generate_password_hash('Jonathan@itsupport'),
             role='admin',
             divisi='IT'
-        )
-        db.session.add(admin)
+        ))
 
     if not User.query.filter_by(username='Devina').first():
-        hrd = User(
+        db.session.add(User(
             username='Devina',
             password=generate_password_hash('Devina@hrd'),
             role='hrd',
             divisi='HRD'
-        )
-        db.session.add(hrd)
+        ))
 
     db.session.commit()
 
@@ -92,12 +106,9 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login_view():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        user = User.query.filter_by(username=request.form['username']).first()
 
-        user = User.query.filter_by(username=username).first()
-
-        if not user or not check_password_hash(user.password, password):
+        if not user or not check_password_hash(user.password, request.form['password']):
             flash("Username / password salah!", "danger")
             return redirect('/login')
 
@@ -111,19 +122,13 @@ def login_view():
 @app.route('/register', methods=['GET', 'POST'])
 def register_view():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        divisi = request.form['divisi']
-
-        if User.query.filter_by(username=username).first():
+        if User.query.filter_by(username=request.form['username']).first():
             return "Username sudah dipakai"
 
-        hashed = generate_password_hash(password)
-
         user = User(
-            username=username,
-            password=hashed,
-            divisi=divisi
+            username=request.form['username'],
+            password=generate_password_hash(request.form['password']),
+            divisi=request.form['divisi']
         )
 
         db.session.add(user)
@@ -140,7 +145,6 @@ def dashboard():
 
     user = User.query.get(session['user_id'])
 
-    # 🔥 TAMBAHAN PENTING
     if not user:
         session.clear()
         return redirect('/login')
@@ -149,63 +153,40 @@ def dashboard():
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
         return render_template('dashboard_user.html', data=data, user=user)
 
-    else:
-        data = LeaveRequest.query.all()
+    data = LeaveRequest.query.all()
 
-        total = LeaveRequest.query.count()
-        pending = LeaveRequest.query.filter_by(status='pending').count()
-        approved = LeaveRequest.query.filter_by(status='approved').count()
-        rejected = LeaveRequest.query.filter_by(status='rejected').count()
+    return render_template(
+        'dashboard_admin.html',
+        data=data,
+        user=user,
+        total=LeaveRequest.query.count(),
+        pending=LeaveRequest.query.filter_by(status='pending').count(),
+        approved=LeaveRequest.query.filter_by(status='approved').count(),
+        rejected=LeaveRequest.query.filter_by(status='rejected').count()
+    )
 
-        jenis_data = db.session.query(
-            LeaveRequest.jenis_izin,
-            func.count(LeaveRequest.id)
-        ).group_by(LeaveRequest.jenis_izin).all()
+@app.route('/form_izin')
+def form_izin():
+    if 'user_id' not in session:
+        return redirect('/login')
 
-        jenis_labels = [j[0] for j in jenis_data]
-        jenis_values = [j[1] for j in jenis_data]
-
-        return render_template(
-            'dashboard_admin.html',
-            data=data,
-            user=user,
-            total=total,
-            pending=pending,
-            approved=approved,
-            rejected=rejected,
-            jenis_labels=jenis_labels,
-            jenis_values=jenis_values
-        )
-
-@app.route('/logout')
-def logout_view():
-    session.clear()
-    return redirect('/login')
+    return render_template('izin.html')
 
 @app.route('/izin', methods=['POST'])
 def ajukan_izin():
     if 'user_id' not in session:
         return redirect('/login')
 
-    user_id = session['user_id']
-
-    jenis = request.form.get('jenis')
-    mulai = request.form.get('mulai')
-    selesai = request.form.get('selesai')
-    alasan = request.form.get('alasan')
-
-    tgl_mulai = datetime.strptime(mulai, '%Y-%m-%d')
-    tgl_selesai = datetime.strptime(selesai, '%Y-%m-%d')
-
-    durasi = (tgl_selesai - tgl_mulai).days + 1
+    mulai = datetime.strptime(request.form['mulai'], '%Y-%m-%d')
+    selesai = datetime.strptime(request.form['selesai'], '%Y-%m-%d')
 
     izin = LeaveRequest(
-        user_id=user_id,
-        jenis_izin=jenis,
-        tanggal_mulai=tgl_mulai,
-        tanggal_selesai=tgl_selesai,
-        durasi=durasi,
-        alasan=alasan
+        user_id=session['user_id'],
+        jenis_izin=request.form['jenis'],
+        tanggal_mulai=mulai,
+        tanggal_selesai=selesai,
+        durasi=(selesai - mulai).days + 1,
+        alasan=request.form['alasan']
     )
 
     db.session.add(izin)
@@ -213,6 +194,11 @@ def ajukan_izin():
 
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
+
+@app.route('/logout')
+def logout_view():
+    session.clear()
+    return redirect('/login')
 
 @app.route('/approve/<int:id>', methods=['POST'])
 def approve(id):
