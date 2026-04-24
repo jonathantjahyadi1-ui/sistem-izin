@@ -140,9 +140,15 @@ def dashboard():
 
     user = User.query.get(session['user_id'])
 
+    # 🔥 TAMBAHAN PENTING
+    if not user:
+        session.clear()
+        return redirect('/login')
+
     if user.role == 'karyawan':
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
         return render_template('dashboard_user.html', data=data, user=user)
+
     else:
         data = LeaveRequest.query.all()
 
