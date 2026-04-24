@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ajukan Izin</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body { background: #f4f6f9; }
+        .card { border-radius: 12px; }
+    </style>
+</head>
+
+<body>
+
+<!-- 🔥 NAVBAR -->
+<nav class="navbar navbar-dark bg-dark px-4">
+    <span class="navbar-brand">Sistem Izin</span>
+    <a href="/dashboard" class="btn btn-sm btn-light">← Kembali</a>
+</nav>
+
+<div class="container mt-5">
+    
+<div class="card shadow-lg border-0 p-4 fade-in">        
+    <h3 class="mb-4 text-center">
+    <i class="bi bi-calendar-plus"></i> Ajukan Izin
+</h3>
+
+        <form action="/izin" method="POST" enctype="multipart/form-data" id="izinForm">
+
+            <!-- JENIS IZIN -->
+            <div class="mb-3">
+                <label class="form-label">Jenis Izin</label>
+                <select name="jenis" id="jenis" class="form-control" required>
+                    <option value="">-- Pilih --</option>
+                    <option value="cuti">Cuti</option>
+                    <option value="sakit">Sakit</option>
+                </select>
+            </div>
+
+            <!-- TANGGAL -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tanggal Mulai</label>
+                    <input type="date" name="mulai" id="mulai" class="form-control" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tanggal Selesai</label>
+                    <input type="date" name="selesai" id="selesai" class="form-control" required>
+                </div>
+            </div>
+
+            <!-- DURASI -->
+            <div class="mb-3">
+                <label class="form-label">Durasi (hari)</label>
+                <input type="text" id="durasi" class="form-control" readonly>
+            </div>
+
+            <!-- ALERT WAJIB SURAT -->
+            <div class="alert alert-warning d-none" id="warningSurat">
+                ⚠️ Jika sakit lebih dari 1 hari, wajib upload surat dokter!
+            </div>
+
+            <!-- ALASAN -->
+            <div class="mb-3">
+                <label class="form-label">Alasan</label>
+                <textarea name="alasan" class="form-control" rows="3" required></textarea>
+            </div>
+
+            <!-- FILE -->
+            <div class="mb-3">
+                <label class="form-label">Upload Surat</label>
+                <input type="file" name="file" id="file" class="form-control">
+                <small class="text-muted">Format: PDF/JPG/PNG</small>
+            </div>
+
+            <!-- PREVIEW FILE -->
+            <div id="preview" class="mb-3"></div>
+
+            <!-- BUTTON -->
+            <button class="btn btn-primary w-100">Submit Izin</button>
+
+        </form>
+    </div>
+
+</div>
+
+<!-- 🔥 SCRIPT INTERAKTIF -->
+<script>
+    const mulai = document.getElementById("mulai");
+    const selesai = document.getElementById("selesai");
+    const durasi = document.getElementById("durasi");
+    const jenis = document.getElementById("jenis");
+    const warning = document.getElementById("warningSurat");
+    const fileInput = document.getElementById("file");
+    const preview = document.getElementById("preview");
+
+    function hitungDurasi() {
+        if (mulai.value && selesai.value) {
+            const t1 = new Date(mulai.value);
+            const t2 = new Date(selesai.value);
+
+            const diff = (t2 - t1) / (1000 * 60 * 60 * 24) + 1;
+
+            durasi.value = diff > 0 ? diff : 0;
+
+            // 🔥 validasi surat dokter
+            if (jenis.value === "sakit" && diff > 1) {
+                warning.classList.remove("d-none");
+            } else {
+                warning.classList.add("d-none");
+            }
+        }
+    }
+
+    mulai.addEventListener("change", hitungDurasi);
+    selesai.addEventListener("change", hitungDurasi);
+    jenis.addEventListener("change", hitungDurasi);
+
+    // 🔥 preview file
+    fileInput.addEventListener("change", function () {
+        const file = this.files[0];
+        preview.innerHTML = "";
+
+        if (file) {
+            preview.innerHTML = `
+                <div class="alert alert-info">
+                    File dipilih: ${file.name}
+                </div>
+            `;
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        body { background: linear-gradient(to right, #36d1dc, #5b86e5); }
+        .card { border-radius: 14px; }
+    </style>
+</head>
+
+<body>
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+
+    <form method="POST" class="card p-4 shadow" style="width: 360px;" id="loginForm">
+        
+        <h4 class="text-center mb-3">Login</h4>
+
+        <!-- 🔔 FLASH MESSAGE (kalau backend kirim) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{category}} py-2">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <<!-- USERNAME -->
+<div class="mb-2">
+    <label class="form-label">Username</label>
+    <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-person"></i></span>
+        <input type="text" name="username" id="username" class="form-control" required>
+    </div>
+</div>
+
+<!-- PASSWORD -->
+<div class="mb-2">
+    <label class="form-label">Password</label>
+    <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+        <input type="password" name="password" id="password" class="form-control" required>
+        <button type="button" class="btn btn-outline-secondary" id="togglePass">👁</button>
+    </div>
+</div>
+        <!-- REMEMBER -->
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="remember">
+            <label class="form-check-label" for="remember">
+                Remember me
+            </label>
+        </div>
+
+        <!-- BUTTON -->
+        <button class="btn btn-primary w-100" id="btnLogin">
+            Login
+        </button>
+
+        <!-- LINK REGISTER -->
+        <a href="/register" class="text-center mt-3 d-block">
+            Belum punya akun? Register
+        </a>
+
+    </form>
+
+</div>
+
+<!-- 🔥 SCRIPT -->
+<script>
+    const toggle = document.getElementById("togglePass");
+    const pass = document.getElementById("password");
+    const form = document.getElementById("loginForm");
+    const btn = document.getElementById("btnLogin");
+
+    // 👁 toggle password
+    toggle.addEventListener("click", () => {
+        pass.type = pass.type === "password" ? "text" : "password";
+    });
+
+    // 🔄 loading button
+    form.addEventListener("submit", () => {
+        btn.innerText = "Loading...";
+        btn.disabled = true;
+    });
+</script>
+
+</body>
+</html>

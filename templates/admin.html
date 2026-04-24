@@ -1,0 +1,27 @@
+<td>
+    {% if user.role in ['admin','hrd'] %}
+
+        {% if i.status == 'pending' %}
+
+            <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
+                <button class="btn btn-success btn-sm"
+                        onclick="return confirm('Yakin approve izin ini?')">
+                    ✔ Approve
+                </button>
+            </form>
+
+            <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
+                <button class="btn btn-danger btn-sm"
+                        onclick="return confirm('Yakin reject izin ini?')">
+                    ✖ Reject
+                </button>
+            </form>
+
+        {% else %}
+            <span class="text-muted">Selesai</span>
+        {% endif %}
+
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+        </td>

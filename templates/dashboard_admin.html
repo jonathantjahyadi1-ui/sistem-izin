@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-dark bg-dark px-4 shadow-sm">
+    <span class="navbar-brand fw-bold">
+        <i class="bi bi-building"></i> Sistem Izin
+    </span>
+
+    <div class="text-white">
+        {{ user.username }} ({{ user.role }})
+        <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h4>
+
+        <div class="d-flex gap-2">
+            <a href="/export_excel" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Export Excel
+            </a>
+
+            <a href="/form_izin" class="btn btn-primary">
+                + Ajukan Izin
+            </a>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 text-center fade-in">
+                <h6><i class="bi bi-bar-chart"></i> Total</h6>
+                <h3>{{ total }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center fade-in">
+                <h6><i class="bi bi-hourglass-split"></i> Pending</h6>
+                <h3>{{ pending }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center fade-in">
+                <h6><i class="bi bi-check-circle"></i> Approved</h6>
+                <h3>{{ approved }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center fade-in">
+                <h6><i class="bi bi-x-circle"></i> Rejected</h6>
+                <h3>{{ rejected }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="card shadow-sm p-3 mb-4">
+        <h5 class="mb-3">Statistik Jenis Izin</h5>
+        <div style="height:300px;">
+            <canvas id="jenisChart"></canvas>
+        </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card shadow-sm p-3 mb-3">
+        <div class="row">
+            <div class="col-md-6">
+                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Cari jenis izin...">
+            </div>
+            <div class="col-md-6">
+                <select id="filterStatus" class="form-control">
+                    <option value="">Semua Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card shadow-sm p-3">
+        <h5 class="mb-3">Daftar Izin</h5>
+
+        <table class="table table-hover align-middle" id="izinTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Jenis</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for i in data %}
+                <tr>
+                    <td>{{ i.id }}</td>
+                    <td class="jenis">{{ i.jenis_izin }}</td>
+
+                    <td class="status">
+                        {% if i.status == 'pending' %}
+                            <span class="badge bg-warning text-dark px-3 py-2">Pending</span>
+                        {% elif i.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if user.role in ['admin','hrd'] and i.status == 'pending' %}
+                            <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
+                                <button class="btn btn-success btn-sm shadow-sm"
+                                    onclick="this.innerHTML='Loading...'; this.disabled=true; return confirm('Approve izin ini?')">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </form>
+
+                            <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
+                                <button class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Reject izin ini?')">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+
+            {% if data|length == 0 %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <div class="p-3">
+                        <h6>📭 Belum ada data izin</h6>
+                        <small>Data akan muncul setelah ada pengajuan</small>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- FILTER SCRIPT -->
+<script>
+const searchInput = document.getElementById('searchInput');
+const filterStatus = document.getElementById('filterStatus');
+
+function filterTable() {
+    const search = searchInput.value.toLowerCase();
+    const status = filterStatus.value;
+
+    document.querySelectorAll("#izinTable tbody tr").forEach(row => {
+        const jenis = row.querySelector(".jenis").innerText.toLowerCase();
+        const stat = row.querySelector(".status").innerText.toLowerCase();
+
+        const matchSearch = jenis.includes(search);
+        const matchStatus = status === "" || stat.includes(status);
+
+        row.style.display = (matchSearch && matchStatus) ? "" : "none";
+    });
+}
+
+searchInput.addEventListener("keyup", filterTable);
+filterStatus.addEventListener("change", filterTable);
+</script>
+
+<!-- CHART -->
+<script>
+const ctx = document.getElementById('jenisChart');
+
+const labels = {{ jenis_labels | tojson }};
+const values = {{ jenis_values | tojson }};
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: values,
+            backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        },
+        animation: {
+            animateScale: true,
+            animateRotate: true
+        }
+    }
+});
+</script>
+
+</body>
+</html>

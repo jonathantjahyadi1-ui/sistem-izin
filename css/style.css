@@ -1,0 +1,143 @@
+body {
+    background: linear-gradient(135deg, #eef2f7, #f8fafc);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* NAVBAR */
+.navbar {
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* CARD */
+.card {
+    border: none;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+}
+
+/* STATS CARD */
+.card h3 {
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+/* TABLE */
+.table {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: #0d6efd;
+    color: white;
+}
+
+/* BADGE */
+.badge {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+/* BUTTON */
+.btn {
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+}
+
+/* INPUT */
+.form-control {
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+/* CHART */
+.chart-box {
+    height: 300px;
+}
+
+/* ANIMATION FADE */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+/* REGISTER PAGE */
+.register-bg {
+    background: linear-gradient(to right, #4facfe, #00f2fe);
+}
+
+.strength-bar {
+    height: 6px;
+    border-radius: 6px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: 0.3s;
+}
+
+.glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.85);
+}
+
+.btn-modern {
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+.btn-modern:hover {
+    transform: scale(1.03);
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+}
+
+.card {
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
