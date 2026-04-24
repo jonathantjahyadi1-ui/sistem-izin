@@ -21,7 +21,7 @@ app = Flask(__name__)
 # =========================
 uri = os.getenv("DATABASE_URL")
 
-if not uri:
+if not uri: 
     raise Exception("DATABASE_URL belum diset di environment!")
 
 if uri.startswith("postgres://"):
