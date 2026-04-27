@@ -153,7 +153,16 @@ def dashboard():
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
         return render_template('dashboard_user.html', data=data, user=user)
 
+    # 🔥 INI MASIH DALAM FUNCTION
     data = LeaveRequest.query.all()
+
+    jenis_data = db.session.query(
+        LeaveRequest.jenis_izin,
+        func.count(LeaveRequest.id)
+    ).group_by(LeaveRequest.jenis_izin).all()
+
+    jenis_labels = [j[0] for j in jenis_data]
+    jenis_values = [j[1] for j in jenis_data]
 
     return render_template(
         'dashboard_admin.html',
@@ -162,7 +171,9 @@ def dashboard():
         total=LeaveRequest.query.count(),
         pending=LeaveRequest.query.filter_by(status='pending').count(),
         approved=LeaveRequest.query.filter_by(status='approved').count(),
-        rejected=LeaveRequest.query.filter_by(status='rejected').count()
+        rejected=LeaveRequest.query.filter_by(status='rejected').count(),
+        jenis_labels=jenis_labels,
+        jenis_values=jenis_values
     )
 
 @app.route('/form_izin')
