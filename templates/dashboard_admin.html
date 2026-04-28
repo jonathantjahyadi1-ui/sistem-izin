@@ -2,122 +2,140 @@
 <html>
 <head>
     <title>Dashboard</title>
-
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    
+    <!-- HARDCODE CSS SIDEBAR -->
+    <style>
+        body {
+            background: #f4f6f9;
+            padding-top: 56px;
+            margin: 0;
+        }
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+        #sidebar {
+            position: fixed;
+            top: 56px;
+            left: -250px;
+            width: 250px;
+            height: calc(100vh - 56px);
+            background: #212529;
+            transition: left 0.3s ease;
+            z-index: 999;
+            padding-top: 20px;
+        }
+        #sidebar.active {
+            left: 0;
+        }
+        #sidebar a {
+            display: block;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        #sidebar a:hover {
+            background: #0d6efd;
+        }
+        #mainContent {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            padding: 20px;
+        }
+        #mainContent.shift {
+            margin-left: 250px;
+        }
+        .card {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .table thead {
+            background: #212529;
+            color: white;
+        }
+    </style>
 </head>
 
-<body>  
+<body>
 
-    <!-- NAVBAR -->
-<nav class="navbar navbar-dark bg-dark px-4 shadow-sm">
-    
-    <!-- 🔥 tombol garis tiga -->
-    <button class="btn btn-outline-light" id="toggleSidebar">
-        ☰
-    </button>
-
-    <span class="navbar-brand fw-bold ms-2">
-        Sistem Izin
-    </span>
-
-    <div class="text-white ms-auto">
+<!-- NAVBAR -->
+<nav class="navbar navbar-dark bg-dark px-4">
+    <button class="btn btn-outline-light" onclick="toggleSidebar()">☰</button>
+    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
+    <div class="ms-auto text-white">
         {{ user.username }} ({{ user.role }})
         <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
     </div>
 </nav>
-<div id="sidebar" class="sidebar">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
     <a href="/dashboard">🏠 Dashboard</a>
-    <a href="/dashboard?filter=pending">⏳ Pending</a>
-    <a href="/dashboard?filter=approved">✅ Approved</a>
-    <a href="/dashboard?filter=rejected">❌ Rejected</a>
+    <a href="/semua_izin">📋 Semua Izin</a>
     <a href="/form_izin">➕ Ajukan Izin</a>
-    <a href="/approval">📋 Approval Izin</a>
+    {% if user.role == 'admin' %}
+    <a href="/manage_users">👥 Manajemen User</a>
+    {% endif %}
 </div>
 
-
-<div class="container mt-4 content">
-    <!-- HEADER -->
+<!-- CONTENT -->
+<div id="mainContent" class="container-fluid mt-4 px-4">
+    
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </h4>
-
-        <div class="d-flex gap-2">
-            <a href="/export_excel" class="btn btn-success">
+        <h4 class="fw-bold"><i class="bi bi-speedometer2"></i> Dashboard</h4>
+        <div>
+            <a href="/export_excel" class="btn btn-success btn-sm me-2">
                 <i class="bi bi-file-earmark-excel"></i> Export Excel
             </a>
-
-            <a href="{{ url_for('form_izin') }}" class="btn btn-primary">
-    + Ajukan Izin
-</a>
+            <a href="/form_izin" class="btn btn-primary btn-sm">+ Ajukan Izin</a>
         </div>
     </div>
 
-    <!-- STATS -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card p-3 text-center fade-in">
-                <h6><i class="bi bi-bar-chart"></i> Total</h6>
-                <h3>{{ total }}</h3>
+        <div class="col-md-3 mb-2">
+            <div class="card p-3 text-center">
+                <h6>Total</h6>
+                <h3 class="text-primary">{{ total }}</h3>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card p-3 text-center fade-in">
-                <h6><i class="bi bi-hourglass-split"></i> Pending</h6>
-                <h3>{{ pending }}</h3>
+        <div class="col-md-3 mb-2">
+            <div class="card p-3 text-center">
+                <h6>Pending</h6>
+                <h3 class="text-warning">{{ pending }}</h3>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card p-3 text-center fade-in">
-                <h6><i class="bi bi-check-circle"></i> Approved</h6>
-                <h3>{{ approved }}</h3>
+        <div class="col-md-3 mb-2">
+            <div class="card p-3 text-center">
+                <h6>Approved</h6>
+                <h3 class="text-success">{{ approved }}</h3>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card p-3 text-center fade-in">
-                <h6><i class="bi bi-x-circle"></i> Rejected</h6>
-                <h3>{{ rejected }}</h3>
+        <div class="col-md-3 mb-2">
+            <div class="card p-3 text-center">
+                <h6>Rejected</h6>
+                <h3 class="text-danger">{{ rejected }}</h3>
             </div>
         </div>
     </div>
 
-    <!-- CHART -->
-    <div class="card shadow-sm p-3 mb-4">
-        <h5 class="mb-3">Statistik Jenis Izin</h5>
-        <div style="height:300px;">
+    <div class="card p-3 mb-4">
+        <h5>Statistik Jenis Izin</h5>
+        <div style="height: 300px;">
             <canvas id="jenisChart"></canvas>
         </div>
     </div>
 
-    <!-- FILTER -->
-    <div class="card shadow-sm p-3 mb-3">
-        <div class="row">
-            <div class="col-md-6">
-                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Cari jenis izin...">
-            </div>
-            <div class="col-md-6">
-                <select id="filterStatus" class="form-control">
-                    <option value="">Semua Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- TABLE -->
-    <div class="card shadow-sm p-3">
-        <h5 class="mb-3">Daftar Izin</h5>
-
-        <table class="table table-hover align-middle" id="izinTable">
+    <div class="card p-3">
+        <h5>Daftar Izin</h5>
+        <table class="table table-hover">
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
@@ -126,37 +144,27 @@
                     <th>Aksi</th>
                 </tr>
             </thead>
-
             <tbody>
             {% for i in data %}
                 <tr>
                     <td>{{ i.id }}</td>
-                    <td class="jenis">{{ i.jenis_izin }}</td>
-
-                    <td class="status">
+                    <td>{{ i.jenis_izin }}</td>
+                    <td>
                         {% if i.status == 'pending' %}
-                            <span class="badge bg-warning text-dark px-3 py-2">Pending</span>
+                            <span class="badge bg-warning">Pending</span>
                         {% elif i.status == 'approved' %}
                             <span class="badge bg-success">Approved</span>
                         {% else %}
                             <span class="badge bg-danger">Rejected</span>
                         {% endif %}
                     </td>
-
                     <td>
                         {% if user.role in ['admin','hrd'] and i.status == 'pending' %}
                             <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                                <button class="btn btn-success btn-sm shadow-sm"
-                                    onclick="this.innerHTML='Loading...'; this.disabled=true; return confirm('Approve izin ini?')">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
+                                <button class="btn btn-success btn-sm">Approve</button>
                             </form>
-
                             <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                                <button class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Reject izin ini?')">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
+                                <button class="btn btn-danger btn-sm">Reject</button>
                             </form>
                         {% else %}
                             <span class="text-muted">-</span>
@@ -164,96 +172,40 @@
                     </td>
                 </tr>
             {% endfor %}
-
-            {% if data|length == 0 %}
-            <tr>
-                <td colspan="4" class="text-center text-muted">
-                    <div class="p-3">
-                        <h6>📭 Belum ada data izin</h6>
-                        <small>Data akan muncul setelah ada pengajuan</small>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
             </tbody>
         </table>
     </div>
 
 </div>
 
-<!-- FILTER SCRIPT -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    // 🔥 SIDEBAR TOGGLE
-    const toggle = document.getElementById("toggleSidebar");
-const sidebar = document.getElementById("sidebar");
-const content = document.querySelector(".content");
-
-if (toggle && sidebar) {
-    toggle.addEventListener("click", () => {
-        sidebar.classList.toggle("active");
-        content.classList.toggle("shift");
-    });
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("active");
+    document.getElementById("mainContent").classList.toggle("shift");
 }
-
-    // 🔥 FILTER
-    const searchInput = document.getElementById('searchInput');
-    const filterStatus = document.getElementById('filterStatus');
-
-    function filterTable() {
-        const search = searchInput.value.toLowerCase();
-        const status = filterStatus.value;
-
-        document.querySelectorAll("#izinTable tbody tr").forEach(row => {
-            const jenis = row.querySelector(".jenis").innerText.toLowerCase();
-            const stat = row.querySelector(".status").innerText.toLowerCase();
-
-            const matchSearch = jenis.includes(search);
-            const matchStatus = status === "" || stat.includes(status);
-
-            row.style.display = (matchSearch && matchStatus) ? "" : "none";
-        });
-    }
-
-    if (searchInput && filterStatus) {
-        searchInput.addEventListener("keyup", filterTable);
-        filterStatus.addEventListener("change", filterTable);
-    }
-
-});
 </script>
 
-<!-- CHART -->
 <script>
-const ctx = document.getElementById('jenisChart');
+    var jenisLabels = {{ jenis_labels | tojson }};
+    var jenisValues = {{ jenis_values | tojson }};
 
-const labels = {{ jenis_labels | tojson }};
-const values = {{ jenis_values | tojson }};
-
-new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: labels,
-        datasets: [{
-            data: values,
-            backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
+var ctx = document.getElementById('jenisChart');
+if (ctx) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: jenisLabels,
+            datasets: [{
+                data: jenisValues,
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
+            }]
         },
-        animation: {
-            animateScale: true,
-            animateRotate: true
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
         }
-    }
-});
+    });
+}
 </script>
 
 </body>
