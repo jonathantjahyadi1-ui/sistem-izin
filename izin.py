@@ -206,6 +206,20 @@ def ajukan_izin():
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
 
+@app.route('/approval')
+def approval():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = User.query.get(session['user_id'])
+
+    if user.role not in ['admin', 'hrd']:
+        return redirect('/dashboard')
+
+    data = LeaveRequest.query.filter_by(status='pending').all()
+
+    return render_template('approval.html', data=data, user=user)
+
 @app.route('/logout')
 def logout_view():
     session.clear()

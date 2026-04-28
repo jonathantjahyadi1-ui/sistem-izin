@@ -13,22 +13,36 @@
 
 </head>
 
-<body>
+<body>  
 
-<!-- NAVBAR -->
+    <!-- NAVBAR -->
 <nav class="navbar navbar-dark bg-dark px-4 shadow-sm">
-    <span class="navbar-brand fw-bold">
-        <i class="bi bi-building"></i> Sistem Izin
+    
+    <!-- 🔥 tombol garis tiga -->
+    <button class="btn btn-outline-light" id="toggleSidebar">
+        ☰
+    </button>
+
+    <span class="navbar-brand fw-bold ms-2">
+        Sistem Izin
     </span>
 
-    <div class="text-white">
+    <div class="text-white ms-auto">
         {{ user.username }} ({{ user.role }})
         <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
     </div>
 </nav>
+<div id="sidebar" class="sidebar">
+    <a href="/dashboard">🏠 Dashboard</a>
+    <a href="/dashboard?filter=pending">⏳ Pending</a>
+    <a href="/dashboard?filter=approved">✅ Approved</a>
+    <a href="/dashboard?filter=rejected">❌ Rejected</a>
+    <a href="/form_izin">➕ Ajukan Izin</a>
+    <a href="/approval">📋 Approval Izin</a>
+</div>
 
-<div class="container mt-4">
 
+<div class="container mt-4 content">
     <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold">
@@ -169,26 +183,45 @@
 
 <!-- FILTER SCRIPT -->
 <script>
-const searchInput = document.getElementById('searchInput');
-const filterStatus = document.getElementById('filterStatus');
+document.addEventListener("DOMContentLoaded", function () {
 
-function filterTable() {
-    const search = searchInput.value.toLowerCase();
-    const status = filterStatus.value;
+    // 🔥 SIDEBAR TOGGLE
+    const toggle = document.getElementById("toggleSidebar");
+const sidebar = document.getElementById("sidebar");
+const content = document.querySelector(".content");
 
-    document.querySelectorAll("#izinTable tbody tr").forEach(row => {
-        const jenis = row.querySelector(".jenis").innerText.toLowerCase();
-        const stat = row.querySelector(".status").innerText.toLowerCase();
-
-        const matchSearch = jenis.includes(search);
-        const matchStatus = status === "" || stat.includes(status);
-
-        row.style.display = (matchSearch && matchStatus) ? "" : "none";
+if (toggle && sidebar) {
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        content.classList.toggle("shift");
     });
 }
 
-searchInput.addEventListener("keyup", filterTable);
-filterStatus.addEventListener("change", filterTable);
+    // 🔥 FILTER
+    const searchInput = document.getElementById('searchInput');
+    const filterStatus = document.getElementById('filterStatus');
+
+    function filterTable() {
+        const search = searchInput.value.toLowerCase();
+        const status = filterStatus.value;
+
+        document.querySelectorAll("#izinTable tbody tr").forEach(row => {
+            const jenis = row.querySelector(".jenis").innerText.toLowerCase();
+            const stat = row.querySelector(".status").innerText.toLowerCase();
+
+            const matchSearch = jenis.includes(search);
+            const matchStatus = status === "" || stat.includes(status);
+
+            row.style.display = (matchSearch && matchStatus) ? "" : "none";
+        });
+    }
+
+    if (searchInput && filterStatus) {
+        searchInput.addEventListener("keyup", filterTable);
+        filterStatus.addEventListener("change", filterTable);
+    }
+
+});
 </script>
 
 <!-- CHART -->
