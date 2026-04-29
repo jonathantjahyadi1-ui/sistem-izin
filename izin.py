@@ -249,9 +249,9 @@ def semua_izin():
     data = query.order_by(LeaveRequest.created_at.desc()).all()
     
     return render_template('semua_izin.html', data=data, user=user,
-                         status_filter=status_filter,
-                         jenis_filter=jenis_filter,
-                         search=search)
+                        status_filter=status_filter,
+                        jenis_filter=jenis_filter,
+                        search=search)
 
 
 # =========================
