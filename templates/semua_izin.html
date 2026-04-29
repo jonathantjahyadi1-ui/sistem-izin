@@ -109,16 +109,16 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if i.status == 'pending' %}
-                            <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                                <button class="btn btn-success btn-sm">Approve</button>
-                            </form>
-                            <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                                <button class="btn btn-danger btn-sm">Reject</button>
-                            </form>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                        {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
+        <form action="/approve/{{ i.id }}" method="POST">
+            <button class="btn btn-success btn-sm">Approve</button>
+        </form>
+        <form action="/reject/{{ i.id }}" method="POST">
+            <button class="btn btn-danger btn-sm">Reject</button>
+        </form>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
                     </td>
                 </tr>
             {% endfor %}

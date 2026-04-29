@@ -78,6 +78,7 @@ class LeaveRequest(db.Model):
 with app.app_context():
     db.create_all()
 
+    # 🔥 ADMIN
     if not User.query.filter_by(username='Jonathan').first():
         db.session.add(User(
             username='Jonathan',
@@ -86,12 +87,25 @@ with app.app_context():
             divisi='IT'
         ))
 
+    # 🔥 HRD
     if not User.query.filter_by(username='Devina').first():
         db.session.add(User(
             username='Devina',
             password=generate_password_hash('Devina@hrd'),
             role='hrd',
             divisi='HRD'
+        ))
+
+    # 🔥 DIREKTUR (CREATE ATAU UPDATE PASSWORD)
+    user = User.query.filter_by(username='Martin').first()
+    if user:
+        user.password = generate_password_hash('Martin@direktur')
+    else:
+        db.session.add(User(
+            username='Martin',
+            password=generate_password_hash('Martin@direktur'),
+            role='direktur',
+            divisi='Direksi'
         ))
 
     db.session.commit()
@@ -215,7 +229,7 @@ def semua_izin():
         return redirect('/login')
     
     user = User.query.get(session['user_id'])
-    if user.role not in ['admin', 'hrd']:
+    if user.role not in ['admin', 'hrd', 'direktur']:
         return redirect('/dashboard')
     
     # Filter
@@ -312,7 +326,7 @@ def export_excel():
         return redirect('/login')
     
     user = User.query.get(session['user_id'])
-    if user.role not in ['admin', 'hrd']:
+    if user.role not in ['admin', 'hrd', 'direktur']:        
         return redirect('/dashboard')
     
     data = LeaveRequest.query.all()
@@ -365,7 +379,7 @@ def approval():
 
     user = User.query.get(session['user_id'])
 
-    if user.role not in ['admin', 'hrd']:
+    if user.role not in ['admin', 'hrd', 'direktur']:        
         return redirect('/dashboard')
 
     data = LeaveRequest.query.filter_by(status='pending').all()

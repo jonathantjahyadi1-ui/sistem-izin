@@ -159,7 +159,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if user.role in ['admin','hrd'] and i.status == 'pending' %}
+                        {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
                             <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
                                 <button class="btn btn-success btn-sm">Approve</button>
                             </form>
