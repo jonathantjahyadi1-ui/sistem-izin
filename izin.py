@@ -215,7 +215,7 @@ def ajukan_izin():
     )
 
     db.session.add(izin)
-    db.session.commit()
+    db.session.commit() 
 
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
