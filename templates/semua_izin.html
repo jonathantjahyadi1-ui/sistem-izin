@@ -81,7 +81,8 @@
                 <tr>
                     <th>ID</th>
                     <th>Pengaju</th>
-                    <th>File</th> 
+                    <th>Surat Sakit</th>
+                    <th>Bukti Chat</th> 
                     <th>Jenis</th>
                     <th>Tanggal</th>
                     <th>Durasi</th>
@@ -107,6 +108,18 @@
             -
         {% endif %}
     </td>
+
+    <td>
+        {% if i.file_chat %}
+            <a href="/download/{{ i.file_chat }}" class="btn btn-sm btn-info">
+                Download Chat
+            </a>
+        {% else %}
+            -
+        {% endif %}
+    </td>
+
+    <td>{{ i.jenis_izin }}</td>
 
     <td>{{ i.jenis_izin }}</td>
     <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>

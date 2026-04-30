@@ -74,6 +74,7 @@ class LeaveRequest(db.Model):
     durasi = db.Column(db.Integer)
     alasan = db.Column(db.Text)
     file_surat = db.Column(db.String(255))
+    file_chat = db.Column(db.String(255))
     status = db.Column(db.String(50), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -210,12 +211,19 @@ def ajukan_izin():
     mulai = datetime.strptime(request.form['mulai'], '%Y-%m-%d')
     selesai = datetime.strptime(request.form['selesai'], '%Y-%m-%d')
 
-    file = request.files.get('file')
-    filename = None
+    # Proses File Surat Sakit
+    file_surat = request.files.get('file')
+    filename_surat = None
+    if file_surat and file_surat.filename != '':
+        filename_surat = f"surat_{datetime.now().timestamp()}_{file_surat.filename}"
+        file_surat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_surat))
 
-    if file and file.filename != '':
-        filename = f"{datetime.now().timestamp()}_{file.filename}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    # Proses File Bukti Chat (BARU)
+    file_chat = request.files.get('file_chat')
+    filename_chat = None
+    if file_chat and file_chat.filename != '':
+        filename_chat = f"chat_{datetime.now().timestamp()}_{file_chat.filename}"
+        file_chat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_chat))
 
     izin = LeaveRequest(
         user_id=session['user_id'],
@@ -224,7 +232,8 @@ def ajukan_izin():
         tanggal_selesai=selesai,
         durasi=(selesai - mulai).days + 1,
         alasan=request.form['alasan'],
-        file_surat=filename   # 🔥 simpan nama file
+        file_surat=filename_surat,
+        file_chat=filename_chat  # <--- Simpan nama file chat ke database
     )
 
     db.session.add(izin)
