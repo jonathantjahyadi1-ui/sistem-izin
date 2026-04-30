@@ -16,6 +16,11 @@ if os.getenv("RENDER") is None:
     
 app = Flask(__name__)
 
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # =========================
 # DATABASE CONFIG (FIX SUPABASE + RENDER)
 # =========================
@@ -205,20 +210,35 @@ def ajukan_izin():
     mulai = datetime.strptime(request.form['mulai'], '%Y-%m-%d')
     selesai = datetime.strptime(request.form['selesai'], '%Y-%m-%d')
 
+    file = request.files.get('file')
+    filename = None
+
+    if file and file.filename != '':
+        filename = f"{datetime.now().timestamp()}_{file.filename}"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
     izin = LeaveRequest(
         user_id=session['user_id'],
         jenis_izin=request.form['jenis'],
         tanggal_mulai=mulai,
         tanggal_selesai=selesai,
         durasi=(selesai - mulai).days + 1,
-        alasan=request.form['alasan']
+        alasan=request.form['alasan'],
+        file_surat=filename   # 🔥 simpan nama file
     )
 
     db.session.add(izin)
-    db.session.commit() 
+    db.session.commit()
 
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_file(
+        os.path.join(app.config['UPLOAD_FOLDER'], filename),
+        as_attachment=True
+    )
 
 # =========================
 # HALAMAN SEMUA IZIN (ADMIN/HRD)
