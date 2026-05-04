@@ -1,25 +1,29 @@
 <h3>Approval Izin</h3>
 
 <table class="table">
-    <tr>
-        <th>ID</th>
-        <th>Jenis</th>
-        <th>Aksi</th>
-    </tr>
-
-    {% for i in data %}
-    <tr>
-        <td>{{ i.id }}</td>
-        <td>{{ i.jenis_izin }}</td>
-        <td>
-            <form action="/approve/{{ i.id }}" method="POST">
-                <button class="btn btn-success">Approve</button>
-            </form>
-
-            <form action="/reject/{{ i.id }}" method="POST">
-                <button class="btn btn-danger">Reject</button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nama Pengaju</th>   <!-- baru -->
+            <th>Jenis</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for i in data %}
+        <tr>
+            <td>{{ i.id }}</td>
+            <td>{{ get_user(i.user_id).username if get_user(i.user_id) else '-' }}</td>   <!-- baru -->
+            <td>{{ i.jenis_izin }}</td>
+            <td>
+                <form action="/approve/{{ i.id }}" method="POST">
+                    <button class="btn btn-success">Approve</button>
+                </form>
+                <form action="/reject/{{ i.id }}" method="POST">
+                    <button class="btn btn-danger">Reject</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>

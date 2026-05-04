@@ -92,56 +92,62 @@
                 </tr>
             </thead>
             <tbody>
-            {% for i in data %}
-                {% set pengaju = get_user(i.user_id) %}
-                <tr>
-    <td>{{ i.id }}</td>
-    <td>{{ pengaju.username if pengaju else '-' }}</td>
+{% for i in data %}
+    {% set pengaju = get_user(i.user_id) %}
+    <tr>
+        <td>{{ i.id }}</td>
+        <td>{{ pengaju.username if pengaju else '-' }}</td>
 
-    <!-- FILE -->
-    <td>
-        {% if i.file_surat %}
-            <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">
-                Download
-            </a>
-        {% else %}
-            -
-        {% endif %}
-    </td>
-    
+        <!-- SURAT SAKIT -->
+        <td>
+            {% if i.file_surat %}
+                <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">Download</a>
+            {% else %}
+                -
+            {% endif %}
+        </td>
 
-    <td>{{ i.jenis_izin }}</td>
-    <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
-    <td>{{ i.durasi }} hari</td>
-    <td>{{ i.alasan[:30] }}{% if i.alasan|length > 30 %}...{% endif %}</td>
+        <!-- BUKTI CHAT (BARU) -->
+        <td>
+            {% if i.file_chat %}
+                <a href="/download/{{ i.file_chat }}" class="btn btn-sm btn-info">Download</a>
+            {% else %}
+                -
+            {% endif %}
+        </td>
 
-    <!-- STATUS -->
-    <td>
-        {% if i.status == 'pending' %}
-            <span class="badge bg-warning">Pending</span>
-        {% elif i.status == 'approved' %}
-            <span class="badge bg-success">Approved</span>
-        {% else %}
-            <span class="badge bg-danger">Rejected</span>
-        {% endif %}
-    </td>
+        <td>{{ i.jenis_izin }}</td>
+        <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
+        <td>{{ i.durasi }} hari</td>
+        <td>{{ i.alasan[:30] }}{% if i.alasan|length > 30 %}...{% endif %}</td>
 
-    <!-- AKSI -->
-    <td>
-        {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
-            <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                <button class="btn btn-success btn-sm">Approve</button>
-            </form>
-            <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                <button class="btn btn-danger btn-sm">Reject</button>
-            </form>
-        {% else %}
-            <span class="text-muted">-</span>
-        {% endif %}
-    </td>
-</tr>
-            {% endfor %}
-            </tbody>
+        <!-- STATUS -->
+        <td>
+            {% if i.status == 'pending' %}
+                <span class="badge bg-warning">Pending</span>
+            {% elif i.status == 'approved' %}
+                <span class="badge bg-success">Approved</span>
+            {% else %}
+                <span class="badge bg-danger">Rejected</span>
+            {% endif %}
+        </td>
+
+        <!-- AKSI -->
+        <td>
+            {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
+                <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
+                    <button class="btn btn-success btn-sm">Approve</button>
+                </form>
+                <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
+                    <button class="btn btn-danger btn-sm">Reject</button>
+                </form>
+            {% else %}
+                <span class="text-muted">-</span>
+            {% endif %}
+        </td>
+    </tr>
+{% endfor %}
+</tbody>
         </table>
     </div>
 </div>
