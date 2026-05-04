@@ -84,6 +84,9 @@
     {% if user.role == 'admin' %}
     <a href="/manage_users">👥 Manajemen User</a>
     {% endif %}
+    {% if user.role in ['admin', 'hrd'] %}
+    <a href="/manage_quota">🗂️ Kuota Cuti</a>
+    {% endif %}
 </div>
 
 <!-- CONTENT -->

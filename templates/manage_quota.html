@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manajemen Kuota Cuti</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #f4f6f9; padding-top: 56px; }
+        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; }
+        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px); background: #212529; transition: 0.3s; z-index: 999; padding-top: 10px; }
+        #sidebar.active { left: 0; }
+        #sidebar a { display: block; color: white; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        #sidebar a:hover { background: #0d6efd; }
+        #mainContent { margin-left: 0; transition: 0.3s; padding: 20px; }
+        #mainContent.shift { margin-left: 250px; }
+        .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-4">
+    <button class="btn btn-outline-light" onclick="toggleSidebar()">☰</button>
+    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
+    <div class="ms-auto text-white">
+        {{ current_user.username }} ({{ current_user.role }})
+        <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
+    </div>
+</nav>
+
+<div id="sidebar">
+    <a href="/dashboard">🏠 Dashboard</a>
+    <a href="/semua_izin">📋 Semua Izin</a>
+    <a href="/approval">⏳ Pending</a>
+    <a href="/form_izin">➕ Ajukan Izin</a>
+    <a href="/manage_users">👥 Manajemen User</a>
+    <a href="/manage_quota">🗂️ Kuota Cuti</a>
+</div>
+
+<div id="mainContent" class="container-fluid mt-4 px-4">
+    <h4 class="fw-bold"><i class="bi bi-pie-chart"></i> Manajemen Kuota Cuti Tahunan</h4>
+    <div class="card p-3 mt-3">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-dark">
+                    <tr><th>ID</th><th>Username</th><th>Divisi</th><th>Kuota (hari)</th><th>Sisa Cuti</th><th>Aksi</th></tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.username }}</td>
+                        <td>{{ u.divisi }}</td>
+                        <td>{{ u.kuota }}</td>
+                        <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning{% else %}text-success{% endif %}">
+                            {{ u.sisa }}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ u.id }}">Edit Kuota</button>
+                        </td>
+                    </tr>
+                    <!-- Modal Edit -->
+                    <div class="modal fade" id="editModal{{ u.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="/update_quota/{{ u.id }}" method="POST">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Edit Kuota - {{ u.username }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <label class="form-label">Kuota Cuti (hari/tahun)</label>
+                                        <input type="number" name="kuota" class="form-control" value="{{ u.kuota }}" required>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-primary">Simpan</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("active");
+    document.getElementById("mainContent").classList.toggle("shift");
+}
+</script>
+</body>
+</html>

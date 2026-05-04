@@ -16,30 +16,23 @@
         <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
     </div>
 </nav>
-<div class="container mt-4">
-    <div class="row mb-4 mt-3">
+<div class="row mb-4 mt-3">
     <div class="col-md-4">
         <div class="card p-3 text-center shadow-sm fade-in">
             <h6>Total Izin</h6>
             <h3>{{ data|length }}</h3>
         </div>
     </div>
-
+    <div class="col-md-4">
+        <div class="card p-3 text-center shadow-sm fade-in">
+            <h6>Sisa Cuti Tahun Ini</h6>
+            <h3 class="text-primary">{{ sisa_cuti }}</h3>
+        </div>
+    </div>
     <div class="col-md-4">
         <div class="card p-3 text-center shadow-sm fade-in">
             <h6>Pending</h6>
-            <h3>
-                {{ data | selectattr('status','equalto','pending') | list | length }}
-            </h3>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card p-3 text-center shadow-sm fade-in">
-            <h6>Approved</h6>
-            <h3>
-                {{ data | selectattr('status','equalto','approved') | list | length }}
-            </h3>
+            <h3>{{ data | selectattr('status','equalto','pending') | list | length }}</h3>
         </div>
     </div>
 </div>
