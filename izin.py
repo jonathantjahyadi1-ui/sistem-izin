@@ -186,11 +186,12 @@ def dashboard():
 
     if user.role == 'karyawan':
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
-        sisa_cuti = get_sisa_cuti(user)   # <--- hitung sisa cuti
+        sisa_cuti = get_sisa_cuti(user)
         return render_template('dashboard_user.html', data=data, user=user, sisa_cuti=sisa_cuti)
 
     # ADMIN / HRD / DIREKTUR
     data = LeaveRequest.query.all()
+    sisa_cuti_pribadi = get_sisa_cuti(user)   # <--- DITAMBAHKAN
     jenis_data = db.session.query(
         LeaveRequest.jenis_izin,
         func.count(LeaveRequest.id)
@@ -202,6 +203,7 @@ def dashboard():
         'dashboard_admin.html',
         data=data,
         user=user,
+        sisa_cuti_pribadi=sisa_cuti_pribadi,
         total=LeaveRequest.query.count(),
         pending=LeaveRequest.query.filter_by(status='pending').count(),
         approved=LeaveRequest.query.filter_by(status='approved').count(),
@@ -418,7 +420,7 @@ def manage_quota():
     if user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
     # Tampilkan semua user dengan role karyawan
-    users = User.query.filter(User.role == 'karyawan').all()
+    users = User.query.filter(User.role != 'direktur').all()
     user_data = []
     for u in users:
         user_data.append({
