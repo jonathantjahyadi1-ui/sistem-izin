@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- HARDCODE CSS SIDEBAR -->
     <style>
         body {
             background: #f4f6f9;
@@ -63,13 +62,12 @@
         }
     </style>
 </head>
-
 <body>
 
 <!-- NAVBAR -->
 <nav class="navbar navbar-dark bg-dark px-4">
     <button class="btn btn-outline-light" onclick="toggleSidebar()">☰</button>
-    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
+    <span class="navbar-brand ms-2 fw-bold">Sistem Izin & Kehadiran</span>
     <div class="ms-auto text-white">
         {{ user.username }} ({{ user.role }})
         <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
@@ -80,6 +78,7 @@
 <div id="sidebar">
     <a href="/dashboard">🏠 Dashboard</a>
     <a href="/semua_izin">📋 Semua Izin</a>
+    <a href="/approval">⏳ Pending</a>
     <a href="/form_izin">➕ Ajukan Izin</a>
     {% if user.role == 'admin' %}
     <a href="/manage_users">👥 Manajemen User</a>
@@ -102,10 +101,11 @@
         </div>
     </div>
 
+    <!-- Kartu statistik izin -->
     <div class="row mb-4">
         <div class="col-md-3 mb-2">
             <div class="card p-3 text-center">
-                <h6>Total</h6>
+                <h6>Total Izin</h6>
                 <h3 class="text-primary">{{ total }}</h3>
             </div>
         </div>
@@ -128,17 +128,85 @@
             </div>
         </div>
     </div>
+
+    <!-- Sisa cuti pribadi -->
     <div class="row mb-4">
-    <div class="col-md-4 offset-md-4">
-        <div class="card p-3 text-center bg-light border-info">
-            <h6><i class="bi bi-calendar-check"></i> Sisa Cuti (Anda)</h6>
-            <h3 class="text-info">{{ sisa_cuti_pribadi }} hari</h3>
+        <div class="col-md-4 offset-md-4">
+            <div class="card p-3 text-center bg-light">
+                <h6><i class="bi bi-calendar-check"></i> Sisa Cuti (Anda)</h6>
+                <h3 class="text-info">{{ sisa_cuti_pribadi }} hari</h3>
+            </div>
         </div>
     </div>
-</div>
 
-    
+    <!-- Tabel Kehadiran Karyawan -->
+    <div class="card p-3 mb-4">
+        <h5><i class="bi bi-calendar-check"></i> Rekap Kehadiran Karyawan - 
+            Bulan {{ bulan_selected }}/{{ tahun_selected }}
+        </h5>
+        <form method="GET" action="/dashboard" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <select name="bulan" class="form-control">
+                    {% for b in range(1,13) %}
+                    <option value="{{ b }}" {% if b == bulan_selected %}selected{% endif %}>{{ b }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="tahun" class="form-control">
+                    {% for y in [2023,2024,2025,2026] %}
+                    <option value="{{ y }}" {% if y == tahun_selected %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="divisi" class="form-control">
+                    <option value="">Semua Divisi</option>
+                    <option value="Marketing" {% if divisi_selected=='Marketing' %}selected{% endif %}>Marketing</option>
+                    <option value="Operational" {% if divisi_selected=='Operational' %}selected{% endif %}>Operational</option>
+                    <option value="Hostlive" {% if divisi_selected=='Hostlive' %}selected{% endif %}>Hostlive</option>
+                    <option value="Creative" {% if divisi_selected=='Creative' %}selected{% endif %}>Creative</option>
+                    <option value="Accounting" {% if divisi_selected=='Accounting' %}selected{% endif %}>Accounting</option>
+                    <option value="IT Support" {% if divisi_selected=='IT Support' %}selected{% endif %}>IT Support</option>
+                    <option value="HRD" {% if divisi_selected=='HRD' %}selected{% endif %}>HRD</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr><th>Nama</th><th>Divisi</th><th>Target Hari Kerja</th><th>Hari Izin (Approved)</th><th>Kehadiran Aktual</th><th>%</th></tr>
+                </thead>
+                <tbody>
+                    {% for k in data_kehadiran %}
+                    <tr>
+                        <td>{{ k.username }}</td>
+                        <td>{{ k.divisi }}</td>
+                        <td>{{ k.target }}</td>
+                        <td>{{ k.izin }}</td>
+                        <td class="{% if k.hadir < 0 %}text-danger{% else %}text-success{% endif %}">{{ k.hadir }}</td>
+                        <td>{% if k.target > 0 %}{{ (k.hadir / k.target * 100) | round(1) }}%{% else %}0%{% endif %}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6">Tidak ada data karyawan</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
+    <!-- Grafik Kehadiran per Divisi -->
+    <div class="card p-3 mb-4">
+        <h5><i class="bi bi-bar-chart-steps"></i> Rata-rata Kehadiran per Divisi ({{ bulan_selected }}/{{ tahun_selected }})</h5>
+        <div style="height: 400px;">
+            <canvas id="kehadiranChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Grafik Jenis Izin -->
     <div class="card p-3 mb-4">
         <h5>Statistik Jenis Izin</h5>
         <div style="height: 300px;">
@@ -146,59 +214,61 @@
         </div>
     </div>
 
+    <!-- Daftar Izin -->
     <div class="card p-3">
         <h5>Daftar Izin</h5>
-        <table class="table table-hover">
-    <thead class="table-dark">
-        <tr>
-            <th>Jenis</th>
-            <th>ID</th>
-            <th>Pengaju</th>   <!-- baru -->
-            <th>Status</th>
-            <th>File</th>
-            <th>Aksi</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for i in data %}
-        <tr>
-            <td>{{ i.jenis_izin }}</td>
-            <td>{{ i.id }}</td>
-            <td>{{ get_user(i.user_id).username if get_user(i.user_id) else '-' }}</td>   <!-- baru -->
-            <td>
-                {% if i.status == 'pending' %}
-                    <span class="badge bg-warning">Pending</span>
-                {% elif i.status == 'approved' %}
-                    <span class="badge bg-success">Approved</span>
-                {% else %}
-                    <span class="badge bg-danger">Rejected</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if i.file_surat %}
-                    <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">Download</a>
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-            <td>
-                {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
-                    <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                        <button class="btn btn-success btn-sm">Approve</button>
-                    </form>
-                    <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                        <button class="btn btn-danger btn-sm">Reject</button>
-                    </form>
-                {% else %}
-                    <span class="text-muted">-</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Jenis</th>
+                        <th>ID</th>
+                        <th>Pengaju</th>
+                        <th>Status</th>
+                        <th>File</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in data %}
+                    <tr>
+                        <td>{{ i.jenis_izin }}</td>
+                        <td>{{ i.id }}</td>
+                        <td>{{ get_user(i.user_id).username if get_user(i.user_id) else '-' }}</td>
+                        <td>
+                            {% if i.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif i.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if i.file_surat %}
+                                <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">Download</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
+                                <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-success btn-sm">Approve</button>
+                                </form>
+                                <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
 </div>
 
 <script>
@@ -209,26 +279,61 @@ function toggleSidebar() {
 </script>
 
 <script>
+    // Chart Jenis Izin
     var jenisLabels = {{ jenis_labels | tojson }};
     var jenisValues = {{ jenis_values | tojson }};
+    var ctxJenis = document.getElementById('jenisChart');
+    if (ctxJenis) {
+        new Chart(ctxJenis, {
+            type: 'doughnut',
+            data: {
+                labels: jenisLabels,
+                datasets: [{
+                    data: jenisValues,
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 
-var ctx = document.getElementById('jenisChart');
-if (ctx) {
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: jenisLabels,
-            datasets: [{
-                data: jenisValues,
-                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-}
+    // Chart Kehadiran per Divisi
+    var divisiLabels = {{ stat_divisi | map(attribute='divisi') | list | tojson }};
+    var rataTarget = {{ stat_divisi | map(attribute='rata_target') | list | tojson }};
+    var rataHadir = {{ stat_divisi | map(attribute='rata_hadir') | list | tojson }};
+    var ctxHadir = document.getElementById('kehadiranChart');
+    if (ctxHadir) {
+        new Chart(ctxHadir, {
+            type: 'bar',
+            data: {
+                labels: divisiLabels,
+                datasets: [
+                    {
+                        label: 'Rata-rata Target Hari Kerja',
+                        data: rataTarget,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Rata-rata Kehadiran Aktual',
+                        data: rataHadir,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Hari' } },
+                    x: { title: { display: true, text: 'Divisi' } }
+                }
+            }
+        });
+    }
 </script>
 
 </body>

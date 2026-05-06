@@ -6,6 +6,8 @@ from datetime import datetime
 from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from calendar import monthrange
+from datetime import date, timedelta
 from sqlalchemy import func, extract   # <--- tambahkan extract
 
 # =========================
@@ -96,6 +98,118 @@ def get_sisa_cuti(user):
     total_dipakai = get_total_cuti_approved_this_year(user.id)
     return user.kuota_cuti - total_dipakai
 
+# =========================
+# FUNGSI KEHADIRAN
+# =========================
+
+def get_hari_kerja_dalam_bulan(tahun, bulan, divisi):
+    """Menghitung jumlah hari kerja dalam bulan tertentu berdasarkan divisi.
+       divisi: 'Operational' atau 'Hostlive' -> kerja Senin-Sabtu (6 hari/minggu)
+               lainnya -> kerja Senin-Jumat (5 hari/minggu)
+    """
+    jumlah_hari = monthrange(tahun, bulan)[1]
+    hari_kerja = 0
+    for hari in range(1, jumlah_hari+1):
+        tgl = date(tahun, bulan, hari)
+        if tgl.weekday() == 6:  # Minggu
+            continue
+        if divisi not in ['Operational', 'Hostlive'] and tgl.weekday() == 5:  # Sabtu
+            continue
+        hari_kerja += 1
+    return hari_kerja
+
+def get_total_hari_izin_approved_per_bulan(user_id, tahun, bulan):
+    """Menghitung total hari izin (cuti, sakit, izin_lain) yang approved dan jatuh pada hari kerja di bulan tertentu.
+       Tidak double count jika ada izin yang overlapping (missal cuti 3 hari tapi bertabrakan dengan sakit? Tidak mungkin karena user hanya punya satu izin per hari? Asumsi tidak double count).
+       Mengembalikan jumlah hari kerja yang terpengaruh izin.
+    """
+    mulai = date(tahun, bulan, 1)
+    selesai = date(tahun, bulan, monthrange(tahun, bulan)[1])
+    izin = LeaveRequest.query.filter(
+        LeaveRequest.user_id == user_id,
+        LeaveRequest.status == 'approved',
+        LeaveRequest.tanggal_mulai <= selesai,
+        LeaveRequest.tanggal_selesai >= mulai
+    ).all()
+    # Kumpulkan semua tanggal yang terkena izin (dalam rentang bulan)
+    tanggal_izin = set()
+    for i in izin:
+        tgl_mulai = max(i.tanggal_mulai, mulai)
+        tgl_selesai = min(i.tanggal_selesai, selesai)
+        delta = (tgl_selesai - tgl_mulai).days + 1
+        for d in range(delta):
+            tgl = tgl_mulai + timedelta(days=d)
+            tanggal_izin.add(tgl)
+    # Filter hanya hari kerja sesuai divisi user
+    user = User.query.get(user_id)
+    if not user:
+        return 0
+    divisi = user.divisi
+    total_hari_izin = 0
+    for tgl in tanggal_izin:
+        if tgl.weekday() == 6:  # Minggu
+            continue
+        if divisi not in ['Operational', 'Hostlive'] and tgl.weekday() == 5:  # Sabtu
+            continue
+        total_hari_izin += 1
+    return total_hari_izin
+
+def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
+    """Mengembalikan list data kehadiran untuk semua karyawan (bisa difilter divisi).
+       Setiap item: {user_id, username, divisi, target, izin, hadir}
+    """
+    if tahun is None:
+        tahun = datetime.now().year
+    if bulan is None:
+        bulan = datetime.now().month
+    
+    query = User.query.filter(User.role == 'karyawan')  # hanya karyawan, bukan admin/hrd/direktur? Atau semua? Sesuai permintaan: semua user kecuali direktur? Kita tampilkan semua user yang memiliki role karyawan. Untuk admin/HRD, mereka juga punya kehadiran? Bisa ditampilkan juga.
+    # Agar lebih rapi, tampilkan semua user yang bukan 'direktur'? Atau hanya 'karyawan'? Saya asumsikan hanya karyawan.
+    if divisi_filter:
+        query = query.filter(User.divisi == divisi_filter)
+    users = query.all()
+    data = []
+    for u in users:
+        target = get_hari_kerja_dalam_bulan(tahun, bulan, u.divisi)
+        izin_hari = get_total_hari_izin_approved_per_bulan(u.id, tahun, bulan)
+        hadir = target - izin_hari
+        data.append({
+            'user_id': u.id,
+            'username': u.username,
+            'divisi': u.divisi,
+            'target': target,
+            'izin': izin_hari,
+            'hadir': hadir
+        })
+    return data
+
+def get_statistik_divisi(tahun=None, bulan=None):
+    """Menghitung rata-rata kehadiran per divisi (hanya untuk karyawan)."""
+    if tahun is None:
+        tahun = datetime.now().year
+    if bulan is None:
+        bulan = datetime.now().month
+    divisi_list = ['Marketing', 'Operational', 'Hostlive', 'Creative', 'Accounting', 'IT Support', 'HRD']
+    stat = []
+    for divisi in divisi_list:
+        users = User.query.filter(User.role == 'karyawan', User.divisi == divisi).all()
+        if not users:
+            continue
+        total_target = 0
+        total_hadir = 0
+        for u in users:
+            target = get_hari_kerja_dalam_bulan(tahun, bulan, divisi)
+            izin_hari = get_total_hari_izin_approved_per_bulan(u.id, tahun, bulan)
+            hadir = target - izin_hari
+            total_target += target
+            total_hadir += hadir
+        stat.append({
+            'divisi': divisi,
+            'rata_target': round(total_target / len(users), 1),
+            'rata_hadir': round(total_hadir / len(users), 1),
+            'persen': round((total_hadir / total_target) * 100 if total_target > 0 else 0, 1)
+        })
+    return stat
 # =========================
 # AUTO CREATE TABLE & SEEDER
 # =========================
@@ -190,8 +304,16 @@ def dashboard():
         return render_template('dashboard_user.html', data=data, user=user, sisa_cuti=sisa_cuti)
 
     # ADMIN / HRD / DIREKTUR
-    data = LeaveRequest.query.all()
-    sisa_cuti_pribadi = get_sisa_cuti(user)   # <--- DITAMBAHKAN
+    # Filter kehadiran dari request args
+    divisi_filter = request.args.get('divisi', '')
+    tahun_filter = int(request.args.get('tahun', datetime.now().year))
+    bulan_filter = int(request.args.get('bulan', datetime.now().month))
+    
+    data_kehadiran = get_data_kehadiran_per_bulan(tahun_filter, bulan_filter, divisi_filter if divisi_filter else None)
+    stat_divisi = get_statistik_divisi(tahun_filter, bulan_filter)
+    
+    data_izin = LeaveRequest.query.all()
+    sisa_cuti_pribadi = get_sisa_cuti(user)
     jenis_data = db.session.query(
         LeaveRequest.jenis_izin,
         func.count(LeaveRequest.id)
@@ -201,7 +323,7 @@ def dashboard():
 
     return render_template(
         'dashboard_admin.html',
-        data=data,
+        data=data_izin,
         user=user,
         sisa_cuti_pribadi=sisa_cuti_pribadi,
         total=LeaveRequest.query.count(),
@@ -209,7 +331,12 @@ def dashboard():
         approved=LeaveRequest.query.filter_by(status='approved').count(),
         rejected=LeaveRequest.query.filter_by(status='rejected').count(),
         jenis_labels=jenis_labels,
-        jenis_values=jenis_values
+        jenis_values=jenis_values,
+        data_kehadiran=data_kehadiran,
+        stat_divisi=stat_divisi,
+        divisi_selected=divisi_filter,
+        bulan_selected=bulan_filter,
+        tahun_selected=tahun_filter
     )
 
 @app.route('/form_izin')
