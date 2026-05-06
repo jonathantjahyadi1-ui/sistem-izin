@@ -395,19 +395,47 @@ def semua_izin():
     if user.role not in ['admin', 'hrd', 'direktur']:
         return redirect('/dashboard')
     
+    # Ambil parameter filter
     status_filter = request.args.get('status', '')
     jenis_filter = request.args.get('jenis', '')
-    search = request.args.get('search', '')
+    search = request.args.get('search', '')          # untuk alasan
+    divisi_filter = request.args.get('divisi', '')   # baru
+    nama_filter = request.args.get('nama', '')       # baru
+    
     query = LeaveRequest.query
+    
     if status_filter:
         query = query.filter_by(status=status_filter)
     if jenis_filter:
         query = query.filter_by(jenis_izin=jenis_filter)
     if search:
         query = query.filter(LeaveRequest.alasan.ilike(f'%{search}%'))
+    
+    # Filter berdasarkan divisi (join dengan User)
+    if divisi_filter:
+        query = query.join(User, LeaveRequest.user_id == User.id).filter(User.divisi == divisi_filter)
+    
+    # Filter berdasarkan nama pengaju (username)
+    if nama_filter:
+        query = query.join(User, LeaveRequest.user_id == User.id).filter(User.username.ilike(f'%{nama_filter}%'))
+    
     data = query.order_by(LeaveRequest.created_at.desc()).all()
-    return render_template('semua_izin.html', data=data, user=user,
-                           status_filter=status_filter, jenis_filter=jenis_filter, search=search)
+    
+    # Kirim juga daftar divisi untuk dropdown
+    divisi_list = db.session.query(User.divisi).distinct().all()
+    divisi_list = [d[0] for d in divisi_list if d[0]]
+    
+    return render_template(
+        'semua_izin.html',
+        data=data,
+        user=user,
+        status_filter=status_filter,
+        jenis_filter=jenis_filter,
+        search=search,
+        divisi_filter=divisi_filter,
+        nama_filter=nama_filter,
+        divisi_list=divisi_list
+    )
 
 @app.route('/manage_users')
 def manage_users():

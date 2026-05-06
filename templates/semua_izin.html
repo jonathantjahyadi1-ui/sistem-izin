@@ -46,33 +46,47 @@
     
     <!-- FILTER -->
     <div class="card p-3 mb-4">
-        <form method="GET" action="/semua_izin" class="row g-2">
-            <div class="col-md-3">
-                <input type="text" name="search" class="form-control" placeholder="🔍 Cari alasan..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-control">
-                    <option value="">Semua Status</option>
-                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="jenis" class="form-control">
-                    <option value="">Semua Jenis</option>
-                    <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
-                    <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Filter</button>
-            </div>
-            <div class="col-md-2">
-                <a href="/semua_izin" class="btn btn-secondary w-100">Reset</a>
-            </div>
-        </form>
-    </div>
+    <form method="GET" action="/semua_izin" class="row g-2">
+        <div class="col-md-3">
+            <input type="text" name="search" class="form-control" placeholder="🔍 Cari alasan..." value="{{ search }}">
+        </div>
+        <div class="col-md-2">
+            <select name="status" class="form-control">
+                <option value="">Semua Status</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="jenis" class="form-control">
+                <option value="">Semua Jenis</option>
+                <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
+                <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
+                <option value="izin_lain" {% if jenis_filter == 'izin_lain' %}selected{% endif %}>Izin Lainnya</option>
+            </select>
+        </div>
+        <!-- FILTER DIVISI (baru) -->
+        <div class="col-md-2">
+            <select name="divisi" class="form-control">
+                <option value="">Semua Divisi</option>
+                {% for d in divisi_list %}
+                <option value="{{ d }}" {% if divisi_filter == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <!-- FILTER NAMA PENGAJU (baru) -->
+        <div class="col-md-3">
+            <input type="text" name="nama" class="form-control" placeholder="🔍 Nama pengaju..." value="{{ nama_filter }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+        <div class="col-md-2">
+            <a href="/semua_izin" class="btn btn-secondary w-100">Reset</a>
+        </div>
+    </form>
+</div>
     
     <!-- TABLE -->
     <div class="card p-3">
