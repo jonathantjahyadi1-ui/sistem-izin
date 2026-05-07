@@ -3,166 +3,191 @@
 <head>
     <title>Semua Izin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Poppins Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #f4f6f9; padding-top: 56px; }
-        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; }
-        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px); background: #212529; transition: 0.3s; z-index: 999; padding-top: 10px; }
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        :root {
+            --primary: #5b86e5;
+            --secondary: #36d1dc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #6b7280;
+        }
+        body { background: #f8fafc; padding-top: 56px; }
+        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important; }
+        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px); background: white; transition: 0.3s; z-index: 999; padding-top: 20px; box-shadow: 4px 0 12px rgba(0,0,0,0.08); }
         #sidebar.active { left: 0; }
-        #sidebar a { display: block; color: white; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        #sidebar a:hover { background: #0d6efd; }
+        #sidebar a { display: block; color: var(--dark); padding: 12px 20px; text-decoration: none; border-left: 4px solid transparent; margin: 5px 0; transition: all 0.2s ease; }
+        #sidebar a:hover { background: var(--light); border-left-color: var(--primary); color: var(--primary); }
         #mainContent { margin-left: 0; transition: 0.3s; padding: 20px; }
         #mainContent.shift { margin-left: 250px; }
-        .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .table thead { background: #212529; color: white; }
+        .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .table thead { background: var(--light); }
+        .badge {
+            padding: 6px 12px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .badge.bg-warning {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+        .badge.bg-success {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+        }
+        .badge.bg-danger {
+            background: #fee2e2 !important;
+            color: #7f1d1d !important;
+        }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark bg-dark px-4">
-    <button class="btn btn-outline-light" onclick="toggleSidebar()">☰</button>
+<nav class="navbar navbar-dark px-4">
+    <button class="btn btn-light btn-sm" onclick="toggleSidebar()">☰</button>
     <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
     <div class="ms-auto text-white">
         {{ user.username }} ({{ user.role }})
-        <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
+        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
     </div>
 </nav>
 
 <div id="sidebar">
-    <a href="/dashboard">🏠 Dashboard</a>
-    <a href="/semua_izin">📋 Semua Izin</a>
-    <a href="/approval">⏳ Pending</a>
-    <a href="/semua_izin?status=approved">✅ Approved</a>
-    <a href="/semua_izin?status=rejected">❌ Rejected</a>
-    <a href="/form_izin">➕ Ajukan Izin</a>
+    <a href="/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
+    <a href="/semua_izin"><i class="bi bi-list-check"></i> Semua Izin</a>
+    <a href="/approval"><i class="bi bi-hourglass-split"></i> Pending</a>
+    <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
     {% if user.role == 'admin' %}
-    <a href="/manage_users">👥 Manajemen User</a>
+    <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
     {% endif %}
 </div>
 
 <div id="mainContent" class="container-fluid mt-4 px-4">
     
-    <h4 class="fw-bold mb-3"><i class="bi bi-list-ul"></i> Semua Pengajuan Izin</h4>
+    <h4 class="fw-bold mb-4"><i class="bi bi-list-ul"></i> Semua Pengajuan Izin</h4>
     
     <!-- FILTER -->
-    <div class="card p-3 mb-4">
-    <form method="GET" action="/semua_izin" class="row g-2">
-        <div class="col-md-3">
-            <input type="text" name="search" class="form-control" placeholder="🔍 Cari alasan..." value="{{ search }}">
-        </div>
-        <div class="col-md-2">
-            <select name="status" class="form-control">
-                <option value="">Semua Status</option>
-                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <select name="jenis" class="form-control">
-                <option value="">Semua Jenis</option>
-                <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
-                <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
-                <option value="izin_lain" {% if jenis_filter == 'izin_lain' %}selected{% endif %}>Izin Lainnya</option>
-            </select>
-        </div>
-        <!-- FILTER DIVISI (baru) -->
-        <div class="col-md-2">
-            <select name="divisi" class="form-control">
-                <option value="">Semua Divisi</option>
-                {% for d in divisi_list %}
-                <option value="{{ d }}" {% if divisi_filter == d %}selected{% endif %}>{{ d }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <!-- FILTER NAMA PENGAJU (baru) -->
-        <div class="col-md-3">
-            <input type="text" name="nama" class="form-control" placeholder="🔍 Nama pengaju..." value="{{ nama_filter }}">
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Filter</button>
-        </div>
-        <div class="col-md-2">
-            <a href="/semua_izin" class="btn btn-secondary w-100">Reset</a>
-        </div>
-    </form>
-</div>
+    <div class="card p-4 mb-4">
+        <form method="GET" action="/semua_izin" class="row g-2">
+            <div class="col-md-2">
+                <input type="text" name="search" class="form-control" placeholder="🔍 Cari alasan..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-control">
+                    <option value="">Semua Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="jenis" class="form-control">
+                    <option value="">Semua Jenis</option>
+                    <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
+                    <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
+                    <option value="izin_lain" {% if jenis_filter == 'izin_lain' %}selected{% endif %}>Izin Lain</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="divisi" class="form-control">
+                    <option value="">Semua Divisi</option>
+                    {% for d in divisi_list %}
+                    <option value="{{ d }}" {% if divisi_filter == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="nama" class="form-control" placeholder="🔍 Nama pengaju..." value="{{ nama_filter }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+            <div class="col-md-2">
+                <a href="/semua_izin" class="btn btn-secondary w-100">Reset</a>
+            </div>
+        </form>
+    </div>
     
     <!-- TABLE -->
-    <div class="card p-3">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Pengaju</th>
-                    <th>Surat Sakit</th>
-                    <th>Bukti Chat</th> 
-                    <th>Jenis</th>
-                    <th>Tanggal</th>
-                    <th>Durasi</th>
-                    <th>Alasan</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-{% for i in data %}
-    {% set pengaju = get_user(i.user_id) %}
-    <tr>
-        <td>{{ i.id }}</td>
-        <td>{{ pengaju.username if pengaju else '-' }}</td>
-
-        <!-- SURAT SAKIT -->
-        <td>
-            {% if i.file_surat %}
-                <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">Download</a>
-            {% else %}
-                -
-            {% endif %}
-        </td>
-
-        <!-- BUKTI CHAT (BARU) -->
-        <td>
-            {% if i.file_chat %}
-                <a href="/download/{{ i.file_chat }}" class="btn btn-sm btn-info">Download</a>
-            {% else %}
-                -
-            {% endif %}
-        </td>
-
-        <td>{{ i.jenis_izin }}</td>
-        <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
-        <td>{{ i.durasi }} hari</td>
-        <td>{{ i.alasan[:30] }}{% if i.alasan|length > 30 %}...{% endif %}</td>
-
-        <!-- STATUS -->
-        <td>
-            {% if i.status == 'pending' %}
-                <span class="badge bg-warning">Pending</span>
-            {% elif i.status == 'approved' %}
-                <span class="badge bg-success">Approved</span>
-            {% else %}
-                <span class="badge bg-danger">Rejected</span>
-            {% endif %}
-        </td>
-
-        <!-- AKSI -->
-        <td>
-            {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
-                <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                    <button class="btn btn-success btn-sm">Approve</button>
-                </form>
-                <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                    <button class="btn btn-danger btn-sm">Reject</button>
-                </form>
-            {% else %}
-                <span class="text-muted">-</span>
-            {% endif %}
-        </td>
-    </tr>
-{% endfor %}
-</tbody>
-        </table>
+    <div class="card p-4">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Pengaju</th>
+                        <th>Surat</th>
+                        <th>Chat</th>
+                        <th>Jenis</th>
+                        <th>Tanggal</th>
+                        <th>Durasi</th>
+                        <th>Alasan</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in data %}
+                    {% set pengaju = get_user(i.user_id) %}
+                    <tr>
+                        <td><strong>#{{ i.id }}</strong></td>
+                        <td>{{ pengaju.username if pengaju else '-' }}</td>
+                        <td>
+                            {% if i.file_surat %}
+                                <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">📄 DL</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if i.file_chat %}
+                                <a href="/download/{{ i.file_chat }}" class="btn btn-sm btn-info">💬 DL</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ i.jenis_izin }}</td>
+                        <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
+                        <td>{{ i.durasi }} hari</td>
+                        <td>{{ i.alasan[:30] }}{% if i.alasan|length > 30 %}...{% endif %}</td>
+                        <td>
+                            {% if i.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif i.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.role in ['admin','hrd','direktur'] and i.status == 'pending' %}
+                                <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-success btn-sm">✓</button>
+                                </form>
+                                <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm">✕</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

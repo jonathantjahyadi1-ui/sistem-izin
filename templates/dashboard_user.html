@@ -3,10 +3,29 @@
 <head>
     <title>Dashboard Karyawan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Poppins Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
     <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        :root {
+            --primary: #5b86e5;
+            --secondary: #36d1dc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #6b7280;
+        }
+        
         body {
-            background: #f4f6f9;
+            background: #f8fafc;
             padding-top: 56px;
             margin: 0;
         }
@@ -16,6 +35,8 @@
             left: 0;
             width: 100%;
             z-index: 1000;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         #sidebar {
             position: fixed;
@@ -23,103 +44,140 @@
             left: -250px;
             width: 250px;
             height: calc(100vh - 56px);
-            background: #212529;
+            background: white;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.08);
             transition: left 0.3s ease;
             z-index: 999;
             padding-top: 20px;
+            overflow-y: auto;
         }
         #sidebar.active {
             left: 0;
         }
         #sidebar a {
             display: block;
-            color: white;
-            padding: 12px 20px;
+            color: var(--dark);
+            padding: 14px 20px;
             text-decoration: none;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-left: 4px solid transparent;
+            margin: 5px 0;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.95rem;
         }
         #sidebar a:hover {
-            background: #0d6efd;
+            background: var(--light);
+            border-left-color: var(--primary);
+            padding-left: 24px;
+            color: var(--primary);
         }
         #mainContent {
             margin-left: 0;
             transition: margin-left 0.3s ease;
-            padding: 20px;
+            padding: 30px 20px;
         }
         #mainContent.shift {
             margin-left: 250px;
         }
         .card {
-            border-radius: 10px;
             border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
         .table thead {
-            background: #212529;
-            color: white;
+            background: var(--light);
+        }
+        .badge {
+            padding: 6px 12px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .badge.bg-warning {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+        .badge.bg-success {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+        }
+        .badge.bg-danger {
+            background: #fee2e2 !important;
+            color: #7f1d1d !important;
         }
     </style>
 </head>
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar navbar-dark bg-dark px-4">
-    <button class="btn btn-outline-light" onclick="toggleSidebar()">☰</button>
-    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
-    <div class="ms-auto text-white">
-        {{ user.username }} ({{ user.role }})
-        <a href="/logout" class="btn btn-sm btn-danger ms-3">Logout</a>
+<nav class="navbar navbar-dark px-4">
+    <button class="btn btn-light btn-sm" onclick="toggleSidebar()">
+        <i class="bi bi-list"></i> Menu
+    </button>
+    <span class="navbar-brand ms-2 fw-bold">📋 Dashboard Karyawan</span>
+    <div class="ms-auto text-white" style="display: flex; align-items: center; gap: 15px;">
+        <div style="font-size: 0.9rem;">
+            <strong>{{ user.username }}</strong><br>
+            <small>{{ user.role | upper }}</small>
+        </div>
+        <a href="/logout" class="btn btn-light btn-sm">Logout</a>
     </div>
 </nav>
 
 <!-- SIDEBAR -->
 <div id="sidebar">
-    <a href="/dashboard">🏠 Dashboard</a>
-    <a href="/form_izin">➕ Ajukan Izin</a>
+    <a href="/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
+    <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
 </div>
 
 <!-- CONTENT -->
 <div id="mainContent" class="container-fluid mt-4 px-4">
     
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold"><i class="bi bi-speedometer2"></i> Dashboard Karyawan</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold"><i class="bi bi-speedometer2"></i> Dashboard Karyawan</h3>
         <a href="/form_izin" class="btn btn-primary btn-sm">+ Ajukan Izin</a>
     </div>
 
     <!-- STATISTICS CARDS -->
     <div class="row mb-4">
         <div class="col-md-3 mb-2">
-            <div class="card p-3 text-center">
-                <h6>Total Izin</h6>
-                <h3 class="text-primary">{{ data|length }}</h3>
+            <div class="card p-4 text-center">
+                <h6 style="color: var(--gray); font-weight: 600; text-transform: uppercase;">Total Izin</h6>
+                <h3 class="text-primary fw-bold">{{ data|length }}</h3>
             </div>
         </div>
         <div class="col-md-3 mb-2">
-            <div class="card p-3 text-center">
-                <h6>Sisa Cuti</h6>
-                <h3 class="text-success">{{ sisa_cuti }}</h3>
+            <div class="card p-4 text-center">
+                <h6 style="color: var(--gray); font-weight: 600; text-transform: uppercase;">Sisa Cuti</h6>
+                <h3 class="text-success fw-bold">{{ sisa_cuti }}</h3>
             </div>
         </div>
         <div class="col-md-3 mb-2">
-            <div class="card p-3 text-center">
-                <h6>Pending</h6>
-                <h3 class="text-warning">{{ data | selectattr('status','equalto','pending') | list | length }}</h3>
+            <div class="card p-4 text-center">
+                <h6 style="color: var(--gray); font-weight: 600; text-transform: uppercase;">Pending</h6>
+                <h3 class="text-warning fw-bold">{{ data | selectattr('status','equalto','pending') | list | length }}</h3>
             </div>
         </div>
         <div class="col-md-3 mb-2">
-            <div class="card p-3 text-center">
-                <h6>Approved</h6>
-                <h3 class="text-success">{{ data | selectattr('status','equalto','approved') | list | length }}</h3>
+            <div class="card p-4 text-center">
+                <h6 style="color: var(--gray); font-weight: 600; text-transform: uppercase;">Approved</h6>
+                <h3 class="text-success fw-bold">{{ data | selectattr('status','equalto','approved') | list | length }}</h3>
             </div>
         </div>
     </div>
 
     <!-- RIWAYAT IZIN -->
-    <div class="card p-3">
-        <h5><i class="bi bi-clock-history"></i> Riwayat Izin</h5>
+    <div class="card p-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-clock-history"></i> Riwayat Izin</h5>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
-                <thead class="table-dark">
+                <thead>
                     <tr>
                         <th>Jenis</th>
                         <th>Tanggal Mulai</th>
@@ -133,7 +191,7 @@
                 <tbody>
                     {% for i in data %}
                     <tr>
-                        <td>{{ i.jenis_izin }}</td>
+                        <td><strong>{{ i.jenis_izin }}</strong></td>
                         <td>{{ i.tanggal_mulai.strftime('%d/%m/%Y') if i.tanggal_mulai else '-' }}</td>
                         <td>{{ i.tanggal_selesai.strftime('%d/%m/%Y') if i.tanggal_selesai else '-' }}</td>
                         <td>{{ i.durasi }} hari</td>
@@ -158,7 +216,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Belum ada pengajuan izin.</td>
+                        <td colspan="7" class="text-center text-muted py-4">📭 Belum ada pengajuan izin</td>
                     </tr>
                     {% endfor %}
                 </tbody>
