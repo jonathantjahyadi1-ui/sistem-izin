@@ -312,7 +312,7 @@
     <a href="/semua_izin"><i class="bi bi-list-check"></i> Semua Izin</a>
     <a href="/approval"><i class="bi bi-hourglass-split"></i> Pending Approval</a>
     <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
-    {% if user.role == 'admin', 'hrd', 'direktur' %}
+    {% if user.role in ['admin', 'hrd', 'direktur'] %}
     <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
     <a href="/manage_quota"><i class="bi bi-calendar-check"></i> Kuota Cuti</a>
     {% endif %}
@@ -428,53 +428,55 @@
     </div>
 
     <!-- TABLE KEHADIRAN -->
-    <div class="card p-4 mb-4">
-        <h5 class="section-title"><i class="bi bi-table"></i> Data Kehadiran</h5>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Nama</th>
-                        <th>Divisi</th>
-                        <th>Target Hari Kerja</th>
-                        <th>Hari Izin</th>
-                        <th>Kehadiran Aktual</th>
-                        <th>Persentase</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for k in data_kehadiran %}
-                    <tr>
-                        <td><strong>{{ k.username }}</strong></td>
-                        <td><span class="badge" style="background: var(--light); color: var(--dark);">{{ k.divisi }}</span></td>
-                        <td>{{ k.target }} hari</td>
-                        <td><span class="badge bg-warning">{{ k.izin }} hari</span></td>
-                        <td>
-                            {% if k.hadir < 0 %}
-                                <span class="badge bg-danger">{{ k.hadir }} hari</span>
-                            {% else %}
-                                <span class="badge bg-success">{{ k.hadir }} hari</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if k.target > 0 %}
-                                <strong>{{ (k.hadir / k.target * 100) | round(1) }}%</strong>
-                            {% else %}
-                                0%
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            📭 Tidak ada data karyawan untuk periode ini
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<div class="card p-4 mb-4">
+    <h5 class="section-title"><i class="bi bi-table"></i> Data Kehadiran</h5>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Divisi</th>
+                    <th>Target Hari Kerja</th>
+                    <th>Sakit</th>
+                    <th>Izin</th>
+                    <th>Kehadiran Aktual</th>
+                    <th>Persentase</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for k in data_kehadiran %}
+                <tr>
+                    <td><strong>{{ k.username }}</strong></td>
+                    <td><span class="badge" style="background: var(--light); color: var(--dark);">{{ k.divisi }}</span></td>
+                    <td>{{ k.target }} hari</td>
+                    <td><span class="badge bg-danger">{{ k.hari_sakit or 0 }} hari</span></td>
+                    <td><span class="badge bg-info">{{ k.hari_izin or 0 }} hari</span></td>
+                    <td>
+                        {% if k.hadir < 0 %}
+                            <span class="badge bg-danger">{{ k.hadir }} hari</span>
+                        {% else %}
+                            <span class="badge bg-success">{{ k.hadir }} hari</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if k.target > 0 %}
+                            <strong>{{ (k.hadir / k.target * 100) | round(1) }}%</strong>
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        📭 Tidak ada data karyawan untuk periode ini
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
 
     <!-- CHARTS ROW -->
     <div class="row mb-4">

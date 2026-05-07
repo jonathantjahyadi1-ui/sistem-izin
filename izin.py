@@ -154,34 +154,113 @@ def get_total_hari_izin_approved_per_bulan(user_id, tahun, bulan):
         total_hari_izin += 1
     return total_hari_izin
 
+def _hitung_hari_kerja_dari_set(tanggal_set, divisi):
+    """Hitung jumlah hari kerja dari set tanggal"""
+    hari_kerja = 0
+    for tgl in tanggal_set:
+        if tgl.weekday() == 6:  # Minggu
+            continue
+        if divisi not in ['Operational', 'Hostlive'] and tgl.weekday() == 5:  # Sabtu
+            continue
+        hari_kerja += 1
+    return hari_kerja
+
 def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
-    """Mengembalikan list data kehadiran untuk semua karyawan (bisa difilter divisi).
-       Setiap item: {user_id, username, divisi, target, izin, hadir}
+    """Mengembalikan list data kehadiran untuk semua karyawan.
+    Setiap item: {user_id, username, divisi, target, hari_sakit, hari_izin, hari_cuti, hadir}
     """
     if tahun is None:
         tahun = datetime.now().year
     if bulan is None:
         bulan = datetime.now().month
     
-    query = User.query.filter(User.role == 'karyawan')  # hanya karyawan, bukan admin/hrd/direktur? Atau semua? Sesuai permintaan: semua user kecuali direktur? Kita tampilkan semua user yang memiliki role karyawan. Untuk admin/HRD, mereka juga punya kehadiran? Bisa ditampilkan juga.
-    # Agar lebih rapi, tampilkan semua user yang bukan 'direktur'? Atau hanya 'karyawan'? Saya asumsikan hanya karyawan.
+    query = User.query.filter(User.role == 'karyawan')
     if divisi_filter:
         query = query.filter(User.divisi == divisi_filter)
     users = query.all()
     data = []
+    
     for u in users:
         target = get_hari_kerja_dalam_bulan(tahun, bulan, u.divisi)
-        izin_hari = get_total_hari_izin_approved_per_bulan(u.id, tahun, bulan)
-        hadir = target - izin_hari
+        
+        mulai = date(tahun, bulan, 1)
+        selesai = date(tahun, bulan, monthrange(tahun, bulan)[1])
+        
+        # ✅ HITUNG SAKIT
+        izin_sakit = LeaveRequest.query.filter(
+            LeaveRequest.user_id == u.id,
+            LeaveRequest.jenis_izin == 'sakit',
+            LeaveRequest.status == 'approved',
+            LeaveRequest.tanggal_mulai <= selesai,
+            LeaveRequest.tanggal_selesai >= mulai
+        ).all()
+        
+        tanggal_sakit = set()
+        for i in izin_sakit:
+            tgl_mulai = max(i.tanggal_mulai, mulai)
+            tgl_selesai = min(i.tanggal_selesai, selesai)
+            delta = (tgl_selesai - tgl_mulai).days + 1
+            for d in range(delta):
+                tgl = tgl_mulai + timedelta(days=d)
+                tanggal_sakit.add(tgl)
+        
+        hari_sakit = _hitung_hari_kerja_dari_set(tanggal_sakit, u.divisi)
+        
+        # ✅ HITUNG IZIN LAIN
+        izin_lain = LeaveRequest.query.filter(
+            LeaveRequest.user_id == u.id,
+            LeaveRequest.jenis_izin == 'izin_lain',
+            LeaveRequest.status == 'approved',
+            LeaveRequest.tanggal_mulai <= selesai,
+            LeaveRequest.tanggal_selesai >= mulai
+        ).all()
+        
+        tanggal_izin = set()
+        for i in izin_lain:
+            tgl_mulai = max(i.tanggal_mulai, mulai)
+            tgl_selesai = min(i.tanggal_selesai, selesai)
+            delta = (tgl_selesai - tgl_mulai).days + 1
+            for d in range(delta):
+                tgl = tgl_mulai + timedelta(days=d)
+                tanggal_izin.add(tgl)
+        
+        hari_izin = _hitung_hari_kerja_dari_set(tanggal_izin, u.divisi)
+        
+        # ✅ HITUNG CUTI (gak motong hari kerja, cuma informasi)
+        izin_cuti = LeaveRequest.query.filter(
+            LeaveRequest.user_id == u.id,
+            LeaveRequest.jenis_izin == 'cuti',
+            LeaveRequest.status == 'approved',
+            LeaveRequest.tanggal_mulai <= selesai,
+            LeaveRequest.tanggal_selesai >= mulai
+        ).all()
+        
+        tanggal_cuti = set()
+        for i in izin_cuti:
+            tgl_mulai = max(i.tanggal_mulai, mulai)
+            tgl_selesai = min(i.tanggal_selesai, selesai)
+            delta = (tgl_selesai - tgl_mulai).days + 1
+            for d in range(delta):
+                tgl = tgl_mulai + timedelta(days=d)
+                tanggal_cuti.add(tgl)
+        
+        hari_cuti = _hitung_hari_kerja_dari_set(tanggal_cuti, u.divisi)
+        
+        # ✅ KEHADIRAN = Target - (Sakit + Izin) --- CUTI TIDAK MENGURANGI
+        total_motong = hari_sakit + hari_izin
+        hadir = target - total_motong
+        
         data.append({
             'user_id': u.id,
             'username': u.username,
             'divisi': u.divisi,
             'target': target,
-            'izin': izin_hari,
+            'hari_sakit': hari_sakit,      # 🔴 Merah - motong hari kerja
+            'hari_izin': hari_izin,        # 🔵 Biru - motong hari kerja
             'hadir': hadir
         })
     return data
+
 
 def get_statistik_divisi(tahun=None, bulan=None):
     """Menghitung rata-rata kehadiran per divisi (hanya untuk karyawan)."""
