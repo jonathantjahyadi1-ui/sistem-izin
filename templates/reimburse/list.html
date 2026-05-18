@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reimburse - List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        :root { --primary: #5b86e5; --secondary: #36d1dc; }
+        body { background: #f8fafc; padding-top: 56px; }
+        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000;
+                  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important; }
+        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px);
+                   background: white; transition: 0.3s; z-index: 999; }
+        #sidebar.active { left: 0; }
+        #sidebar a { display: block; padding: 12px 20px; color: #1f2937; text-decoration: none; border-left: 4px solid transparent; }
+        #sidebar a:hover { background: #f9fafb; border-left-color: var(--primary); }
+        #mainContent { margin-left: 0; transition: 0.3s; padding: 20px; }
+        #mainContent.shift { margin-left: 250px; }
+        .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .collapse-trigger { cursor: pointer; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark px-4">
+    <button class="btn btn-light btn-sm" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+    <span class="navbar-brand ms-2">💰 Reimburse</span>
+    <div class="ms-auto text-white">
+        {{ user.username }} ({{ user.role }})
+        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
+    </div>
+</nav>
+
+<div id="sidebar">
+    <a href="/reimburse/list"><i class="bi bi-list-check"></i> Semua Pengajuan</a>
+    <a href="/reimburse/submit"><i class="bi bi-plus-circle"></i> Ajukan Reimburse</a>
+    <a href="/reimburse/archive"><i class="bi bi-archive"></i> Arsip</a>
+    <a href="/change_system"><i class="bi bi-arrow-left-right"></i> Ganti Sistem</a>
+</div>
+
+<div id="mainContent" class="container-fluid mt-4 px-4">
+    <h4 class="fw-bold"><i class="bi bi-cash-stack"></i> Pengajuan Reimburse Aktif</h4>
+
+    <div class="card p-4">
+        <table class="table">
+            <thead><tr><th>Pengaju</th><th>Tgl Ajuan</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                {% for r in data %}
+                {% set pengaju = get_user(r.user_id) %}
+                <tr>
+                    <td>{{ pengaju.username if pengaju else '-' }}</td>
+                    <td>{{ r.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        <span class="collapse-trigger text-primary" data-bs-toggle="collapse" data-bs-target="#detail{{ r.id }}">
+                            Rp {{ "{:,.0f}".format(r.total_amount) }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if r.status == 'submitted' %}
+                            <span class="badge bg-warning">Menunggu</span>
+                        {% else %}
+                            <span class="badge bg-success">Dibayar</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/reimburse/detail/{{ r.id }}" class="btn btn-sm btn-outline-primary">Detail</a>
+                    </td>
+                </tr>
+                <!-- Collapse detail ringkas -->
+                <tr class="collapse" id="detail{{ r.id }}">
+                    <td colspan="5">
+                        <div class="p-3 bg-light">
+                            <strong>Nota:</strong><br>
+                            {% if r.receipt_photo %}
+                                <img src="/uploads/{{ r.receipt_photo }}" style="max-height: 200px;" class="mb-2"><br>
+                            {% endif %}
+                            <strong>Items:</strong>
+                            <ul>
+                                {% for item in r.items %}
+                                    <li>{{ item.item_name }} - Rp {{ "{:,.0f}".format(item.price) }} x{{ item.qty }}</li>
+                                {% endfor %}
+                            </ul>
+                            <strong>Total: Rp {{ "{:,.0f}".format(r.total_amount) }}</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("active");
+    document.getElementById("mainContent").classList.toggle("shift");
+}
+</script>
+</body>
+</html>

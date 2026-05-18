@@ -4,18 +4,19 @@ import pandas as pd
 import io
 from datetime import datetime
 from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file
-from flask_sqlalchemy import SQLAlchemy
+from extensions import db
+from models import User, LeaveRequest
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
-from sqlalchemy import func, extract   # <--- tambahkan extract
+from sqlalchemy import func, extract
 
 # =========================
 # LOAD ENV
 # =========================
 if os.getenv("RENDER") is None:
     load_dotenv()
-    
+
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
@@ -23,9 +24,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# =========================
+# ================
 # DATABASE CONFIG
-# =========================
+# ================
 uri = os.getenv("DATABASE_URL")
 if not uri: 
     raise Exception("DATABASE_URL belum diset di environment!")
@@ -48,35 +49,9 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_recycle": 300,
 }
 
-db = SQLAlchemy(app)
+db.init_app(app)
 
-# =========================
-# MODEL USER
-# =========================
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(50), default='karyawan')
-    divisi = db.Column(db.String(50))
-    kuota_cuti = db.Column(db.Integer, default=12)   # tambahan
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-# =========================
-# MODEL IZIN
-# =========================
-class LeaveRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer)
-    jenis_izin = db.Column(db.String(50))
-    tanggal_mulai = db.Column(db.Date)
-    tanggal_selesai = db.Column(db.Date)
-    durasi = db.Column(db.Integer)
-    alasan = db.Column(db.Text)
-    file_surat = db.Column(db.String(255))
-    file_chat = db.Column(db.String(255))
-    status = db.Column(db.String(50), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # =========================
 # FUNGSI BANTU CUTI (diletakkan setelah model)
@@ -140,6 +115,7 @@ def get_total_hari_izin_approved_per_bulan(user_id, tahun, bulan):
         for d in range(delta):
             tgl = tgl_mulai + timedelta(days=d)
             tanggal_izin.add(tgl)
+
     # Filter hanya hari kerja sesuai divisi user
     user = User.query.get(user_id)
     if not user:
@@ -226,7 +202,7 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
         
         hari_izin = _hitung_hari_kerja_dari_set(tanggal_izin, u.divisi)
         
-        # ✅ HITUNG CUTI (gak motong hari kerja, cuma informasi)
+        #HITUNG CUTI (gak motong hari kerja, cuma informasi)
         izin_cuti = LeaveRequest.query.filter(
             LeaveRequest.user_id == u.id,
             LeaveRequest.jenis_izin == 'cuti',
@@ -246,7 +222,7 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
         
         hari_cuti = _hitung_hari_kerja_dari_set(tanggal_cuti, u.divisi)
         
-        # ✅ KEHADIRAN = Target - (Sakit + Izin) --- CUTI TIDAK MENGURANGI
+        #KEHADIRAN 
         total_motong = hari_sakit + hari_izin
         hadir = target - total_motong
         
@@ -289,13 +265,12 @@ def get_statistik_divisi(tahun=None, bulan=None):
             'persen': round((total_hadir / total_target) * 100 if total_target > 0 else 0, 1)
         })
     return stat
-# =========================
+# ==========================
 # AUTO CREATE TABLE & SEEDER
-# =========================
+# ==========================
 with app.app_context():
     db.create_all()
 
-    # Tambah kolom kuota_cuti jika belum ada (migrasi)
     inspector = db.inspect(db.engine)
     if 'kuota_cuti' not in [c['name'] for c in inspector.get_columns('user')]:
         with db.engine.connect() as conn:
@@ -334,9 +309,9 @@ with app.app_context():
 
     db.session.commit()
 
-# =========================
+# ========
 # ROUTES
-# =========================
+# ========
 @app.route('/')
 def index():
     return redirect('/login')
@@ -350,7 +325,7 @@ def login_view():
             return redirect('/login')
         session['user_id'] = user.id
         session['role'] = user.role
-        return redirect('/dashboard')
+        return redirect('/main_dashboard')  
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -367,6 +342,34 @@ def register_view():
         db.session.commit()
         return redirect('/login')
     return render_template('register.html')
+
+@app.route('/main_dashboard')
+def main_dashboard():
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect('/login')
+    
+    if request.args.get('system') == 'izin':
+        session['active_system'] = 'izin'
+        return redirect('/dashboard')
+    elif request.args.get('system') == 'reimburse':
+        session['active_system'] = 'reimburse'
+        return redirect('/reimburse/list')
+    if session.get('active_system') == 'izin':
+        return redirect('/dashboard')
+    elif session.get('active_system') == 'reimburse':
+        return redirect('/reimburse/list')
+    
+    return render_template('main_dashboard.html', user=user)
+
+@app.route('/change_system')
+def change_system():
+    session.pop('active_system', None)
+    return redirect('/main_dashboard')
 
 @app.route('/dashboard')
 def dashboard():
@@ -680,6 +683,15 @@ def update_quota(user_id):
         db.session.commit()
         flash(f'Kuota cuti {user.username} diperbarui menjadi {new_kuota} hari.', 'success')
     return redirect('/manage_quota')
+
+# Di izin.py, setelah app initialization
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+from reimburse.routes import reimburse_bp
+app.register_blueprint(reimburse_bp, url_prefix='/reimburse')
 
 if __name__ == "__main__":
     app.run(debug=True)
