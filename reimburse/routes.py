@@ -15,7 +15,7 @@ def get_user(user_id):
 
 @reimburse_bp.route('/list')
 def list_reimburse():
-    from izin import User          # lazy import
+    from izin import User    
     if 'user_id' not in session:
         return redirect('/login')
     user = db.session.get(User, session['user_id'])
