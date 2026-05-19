@@ -25,12 +25,28 @@ def list_reimburse():
     now = datetime.utcnow()
     cutoff = now - timedelta(days=7)
 
-    data = ReimburseRequest.query.filter(
+    # Query dasar: hanya data yang belum diarsipkan (paid_at null atau <7 hari)
+    query = ReimburseRequest.query.filter(
         (ReimburseRequest.paid_at == None) |
         (ReimburseRequest.paid_at >= cutoff)
-    ).order_by(ReimburseRequest.created_at.desc()).all()
+    )
 
-    return render_template('list.html', data=data, user=user, get_user=get_user)
+    # 🔒 PEMBATASAN AKSES: karyawan hanya melihat milik sendiri
+    if user.role not in ['admin', 'direktur']:
+        query = query.filter(ReimburseRequest.user_id == user.id)
+    else:
+        # 🔍 FILTER BERDASARKAN NAMA (hanya untuk role yang punya akses penuh)
+        nama_filter = request.args.get('nama', '')
+        if nama_filter:
+            query = query.join(User, ReimburseRequest.user_id == User.id)
+            query = query.filter(User.username.ilike(f'%{nama_filter}%'))
+
+    query = query.order_by(ReimburseRequest.created_at.desc())
+    data = query.all()
+
+    # Kirim nama_filter ke template agar input filter tetap terisi
+    nama_filter = request.args.get('nama', '')
+    return render_template('list.html', data=data, user=user, get_user=get_user, nama_filter=nama_filter)
 
 
 @reimburse_bp.route('/archive')

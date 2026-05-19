@@ -42,6 +42,24 @@
 <div id="mainContent" class="container-fluid mt-4 px-4">
     <h4 class="fw-bold"><i class="bi bi-cash-stack"></i> Pengajuan Reimburse Aktif</h4>
 
+    {% if user.role in ['admin','hrd','direktur'] %}
+<div class="card p-3 mb-4">
+    <form method="GET" action="/reimburse/list" class="row g-3">
+        <div class="col-md-6">
+            <input type="text" name="nama" class="form-control" 
+                    placeholder="🔍 Cari berdasarkan nama pengaju..." 
+                    value="{{ nama_filter }}">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+        <div class="col-md-3">
+            <a href="/reimburse/list" class="btn btn-secondary w-100">Reset</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+
     <div class="card p-4">
         <table class="table">
             <thead><tr><th>Pengaju</th><th>Tgl Ajuan</th><th>Total</th><th>Status</th><th></th></tr></thead>
