@@ -35,7 +35,7 @@ def list_reimburse():
 
 @reimburse_bp.route('/archive')
 def archive():
-    from izin import User
+    from models import User
     if 'user_id' not in session:
         return redirect('/login')
     user = db.session.get(User, session['user_id'])
@@ -45,13 +45,18 @@ def archive():
     now = datetime.utcnow()
     cutoff = now - timedelta(days=7)
 
-    data = ReimburseRequest.query.filter(
+    # Basis query: semua yang sudah dibayar & lewat 7 hari
+    query = ReimburseRequest.query.filter(
         ReimburseRequest.paid_at != None,
         ReimburseRequest.paid_at < cutoff
-    ).order_by(ReimburseRequest.paid_at.desc()).all()
+    )
 
+    # Batasi akses: karyawan hanya lihat punya sendiri
+    if user.role not in ['admin', 'direktur']:
+        query = query.filter(ReimburseRequest.user_id == user.id)
+
+    data = query.order_by(ReimburseRequest.paid_at.desc()).all()
     return render_template('archive.html', data=data, user=user, get_user=get_user)
-
 
 @reimburse_bp.route('/detail/<int:id>', methods=['GET', 'POST'])
 def detail(id):
