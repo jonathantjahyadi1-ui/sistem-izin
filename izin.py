@@ -231,8 +231,8 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
             'username': u.username,
             'divisi': u.divisi,
             'target': target,
-            'hari_sakit': hari_sakit,      # 🔴 Merah - motong hari kerja
-            'hari_izin': hari_izin,        # 🔵 Biru - motong hari kerja
+            'hari_sakit': hari_sakit,      
+            'hari_izin': hari_izin,        
             'hadir': hadir
         })
     return data
