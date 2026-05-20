@@ -307,6 +307,14 @@ with app.app_context():
             divisi='Direksi'
         ))
 
+    if not User.query.filter_by(username='aul').first():
+        db.session.add(User(
+        username='aul',
+        password=generate_password_hash('aul@accounting'),
+        role='accounting',
+        divisi='Accounting'
+    ))
+
     db.session.commit()
 
 # ========
@@ -380,7 +388,7 @@ def dashboard():
         session.clear()
         return redirect('/login')
 
-    if user.role == 'karyawan':
+    if user.role == ['karyawan', 'accounting']:
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
         sisa_cuti = get_sisa_cuti(user)
         return render_template('dashboard_user.html', data=data, user=user, sisa_cuti=sisa_cuti)

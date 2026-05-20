@@ -42,7 +42,14 @@
 <div id="mainContent" class="container-fluid mt-4 px-4">
     <h4 class="fw-bold"><i class="bi bi-cash-stack"></i> Pengajuan Reimburse Aktif</h4>
 
-    {% if user.role in ['admin','hrd','direktur'] %}
+    {% if user.role in ['admin', 'direktur', 'accounting'] %}
+    <a href="{{ url_for('reimburse.export_excel') }}" class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i> Download Excel
+    </a>
+    {% endif %}
+</div> 
+
+    {% if user.role in ['admin','hrd','direktur','accounting'] %}
 <div class="card p-3 mb-4">
     <form method="GET" action="/reimburse/list" class="row g-3">
         <div class="col-md-6">
