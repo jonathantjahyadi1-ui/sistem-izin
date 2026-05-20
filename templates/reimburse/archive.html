@@ -16,6 +16,12 @@
 <nav class="navbar navbar-dark px-4">
     <a href="/reimburse/list" class="btn btn-light btn-sm">← Kembali</a>
     <span class="navbar-brand ms-2">Arsip Reimburse (>7 hari)</span>
+     {% if user.role in ['admin', 'direktur', 'accounting'] %}
+    <a href="{{ url_for('reimburse.export_archive_excel') }}" class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i> Download Excel
+    </a>
+    {% endif %}
+</div>
     <div class="ms-auto text-white">{{ user.username }} ({{ user.role }})
         <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
     </div>

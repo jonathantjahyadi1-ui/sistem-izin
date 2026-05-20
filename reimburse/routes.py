@@ -51,9 +51,11 @@ def list_reimburse():
 
 @reimburse_bp.route('/archive')
 def archive():
-    from models import User
+    from izin import User
+
     if 'user_id' not in session:
         return redirect('/login')
+
     user = db.session.get(User, session['user_id'])
     if not user:
         return redirect('/login')
@@ -68,11 +70,79 @@ def archive():
     )
 
     # Batasi akses: karyawan hanya lihat punya sendiri
-    if user.role not in ['admin', 'direktur']:
+    if user.role not in ['admin', 'direktur', 'accounting']:
         query = query.filter(ReimburseRequest.user_id == user.id)
 
     data = query.order_by(ReimburseRequest.paid_at.desc()).all()
-    return render_template('archive.html', data=data, user=user, get_user=get_user)
+
+    return render_template(
+        'archive.html',
+        data=data,
+        user=user,
+        get_user=get_user
+    )
+
+@reimburse_bp.route('/archive/export_excel')
+def export_archive_excel():
+    from izin import User
+    import pandas as pd
+    import io
+    from flask import send_file
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        return redirect('/login')
+
+    if user.role not in ['admin', 'direktur', 'accounting']:
+        flash('Kamu tidak memiliki akses untuk mengunduh data arsip.', 'danger')
+        return redirect(url_for('reimburse.archive'))
+
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=7)
+
+    reimbursements = ReimburseRequest.query.filter(
+        ReimburseRequest.paid_at != None,
+        ReimburseRequest.paid_at < cutoff
+    ).order_by(ReimburseRequest.paid_at.desc()).all()
+
+    rows = []
+
+    for r in reimbursements:
+        pengaju = get_user(r.user_id)
+
+        for item in r.items:
+            rows.append({
+                'ID Reimburse': r.id,
+                'Pengaju': pengaju.username if pengaju else '-',
+                'Tanggal Pengajuan': r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '-',
+                'Tanggal Dibayar': r.paid_at.strftime('%d/%m/%Y %H:%M') if r.paid_at else '-',
+                'Status': r.status,
+                'Nama Item': item.item_name,
+                'Harga': item.price,
+                'Qty': item.qty,
+                'Subtotal': item.price * item.qty,
+                'Total Reimburse': r.total_amount
+            })
+
+    df = pd.DataFrame(rows)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Arsip Reimburse')
+
+    output.seek(0)
+
+    filename = f"Arsip_Reimburse_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 @reimburse_bp.route('/detail/<int:id>', methods=['GET', 'POST'])
 def detail(id):
