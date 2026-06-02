@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Purchase Order</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f8fafc;
+            padding-top: 56px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 56px;
+            left: -250px;
+            width: 250px;
+            height: calc(100vh - 56px);
+            background: white;
+            transition: 0.3s;
+            z-index: 999;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+        }
+
+        #sidebar.active {
+            left: 0;
+        }
+
+        #sidebar a {
+            display: block;
+            padding: 12px 20px;
+            color: #1f2937;
+            text-decoration: none;
+            border-left: 4px solid transparent;
+        }
+
+        #sidebar a:hover {
+            background: #f9fafb;
+            border-left-color: #0d6efd;
+        }
+
+        #mainContent {
+            transition: 0.3s;
+        }
+
+        #mainContent.shift {
+            margin-left: 250px;
+        }
+    </style>
+</head>
+
+<body>
+<nav class="navbar navbar-dark bg-primary px-4">
+    <button class="btn btn-light btn-sm me-2" onclick="toggleSidebar()">☰</button>
+
+    <span class="navbar-brand">📦 Purchase Order</span>
+
+    <div class="ms-auto text-white">
+        {{ user.username }} ({{ user.role }})
+        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
+    </div>
+</nav>
+
+<div id="sidebar">
+    <a href="/purchase-order/list">Daftar Purchase Order</a>
+    <a href="/purchase-order/submit">Ajukan Purchase Order</a>
+    <a href="/change_system">Ganti Sistem</a>
+</div>
+
+<div id="mainContent" class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Daftar Purchase Order</h4>
+
+        <div>
+            {% if user.role in ['admin', 'direktur', 'accounting'] %}
+            <a href="{{ url_for('purchase_order.export_po_excel', status=status_filter, nama=nama_filter) }}" class="btn btn-success">
+                Export Excel
+            </a>
+            {% endif %}
+
+            <a href="/purchase-order/submit" class="btn btn-primary">+ Ajukan PO</a>
+        </div>
+    </div>
+
+    {% if user.role in ['admin', 'direktur', 'accounting'] %}
+    <form method="GET" class="card card-body mb-3">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="nama" class="form-control" placeholder="Cari nama pengaju" value="{{ nama_filter }}">
+            </div>
+
+            <div class="col-md-4">
+                <select name="status" class="form-select">
+                    <option value="">Semua Status</option>
+                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="ordered" {% if status_filter == 'ordered' %}selected{% endif %}>Ordered</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100">Filter</button>
+            </div>
+
+            <div class="col-md-2">
+                <a href="/purchase-order/list" class="btn btn-secondary w-100">Reset</a>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    <div class="card p-3">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Pengaju</th>
+                    <th>Tanggal</th>
+                    <th>Total Estimasi</th>
+                    <th>Status</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for po in data %}
+                {% set pengaju = get_user(po.user_id) %}
+                <tr>
+                    <td>{{ pengaju.username if pengaju else '-' }}</td>
+                    <td>{{ po.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td>Rp {{ "{:,.0f}".format(po.total_amount) }}</td>
+                    <td>{{ po.status }}</td>
+                    <td>
+                        <a href="/purchase-order/detail/{{ po.id }}" class="btn btn-sm btn-outline-primary">
+                            Lihat
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("active");
+    document.getElementById("mainContent").classList.toggle("shift");
+}
+</script>
+
+</body>
+</html>

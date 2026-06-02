@@ -47,8 +47,6 @@
         <i class="bi bi-file-earmark-excel"></i> Download Excel
     </a>
     {% endif %}
-</div> 
-
     {% if user.role in ['admin','hrd','direktur','accounting'] %}
 <div class="card p-3 mb-4">
     <form method="GET" action="/reimburse/list" class="row g-3">

@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file
 from extensions import db
 from models import User, LeaveRequest
+from reimburse.models import ReimburseRequest, ReimburseItem
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
@@ -53,9 +54,9 @@ db.init_app(app)
 
 
 
-# =========================
-# FUNGSI BANTU CUTI (diletakkan setelah model)
-# =========================
+# ==================
+# FUNGSI BANTU CUTI
+# ==================
 def get_total_cuti_approved_this_year(user_id, tahun=None):
     """Total durasi cuti (jenis='cuti') yang sudah approved pada tahun tertentu"""
     if tahun is None:
@@ -73,9 +74,9 @@ def get_sisa_cuti(user):
     total_dipakai = get_total_cuti_approved_this_year(user.id)
     return user.kuota_cuti - total_dipakai
 
-# =========================
+# ================
 # FUNGSI KEHADIRAN
-# =========================
+# ================
 
 def get_hari_kerja_dalam_bulan(tahun, bulan, divisi):
     """Menghitung jumlah hari kerja dalam bulan tertentu berdasarkan divisi.
@@ -360,17 +361,29 @@ def main_dashboard():
     if not user:
         session.clear()
         return redirect('/login')
-    
-    if request.args.get('system') == 'izin':
+
+    selected_system = request.args.get('system')
+
+    if selected_system == 'izin':
         session['active_system'] = 'izin'
         return redirect('/dashboard')
-    elif request.args.get('system') == 'reimburse':
+
+    elif selected_system == 'reimburse':
         session['active_system'] = 'reimburse'
         return redirect('/reimburse/list')
+
+    elif selected_system == 'purchase_order':
+        session['active_system'] = 'purchase_order'
+        return redirect('/purchase-order/list')
+
     if session.get('active_system') == 'izin':
         return redirect('/dashboard')
+
     elif session.get('active_system') == 'reimburse':
         return redirect('/reimburse/list')
+
+    elif session.get('active_system') == 'purchase_order':
+        return redirect('/purchase-order/list')
     
     return render_template('main_dashboard.html', user=user)
 
@@ -388,13 +401,12 @@ def dashboard():
         session.clear()
         return redirect('/login')
 
-    if user.role == ['karyawan', 'accounting']:
+    if user.role in ['karyawan', 'accounting']:
         data = LeaveRequest.query.filter_by(user_id=user.id).all()
         sisa_cuti = get_sisa_cuti(user)
         return render_template('dashboard_user.html', data=data, user=user, sisa_cuti=sisa_cuti)
 
     # ADMIN / HRD / DIREKTUR
-    # Filter kehadiran dari request args
     divisi_filter = request.args.get('divisi', '')
     tahun_filter = int(request.args.get('tahun', datetime.now().year))
     bulan_filter = int(request.args.get('bulan', datetime.now().month))
@@ -601,7 +613,7 @@ def export_excel():
     output.seek(0)
     filename = f"Rekap_Izin_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                     as_attachment=True, download_name=filename)
+                    as_attachment=True, download_name=filename)
 
 @app.context_processor
 def utility_processor():
@@ -700,6 +712,9 @@ def uploaded_file(filename):
 
 from reimburse.routes import reimburse_bp
 app.register_blueprint(reimburse_bp, url_prefix='/reimburse')
+
+from purchase_order.routes import po_bp
+app.register_blueprint(po_bp, url_prefix='/purchase-order')
 
 if __name__ == "__main__":
     app.run(debug=True)

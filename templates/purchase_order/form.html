@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ajukan Purchase Order</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary px-4">
+    <a href="/purchase-order/list" class="btn btn-light btn-sm">← Kembali</a>
+    <span class="navbar-brand ms-2">Ajukan Purchase Order</span>
+</nav>
+
+<div class="container mt-5" style="max-width: 800px;">
+    <div class="card p-4">
+        <h4 class="mb-4">Form Purchase Order</h4>
+
+        <form method="POST" id="poForm">
+            <div id="itemsContainer">
+                <div class="row mb-2 item-row">
+                    <div class="col-md-4">
+                        <input type="text" name="item_name[]" class="form-control" placeholder="Nama Barang" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="estimated_price[]" class="form-control" placeholder="Estimasi Harga" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" name="qty[]" class="form-control" value="1" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="note[]" class="form-control" placeholder="Keterangan">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-secondary btn-sm mb-3" id="addRow">
+                + Tambah Barang
+            </button>
+
+            <div class="mb-3">
+                <label class="form-label">Alasan Pembelian</label>
+                <textarea name="reason" class="form-control" rows="4" required placeholder="Jelaskan kenapa barang ini perlu dibeli"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                Ajukan Purchase Order
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('addRow').addEventListener('click', function () {
+    const container = document.getElementById('itemsContainer');
+    const row = document.querySelector('.item-row').cloneNode(true);
+
+    row.querySelectorAll('input').forEach(input => {
+        if (input.name === 'qty[]') {
+            input.value = 1;
+        } else {
+            input.value = '';
+        }
+    });
+
+    container.appendChild(row);
+});
+
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('remove-row')) {
+        const rows = document.querySelectorAll('.item-row');
+        if (rows.length > 1) {
+            e.target.closest('.item-row').remove();
+        }
+    }
+});
+</script>
+</body>
+</html>

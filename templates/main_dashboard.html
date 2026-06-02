@@ -30,25 +30,37 @@
 <div class="container text-center">
     <h2 class="text-white mb-5">Halo, {{ user.username }}! Mau akses apa hari ini?</h2>
     <div class="row justify-content-center g-4">
-        <div class="col-md-5">
-            <a href="{{ url_for('main_dashboard', system='izin') }}" class="text-decoration-none">
-                <div class="card card-pilih p-5">
-                    <h1>🕒</h1>
-                    <h3>Izin & Kehadiran</h3>
-                    <p class="text-muted">Kelola cuti, sakit, izin, dan rekap kehadiran</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-5">
-            <a href="{{ url_for('main_dashboard', system='reimburse') }}" class="text-decoration-none">
-                <div class="card card-pilih p-5">
-                    <h1>💰</h1>
-                    <h3>Reimburse</h3>
-                    <p class="text-muted">Klaim nota, upload bukti, dan lihat status</p>
-                </div>
-            </a>
-        </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('main_dashboard', system='izin') }}" class="text-decoration-none">
+            <div class="card card-pilih p-5 h-100">
+                <h1>🕒</h1>
+                <h3>Izin & Kehadiran</h3>
+                <p class="text-muted">Kelola cuti, sakit, izin, dan rekap kehadiran</p>
+            </div>
+        </a>
     </div>
+
+    <div class="col-md-4">
+        <a href="{{ url_for('main_dashboard', system='reimburse') }}" class="text-decoration-none">
+            <div class="card card-pilih p-5 h-100">
+                <h1>💰</h1>
+                <h3>Reimburse</h3>
+                <p class="text-muted">Klaim nota, upload bukti, dan lihat status</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="{{ url_for('main_dashboard', system='purchase_order') }}" class="text-decoration-none">
+            <div class="card card-pilih p-5 h-100">
+                <h1>📦</h1>
+                <h3>Purchase Order</h3>
+                <p class="text-muted">Ajukan pembelian barang sebelum barang dipesan perusahaan</p>
+            </div>
+        </a>
+    </div>
+</div>
+
     <br>
     <a href="/logout" class="btn btn-light mt-4">Logout</a>
 </div>

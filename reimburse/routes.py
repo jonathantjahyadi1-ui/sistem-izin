@@ -1,5 +1,6 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session
 from extensions import db
+from models import User
 from .models import ReimburseRequest, ReimburseItem
 from datetime import datetime, timedelta
 import os
@@ -9,13 +10,11 @@ UPLOAD_FOLDER = 'uploads'
 
 
 def get_user(user_id):
-    from izin import User
     return db.session.get(User, user_id)
 
 
 @reimburse_bp.route('/list')
 def list_reimburse():
-    from izin import User    
     if 'user_id' not in session:
         return redirect('/login')
     user = db.session.get(User, session['user_id'])
@@ -46,13 +45,11 @@ def list_reimburse():
 
     # Kirim nama_filter ke template agar input filter tetap terisi
     nama_filter = request.args.get('nama', '')
-    return render_template('list.html', data=data, user=user, get_user=get_user, nama_filter=nama_filter)
+    return render_template('reimburse/list.html', data=data, user=user, get_user=get_user, nama_filter=nama_filter)
 
 
 @reimburse_bp.route('/archive')
 def archive():
-    from izin import User
-
     if 'user_id' not in session:
         return redirect('/login')
 
@@ -76,7 +73,7 @@ def archive():
     data = query.order_by(ReimburseRequest.paid_at.desc()).all()
 
     return render_template(
-        'archive.html',
+        'reimburse/archive.html',
         data=data,
         user=user,
         get_user=get_user
@@ -84,7 +81,6 @@ def archive():
 
 @reimburse_bp.route('/archive/export_excel')
 def export_archive_excel():
-    from izin import User
     import pandas as pd
     import io
     from flask import send_file
@@ -146,8 +142,6 @@ def export_archive_excel():
 
 @reimburse_bp.route('/detail/<int:id>', methods=['GET', 'POST'])
 def detail(id):
-    from izin import User
-
     if 'user_id' not in session:
         return redirect('/login')
 
@@ -179,7 +173,7 @@ def detail(id):
         return redirect(url_for('reimburse.detail', id=id))
 
     return render_template(
-        'detail.html',
+        'reimburse/detail.html',
         reimb=reimb,
         user=user,
         get_user=get_user
@@ -187,7 +181,6 @@ def detail(id):
 
 @reimburse_bp.route('/export_excel')
 def export_excel():
-    from izin import User
     import pandas as pd
     import io
     from flask import send_file
@@ -243,7 +236,6 @@ def export_excel():
 
 @reimburse_bp.route('/submit', methods=['GET', 'POST'])
 def submit():
-    from izin import User
     if 'user_id' not in session:
         return redirect('/login')
     user = db.session.get(User, session['user_id'])
@@ -293,4 +285,4 @@ def submit():
         flash('Pengajuan reimburse berhasil!', 'success')
         return redirect(url_for('reimburse.list_reimburse'))
 
-    return render_template('form.html', user=user)
+    return render_template('reimburse/form.html', user=user)
