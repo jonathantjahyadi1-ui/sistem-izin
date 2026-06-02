@@ -500,9 +500,9 @@ def semua_izin():
     # Ambil parameter filter
     status_filter = request.args.get('status', '')
     jenis_filter = request.args.get('jenis', '')
-    search = request.args.get('search', '')          # untuk alasan
-    divisi_filter = request.args.get('divisi', '')   # baru
-    nama_filter = request.args.get('nama', '')       # baru
+    search = request.args.get('search', '')
+    divisi_filter = request.args.get('divisi', '')   
+    nama_filter = request.args.get('nama', '')       
     
     query = LeaveRequest.query
     
