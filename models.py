@@ -38,6 +38,14 @@ class PurchaseOrderRequest(db.Model):
 
     order_proof = db.Column(db.String(255))
 
+    accounting_approved_at = db.Column(db.DateTime)
+    accounting_rejected_at = db.Column(db.DateTime)
+
+    director_approved_at = db.Column(db.DateTime)
+    director_rejected_at = db.Column(db.DateTime)
+
+    reject_reason = db.Column(db.Text)
+
     approved_at = db.Column(db.DateTime)
     rejected_at = db.Column(db.DateTime)
     ordered_at = db.Column(db.DateTime)

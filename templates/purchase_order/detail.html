@@ -3,28 +3,79 @@
 <head>
     <title>Detail Purchase Order</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f8fafc;
+        }
+
+        .status-badge {
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+
+        .card {
+            border-radius: 10px;
+        }
+    </style>
 </head>
+
 <body>
 <nav class="navbar navbar-dark bg-primary px-4">
     <a href="/purchase-order/list" class="btn btn-light btn-sm">← Kembali</a>
     <span class="navbar-brand ms-2">Detail Purchase Order</span>
+
+    <div class="ms-auto text-white">
+        {{ user.username }} ({{ user.role }})
+        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
+    </div>
 </nav>
 
 <div class="container mt-5" style="max-width: 900px;">
+
     <div class="card p-4 mb-3">
         {% set pengaju = get_user(po.user_id) %}
 
         <h4>PO #{{ po.id }}</h4>
+
         <p><strong>Pengaju:</strong> {{ pengaju.username if pengaju else '-' }}</p>
-        <p><strong>Status:</strong> {{ po.status }}</p>
+
+        <p>
+            <strong>Status:</strong>
+
+            {% if po.status == 'submitted' %}
+                <span class="badge bg-warning text-dark status-badge">Menunggu Accounting</span>
+            {% elif po.status == 'accounting_approved' %}
+                <span class="badge bg-info text-dark status-badge">Disetujui Accounting</span>
+            {% elif po.status == 'accounting_rejected' %}
+                <span class="badge bg-danger status-badge">Ditolak Accounting</span>
+            {% elif po.status == 'director_approved' %}
+                <span class="badge bg-success status-badge">Disetujui Direktur</span>
+            {% elif po.status == 'director_rejected' %}
+                <span class="badge bg-danger status-badge">Ditolak Direktur</span>
+            {% elif po.status == 'ordered' %}
+                <span class="badge bg-primary status-badge">Sudah Dipesan</span>
+            {% else %}
+                <span class="badge bg-secondary status-badge">{{ po.status }}</span>
+            {% endif %}
+        </p>
+
+        {% if po.reject_reason %}
+        <div class="alert alert-danger">
+            <strong>Alasan Ditolak:</strong><br>
+            {{ po.reject_reason }}
+        </div>
+        {% endif %}
+
         <p><strong>Alasan Pembelian:</strong></p>
         <p>{{ po.reason }}</p>
 
         <hr>
 
         <h5>Daftar Barang</h5>
-        <table class="table">
-            <thead>
+
+        <table class="table table-bordered">
+            <thead class="table-light">
                 <tr>
                     <th>Barang</th>
                     <th>Harga Estimasi</th>
@@ -33,6 +84,7 @@
                     <th>Keterangan</th>
                 </tr>
             </thead>
+
             <tbody>
                 {% for item in po.items %}
                 <tr>
@@ -46,44 +98,96 @@
             </tbody>
         </table>
 
-        <h5 class="text-end">Total: Rp {{ "{:,.0f}".format(po.total_amount) }}</h5>
+        <h5 class="text-end">
+            Total: Rp {{ "{:,.0f}".format(po.total_amount) }}
+        </h5>
     </div>
 
     {% if po.order_proof %}
     <div class="card p-4 mb-3">
         <h5>Bukti Pemesanan</h5>
+        <p class="text-muted mb-2">Produk sudah dipesan dan sedang menunggu pengantaran.</p>
+
         <a href="/uploads/{{ po.order_proof }}" target="_blank" class="btn btn-outline-success">
             Lihat Bukti Pemesanan
         </a>
     </div>
     {% endif %}
 
-    {% if user.role == 'direktur' %}
-    <div class="card p-4">
-        <h5>Aksi Direktur</h5>
-
-        {% if po.status == 'submitted' %}
-        <form method="POST" class="d-inline">
-            <input type="hidden" name="action" value="approve">
-            <button class="btn btn-success">Approve</button>
-        </form>
+    {% if user.role in ['accounting', 'admin'] and po.status == 'submitted' %}
+    <div class="card p-4 mb-3">
+        <h5>Aksi Accounting</h5>
+        <p class="text-muted">
+            Accounting mengecek apakah pengajuan sudah sesuai sebelum diteruskan ke Direktur.
+        </p>
 
         <form method="POST" class="d-inline">
-            <input type="hidden" name="action" value="reject">
-            <button class="btn btn-danger">Reject</button>
+            <input type="hidden" name="action" value="accounting_approve">
+            <button type="submit" class="btn btn-success">
+                ACC Accounting
+            </button>
         </form>
-        {% endif %}
 
-        {% if po.status == 'approved' %}
-        <form method="POST" enctype="multipart/form-data" class="mt-3">
-            <input type="hidden" name="action" value="upload_order_proof">
-            <label class="form-label">Upload Bukti Pemesanan</label>
-            <input type="file" name="order_proof" class="form-control mb-2" required>
-            <button class="btn btn-primary">Upload Bukti Pemesanan</button>
+        <form method="POST" class="mt-3">
+            <input type="hidden" name="action" value="accounting_reject">
+
+            <label class="form-label">Alasan Ditolak</label>
+            <textarea name="reject_reason" class="form-control mb-2" rows="3" required></textarea>
+
+            <button type="submit" class="btn btn-danger">
+                Tolak Accounting
+            </button>
         </form>
-        {% endif %}
     </div>
     {% endif %}
+
+    {% if user.role == 'direktur' and po.status == 'accounting_approved' %}
+    <div class="card p-4 mb-3">
+        <h5>Aksi Direktur</h5>
+        <p class="text-muted">
+            PO ini sudah disetujui Accounting dan menunggu keputusan Direktur.
+        </p>
+
+        <form method="POST" class="d-inline">
+            <input type="hidden" name="action" value="director_approve">
+            <button type="submit" class="btn btn-success">
+                ACC Direktur
+            </button>
+        </form>
+
+        <form method="POST" class="mt-3">
+            <input type="hidden" name="action" value="director_reject">
+
+            <label class="form-label">Alasan Ditolak</label>
+            <textarea name="reject_reason" class="form-control mb-2" rows="3" required></textarea>
+
+            <button type="submit" class="btn btn-danger">
+                Tolak Direktur
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if user.role == 'direktur' and po.status == 'director_approved' %}
+    <div class="card p-4 mb-3">
+        <h5>Upload Bukti Pemesanan</h5>
+        <p class="text-muted">
+            Upload bukti bahwa produk sudah dipesan. Setelah upload, status akan berubah menjadi sudah dipesan.
+        </p>
+
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="upload_order_proof">
+
+            <label class="form-label">Bukti Pemesanan</label>
+            <input type="file" name="order_proof" class="form-control mb-2" required>
+
+            <button type="submit" class="btn btn-primary">
+                Upload Bukti Pemesanan
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
 </div>
 </body>
 </html>

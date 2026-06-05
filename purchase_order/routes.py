@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file
 from extensions import db
 from models import User, PurchaseOrderRequest, PurchaseOrderItem
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import io
 import pandas as pd
@@ -30,7 +30,12 @@ def list_po():
         session.clear()
         return redirect('/login')
 
-    query = PurchaseOrderRequest.query
+    cutoff = datetime.utcnow() - timedelta(days=7)
+
+    query = PurchaseOrderRequest.query.filter(
+        (PurchaseOrderRequest.ordered_at == None) |
+        (PurchaseOrderRequest.ordered_at >= cutoff)
+    )
 
     if user.role not in ['admin', 'direktur', 'accounting']:
         query = query.filter(PurchaseOrderRequest.user_id == user.id)
@@ -54,6 +59,36 @@ def list_po():
         get_user=get_user,
         status_filter=status_filter,
         nama_filter=nama_filter
+    )
+
+@po_bp.route('/archive')
+def archive_po():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    cutoff = datetime.utcnow() - timedelta(days=7)
+
+    query = PurchaseOrderRequest.query.filter(
+        PurchaseOrderRequest.status == 'ordered',
+        PurchaseOrderRequest.ordered_at != None,
+        PurchaseOrderRequest.ordered_at < cutoff
+    )
+
+    if user.role not in ['admin', 'direktur', 'accounting']:
+        query = query.filter(PurchaseOrderRequest.user_id == user.id)
+
+    data = query.order_by(PurchaseOrderRequest.ordered_at.desc()).all()
+
+    return render_template(
+        'purchase_order/archive.html',
+        data=data,
+        user=user,
+        get_user=get_user
     )
 
 
@@ -156,35 +191,74 @@ def detail_po(id):
         return redirect(url_for('purchase_order.list_po'))
 
     if request.method == 'POST':
-        if user.role != 'direktur':
-            flash('Hanya direktur yang bisa memproses Purchase Order.', 'danger')
-            return redirect(url_for('purchase_order.detail_po', id=id))
-
         action = request.form.get('action')
+        reject_reason = request.form.get('reject_reason', '').strip()
 
-        if action == 'approve':
+        if action == 'accounting_approve':
+            if user.role not in ['accounting', 'admin']:
+                flash('Hanya accounting yang bisa approve tahap ini.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
             if po.status != 'submitted':
                 flash('PO ini sudah diproses sebelumnya.', 'warning')
                 return redirect(url_for('purchase_order.detail_po', id=id))
 
-            po.status = 'approved'
-            po.approved_at = datetime.utcnow()
+            po.status = 'accounting_approved'
+            po.accounting_approved_at = datetime.utcnow()
             db.session.commit()
-            flash('Purchase Order berhasil disetujui.', 'success')
+            flash('PO disetujui Accounting dan diteruskan ke Direktur.', 'success')
 
-        elif action == 'reject':
-            if po.status != 'submitted':
-                flash('PO ini sudah diproses sebelumnya.', 'warning')
+        elif action == 'accounting_reject':
+            if user.role not in ['accounting', 'admin']:
+                flash('Hanya accounting yang bisa menolak tahap ini.', 'danger')
                 return redirect(url_for('purchase_order.detail_po', id=id))
 
-            po.status = 'rejected'
-            po.rejected_at = datetime.utcnow()
+            if not reject_reason:
+                flash('Alasan penolakan wajib diisi.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            po.status = 'accounting_rejected'
+            po.accounting_rejected_at = datetime.utcnow()
+            po.reject_reason = reject_reason
             db.session.commit()
-            flash('Purchase Order ditolak.', 'warning')
+            flash('PO ditolak oleh Accounting.', 'warning')
+
+        elif action == 'director_approve':
+            if user.role != 'direktur':
+                flash('Hanya direktur yang bisa approve tahap ini.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            if po.status != 'accounting_approved':
+                flash('PO harus disetujui Accounting terlebih dahulu.', 'warning')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            po.status = 'director_approved'
+            po.director_approved_at = datetime.utcnow()
+            db.session.commit()
+            flash('PO disetujui Direktur.', 'success')
+
+        elif action == 'director_reject':
+            if user.role != 'direktur':
+                flash('Hanya direktur yang bisa menolak tahap ini.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            if not reject_reason:
+                flash('Alasan penolakan wajib diisi.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            po.status = 'director_rejected'
+            po.director_rejected_at = datetime.utcnow()
+            po.reject_reason = reject_reason
+            db.session.commit()
+            flash('PO ditolak oleh Direktur.', 'warning')
 
         elif action == 'upload_order_proof':
-            if po.status != 'approved':
-                flash('Bukti pemesanan hanya bisa diupload setelah PO disetujui.', 'danger')
+            if user.role != 'direktur':
+                flash('Hanya direktur yang bisa upload bukti pemesanan.', 'danger')
+                return redirect(url_for('purchase_order.detail_po', id=id))
+
+            if po.status != 'director_approved':
+                flash('Bukti pemesanan hanya bisa diupload setelah disetujui Direktur.', 'danger')
                 return redirect(url_for('purchase_order.detail_po', id=id))
 
             file = request.files.get('order_proof')
@@ -203,7 +277,7 @@ def detail_po(id):
             po.status = 'ordered'
 
             db.session.commit()
-            flash('Bukti pemesanan berhasil diupload.', 'success')
+            flash('Bukti pemesanan berhasil diupload. Status menjadi sudah dipesan.', 'success')
 
         else:
             flash('Aksi tidak valid.', 'danger')
