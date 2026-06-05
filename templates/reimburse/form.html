@@ -59,6 +59,14 @@
     <div class="card p-4">
         <h4 class="mb-4">Form Pengajuan Reimburse</h4>
 
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div>
+        <strong>Wajib Upload Nota dari CamScanner.</strong><br>
+        Pastikan setiap nota difoto/scan menggunakan CamScanner agar hasilnya jelas, rapi, dan mudah diverifikasi oleh Accounting/Direktur.
+    </div>
+</div>
+
         <form method="POST" enctype="multipart/form-data" id="reimbForm">
 
             <div id="itemsContainer">
@@ -82,9 +90,12 @@
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label">Foto Nota</label>
-                            <input type="file" name="receipt[]" class="form-control" accept="image/*" required>
-                        </div>
+    <label class="form-label">Foto Nota <span class="text-danger">(Wajib CamScanner)</span></label>
+    <small class="text-muted d-block mb-1">
+        Upload hasil scan CamScanner, bukan foto biasa.
+    </small>
+    <input type="file" name="receipt[]" class="form-control" accept="image/*" required>
+</div>
 
                         <div class="col-md-1">
                             <button type="button" class="btn btn-danger w-100 remove-row">X</button>
