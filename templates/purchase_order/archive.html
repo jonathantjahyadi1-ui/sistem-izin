@@ -28,6 +28,12 @@
     <a href="/purchase-order/list" class="btn btn-light btn-sm">Kembali</a>
 
     <span class="navbar-brand ms-2">Arsip Purchase Order</span>
+    
+    {% if user.role in ['admin', 'direktur', 'accounting'] %}
+<a href="{{ url_for('purchase_order.export_po_archive_excel') }}" class="btn btn-success btn-sm ms-3">
+    Export Excel
+</a>
+{% endif %}
 
     <div class="ms-auto text-white">
         {{ user.username }} ({{ user.role }})

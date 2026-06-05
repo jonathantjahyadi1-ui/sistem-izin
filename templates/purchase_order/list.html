@@ -99,12 +99,26 @@
 
             <div class="col-md-4">
                 <select name="status" class="form-select">
-                    <option value="">Semua Status</option>
-                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
-                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                    <option value="ordered" {% if status_filter == 'ordered' %}selected{% endif %}>Ordered</option>
-                </select>
+    <option value="">Semua Status</option>
+    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>
+        Menunggu Accounting
+    </option>
+    <option value="accounting_approved" {% if status_filter == 'accounting_approved' %}selected{% endif %}>
+        Disetujui Accounting
+    </option>
+    <option value="accounting_rejected" {% if status_filter == 'accounting_rejected' %}selected{% endif %}>
+        Ditolak Accounting
+    </option>
+    <option value="director_approved" {% if status_filter == 'director_approved' %}selected{% endif %}>
+        Disetujui Direktur
+    </option>
+    <option value="director_rejected" {% if status_filter == 'director_rejected' %}selected{% endif %}>
+        Ditolak Direktur
+    </option>
+    <option value="ordered" {% if status_filter == 'ordered' %}selected{% endif %}>
+        Sudah Dipesan
+    </option>
+</select>
             </div>
 
             <div class="col-md-2">

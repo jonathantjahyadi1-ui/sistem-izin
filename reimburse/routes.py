@@ -1,9 +1,11 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file
 from extensions import db
 from models import User
 from .models import ReimburseRequest, ReimburseItem
 from datetime import datetime, timedelta
 import os
+import io
+import pandas as pd
 
 reimburse_bp = Blueprint('reimburse', __name__, template_folder='../templates/reimburse')
 UPLOAD_FOLDER = 'uploads'
@@ -11,6 +13,57 @@ UPLOAD_FOLDER = 'uploads'
 
 def get_user(user_id):
     return db.session.get(User, user_id)
+
+def format_tanggal_excel(value, pakai_jam=False):
+    if not value:
+        return '-'
+
+    try:
+        if pakai_jam:
+            return value.strftime('%d/%m/%Y %H:%M')
+        return value.strftime('%d/%m/%Y')
+    except:
+        return str(value)
+
+
+def buat_file_excel(rows, sheet_name, filename_prefix):
+    df = pd.DataFrame(rows)
+
+    if df.empty:
+        df = pd.DataFrame([{
+            'Info': 'Tidak ada data untuk diexport'
+        }])
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        worksheet = writer.sheets[sheet_name]
+
+        for column_cells in worksheet.columns:
+            max_length = 0
+            column_letter = column_cells[0].column_letter
+
+            for cell in column_cells:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+
+            worksheet.column_dimensions[column_letter].width = max_length + 3
+
+    output.seek(0)
+
+    filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 @reimburse_bp.route('/list')
@@ -81,14 +134,11 @@ def archive():
 
 @reimburse_bp.route('/archive/export_excel')
 def export_archive_excel():
-    import pandas as pd
-    import io
-    from flask import send_file
-
     if 'user_id' not in session:
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
+
     if not user:
         return redirect('/login')
 
@@ -99,45 +149,56 @@ def export_archive_excel():
     now = datetime.utcnow()
     cutoff = now - timedelta(days=7)
 
-    reimbursements = ReimburseRequest.query.filter(
+    query = db.session.query(ReimburseRequest, User).join(
+        User, ReimburseRequest.user_id == User.id
+    ).filter(
         ReimburseRequest.paid_at != None,
         ReimburseRequest.paid_at < cutoff
-    ).order_by(ReimburseRequest.paid_at.desc()).all()
+    )
+
+    reimbursements = query.order_by(ReimburseRequest.paid_at.desc()).all()
 
     rows = []
 
-    for r in reimbursements:
-        pengaju = get_user(r.user_id)
-
-        for item in r.items:
+    for reimb, pengaju in reimbursements:
+        if reimb.items:
+            for item in reimb.items:
+                rows.append({
+                    'ID Reimburse': reimb.id,
+                    'Nama Pengaju': pengaju.username if pengaju else '-',
+                    'Divisi': pengaju.divisi if pengaju else '-',
+                    'Tanggal Pengajuan': format_tanggal_excel(reimb.created_at, pakai_jam=True),
+                    'Tanggal Dibayar': format_tanggal_excel(reimb.paid_at, pakai_jam=True),
+                    'Status': 'Dibayar' if reimb.status == 'paid' else reimb.status,
+                    'Nama Item': item.item_name,
+                    'Harga': item.price,
+                    'Qty': item.qty,
+                    'Subtotal': item.price * item.qty,
+                    'Total Reimburse': reimb.total_amount,
+                    'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                    'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
+                })
+        else:
             rows.append({
-                'ID Reimburse': r.id,
-                'Pengaju': pengaju.username if pengaju else '-',
-                'Tanggal Pengajuan': r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '-',
-                'Tanggal Dibayar': r.paid_at.strftime('%d/%m/%Y %H:%M') if r.paid_at else '-',
-                'Status': r.status,
-                'Nama Item': item.item_name,
-                'Harga': item.price,
-                'Qty': item.qty,
-                'Subtotal': item.price * item.qty,
-                'Total Reimburse': r.total_amount
+                'ID Reimburse': reimb.id,
+                'Nama Pengaju': pengaju.username if pengaju else '-',
+                'Divisi': pengaju.divisi if pengaju else '-',
+                'Tanggal Pengajuan': format_tanggal_excel(reimb.created_at, pakai_jam=True),
+                'Tanggal Dibayar': format_tanggal_excel(reimb.paid_at, pakai_jam=True),
+                'Status': 'Dibayar' if reimb.status == 'paid' else reimb.status,
+                'Nama Item': '-',
+                'Harga': 0,
+                'Qty': 0,
+                'Subtotal': 0,
+                'Total Reimburse': reimb.total_amount,
+                'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
             })
 
-    df = pd.DataFrame(rows)
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Arsip Reimburse')
-
-    output.seek(0)
-
-    filename = f"Arsip_Reimburse_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=filename
+    return buat_file_excel(
+        rows=rows,
+        sheet_name='Arsip Reimburse',
+        filename_prefix='Arsip_Reimburse'
     )
 
 @reimburse_bp.route('/detail/<int:id>', methods=['GET', 'POST'])
@@ -181,56 +242,78 @@ def detail(id):
 
 @reimburse_bp.route('/export_excel')
 def export_excel():
-    import pandas as pd
-    import io
-    from flask import send_file
-
     if 'user_id' not in session:
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
 
+    if not user:
+        return redirect('/login')
+
     if user.role not in ['admin', 'direktur', 'accounting']:
+        flash('Kamu tidak memiliki akses untuk mengunduh data reimburse.', 'danger')
         return redirect('/reimburse/list')
 
-    reimbursements = ReimburseRequest.query.order_by(
-        ReimburseRequest.created_at.desc()
-    ).all()
+    nama_filter = request.args.get('nama', '').strip()
+
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=7)
+
+    # Sama seperti /reimburse/list:
+    # hanya data aktif, bukan arsip
+    query = db.session.query(ReimburseRequest, User).join(
+        User, ReimburseRequest.user_id == User.id
+    ).filter(
+        (ReimburseRequest.paid_at == None) |
+        (ReimburseRequest.paid_at >= cutoff)
+    )
+
+    if nama_filter:
+        query = query.filter(User.username.ilike(f'%{nama_filter}%'))
+
+    reimbursements = query.order_by(ReimburseRequest.created_at.desc()).all()
 
     rows = []
 
-    for r in reimbursements:
-        pengaju = db.session.get(User, r.user_id)
-
-        for item in r.items:
+    for reimb, pengaju in reimbursements:
+        if reimb.items:
+            for item in reimb.items:
+                rows.append({
+                    'ID Reimburse': reimb.id,
+                    'Nama Pengaju': pengaju.username if pengaju else '-',
+                    'Divisi': pengaju.divisi if pengaju else '-',
+                    'Tanggal Pengajuan': format_tanggal_excel(reimb.created_at, pakai_jam=True),
+                    'Status': 'Dibayar' if reimb.status == 'paid' else 'Menunggu Pembayaran',
+                    'Nama Item': item.item_name,
+                    'Harga': item.price,
+                    'Qty': item.qty,
+                    'Subtotal': item.price * item.qty,
+                    'Total Reimburse': reimb.total_amount,
+                    'Tanggal Dibayar': format_tanggal_excel(reimb.paid_at, pakai_jam=True),
+                    'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                    'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
+                })
+        else:
             rows.append({
-                'ID Reimburse': r.id,
-                'Pengaju': pengaju.username if pengaju else '-',
-                'Tanggal Pengajuan': r.created_at.strftime('%d/%m/%Y %H:%M'),
-                'Status': r.status,
-                'Nama Item': item.item_name,
-                'Harga': item.price,
-                'Qty': item.qty,
-                'Subtotal': item.price * item.qty,
-                'Total Reimburse': r.total_amount,
-                'Tanggal Bayar': r.paid_at.strftime('%d/%m/%Y %H:%M') if r.paid_at else '-'
+                'ID Reimburse': reimb.id,
+                'Nama Pengaju': pengaju.username if pengaju else '-',
+                'Divisi': pengaju.divisi if pengaju else '-',
+                'Tanggal Pengajuan': format_tanggal_excel(reimb.created_at, pakai_jam=True),
+                'Status': 'Dibayar' if reimb.status == 'paid' else 'Menunggu Pembayaran',
+                'Nama Item': '-',
+                'Harga': 0,
+                'Qty': 0,
+                'Subtotal': 0,
+                'Total Reimburse': reimb.total_amount,
+                'Tanggal Dibayar': format_tanggal_excel(reimb.paid_at, pakai_jam=True),
+                'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
             })
 
-    df = pd.DataFrame(rows)
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data Reimburse')
-
-    output.seek(0)
-
-    filename = f"Data_Reimburse_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=filename
+    return buat_file_excel(
+        rows=rows,
+        sheet_name='Data Reimburse',
+        filename_prefix='Rekap_Reimburse_Aktif'
     )
 
 

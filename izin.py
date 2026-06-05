@@ -583,37 +583,127 @@ def reset_password(id):
     flash(f'Password {user.username} berhasil direset!', 'success')
     return redirect('/manage_users')
 
+# =========================
+# EXPORT EXCEL IZIN
+# =========================
+
+def format_tanggal_excel(value, pakai_jam=False):
+    if not value:
+        return '-'
+
+    try:
+        if pakai_jam:
+            return value.strftime('%d/%m/%Y %H:%M')
+        return value.strftime('%d/%m/%Y')
+    except:
+        return str(value)
+
+
+def buat_file_excel(rows, sheet_name, filename_prefix):
+    df = pd.DataFrame(rows)
+
+    if df.empty:
+        df = pd.DataFrame([{
+            'Info': 'Tidak ada data untuk diexport'
+        }])
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        worksheet = writer.sheets[sheet_name]
+
+        for column_cells in worksheet.columns:
+            max_length = 0
+            column_letter = column_cells[0].column_letter
+
+            for cell in column_cells:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+
+            worksheet.column_dimensions[column_letter].width = max_length + 3
+
+    output.seek(0)
+
+    filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
 @app.route('/export_excel')
 def export_excel():
     if 'user_id' not in session:
         return redirect('/login')
-    user = User.query.get(session['user_id'])
-    if user.role not in ['admin', 'hrd', 'direktur']:        
+
+    current_user = User.query.get(session['user_id'])
+
+    if not current_user:
+        session.clear()
+        return redirect('/login')
+
+    if current_user.role not in ['admin', 'hrd', 'direktur']:
+        flash('Kamu tidak memiliki akses untuk export data izin.', 'danger')
         return redirect('/dashboard')
-    data = LeaveRequest.query.all()
+
+    status_filter = request.args.get('status', '').strip()
+    jenis_filter = request.args.get('jenis', '').strip()
+    search = request.args.get('search', '').strip()
+    divisi_filter = request.args.get('divisi', '').strip()
+    nama_filter = request.args.get('nama', '').strip()
+
+    query = db.session.query(LeaveRequest, User).join(
+        User, LeaveRequest.user_id == User.id
+    )
+
+    if status_filter:
+        query = query.filter(LeaveRequest.status == status_filter)
+
+    if jenis_filter:
+        query = query.filter(LeaveRequest.jenis_izin == jenis_filter)
+
+    if search:
+        query = query.filter(LeaveRequest.alasan.ilike(f'%{search}%'))
+
+    if divisi_filter:
+        query = query.filter(User.divisi == divisi_filter)
+
+    if nama_filter:
+        query = query.filter(User.username.ilike(f'%{nama_filter}%'))
+
+    data = query.order_by(LeaveRequest.created_at.desc()).all()
+
     rows = []
-    for i in data:
-        pengaju = User.query.get(i.user_id)
+
+    for izin, pengaju in data:
         rows.append({
-            'ID': i.id,
-            'Pengaju': pengaju.username if pengaju else '-',
+            'ID Izin': izin.id,
+            'Nama Pengaju': pengaju.username if pengaju else '-',
             'Divisi': pengaju.divisi if pengaju else '-',
-            'Jenis Izin': i.jenis_izin,
-            'Tanggal Mulai': i.tanggal_mulai,
-            'Tanggal Selesai': i.tanggal_selesai,
-            'Durasi (Hari)': i.durasi,
-            'Alasan': i.alasan,
-            'Status': i.status.upper(),
-            'Tanggal Ajuan': i.created_at
+            'Jenis Izin': izin.jenis_izin,
+            'Tanggal Mulai': format_tanggal_excel(izin.tanggal_mulai),
+            'Tanggal Selesai': format_tanggal_excel(izin.tanggal_selesai),
+            'Durasi': izin.durasi,
+            'Alasan': izin.alasan,
+            'Status': izin.status.upper() if izin.status else '-',
+            'Tanggal Pengajuan': format_tanggal_excel(izin.created_at, pakai_jam=True),
+            'File Surat Dokter': izin.file_surat if izin.file_surat else '-',
+            'File Bukti Chat': izin.file_chat if izin.file_chat else '-'
         })
-    df = pd.DataFrame(rows)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data Izin')
-    output.seek(0)
-    filename = f"Rekap_Izin_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    as_attachment=True, download_name=filename)
+
+    return buat_file_excel(
+        rows=rows,
+        sheet_name='Data Izin',
+        filename_prefix='Rekap_Izin'
+    )
 
 @app.context_processor
 def utility_processor():

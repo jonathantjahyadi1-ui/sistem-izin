@@ -18,6 +18,69 @@ UPLOAD_FOLDER = 'uploads'
 
 def get_user(user_id):
     return db.session.get(User, user_id)
+def format_tanggal_excel(value, pakai_jam=False):
+    if not value:
+        return '-'
+
+    try:
+        if pakai_jam:
+            return value.strftime('%d/%m/%Y %H:%M')
+        return value.strftime('%d/%m/%Y')
+    except:
+        return str(value)
+
+
+def label_status_po(status):
+    labels = {
+        'submitted': 'Menunggu Accounting',
+        'accounting_approved': 'Disetujui Accounting',
+        'accounting_rejected': 'Ditolak Accounting',
+        'director_approved': 'Disetujui Direktur',
+        'director_rejected': 'Ditolak Direktur',
+        'ordered': 'Sudah Dipesan'
+    }
+
+    return labels.get(status, status or '-')
+
+
+def buat_file_excel(rows, sheet_name, filename_prefix):
+    df = pd.DataFrame(rows)
+
+    if df.empty:
+        df = pd.DataFrame([{
+            'Info': 'Tidak ada data untuk diexport'
+        }])
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        worksheet = writer.sheets[sheet_name]
+
+        for column_cells in worksheet.columns:
+            max_length = 0
+            column_letter = column_cells[0].column_letter
+
+            for cell in column_cells:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+
+            worksheet.column_dimensions[column_letter].width = max_length + 3
+
+    output.seek(0)
+
+    filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 @po_bp.route('/list')
@@ -298,6 +361,7 @@ def export_po_excel():
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
+
     if not user:
         session.clear()
         return redirect('/login')
@@ -306,57 +370,147 @@ def export_po_excel():
         flash('Kamu tidak memiliki akses untuk mengunduh data PO.', 'danger')
         return redirect(url_for('purchase_order.list_po'))
 
-    query = PurchaseOrderRequest.query
+    status_filter = request.args.get('status', '').strip()
+    nama_filter = request.args.get('nama', '').strip()
 
-    status_filter = request.args.get('status', '')
-    nama_filter = request.args.get('nama', '')
+    cutoff = datetime.utcnow() - timedelta(days=7)
+
+    # Sama seperti /purchase-order/list:
+    # hanya data aktif, bukan arsip
+    query = db.session.query(PurchaseOrderRequest, User).join(
+        User, PurchaseOrderRequest.user_id == User.id
+    ).filter(
+        (PurchaseOrderRequest.ordered_at == None) |
+        (PurchaseOrderRequest.ordered_at >= cutoff)
+    )
 
     if status_filter:
         query = query.filter(PurchaseOrderRequest.status == status_filter)
 
     if nama_filter:
-        query = query.join(User, PurchaseOrderRequest.user_id == User.id)
         query = query.filter(User.username.ilike(f'%{nama_filter}%'))
 
     purchase_orders = query.order_by(PurchaseOrderRequest.created_at.desc()).all()
 
     rows = []
 
-    for po in purchase_orders:
-        pengaju = get_user(po.user_id)
-
-        for item in po.items:
+    for po, pengaju in purchase_orders:
+        if po.items:
+            for item in po.items:
+                rows.append({
+                    'ID PO': po.id,
+                    'Nama Pengaju': pengaju.username if pengaju else '-',
+                    'Divisi': pengaju.divisi if pengaju else '-',
+                    'Tanggal Pengajuan': format_tanggal_excel(po.created_at, pakai_jam=True),
+                    'Status': label_status_po(po.status),
+                    'Alasan Pembelian': po.reason,
+                    'Nama Barang': item.item_name,
+                    'Estimasi Harga': item.estimated_price,
+                    'Qty': item.qty,
+                    'Subtotal': item.estimated_price * item.qty,
+                    'Total PO': po.total_amount,
+                    'Tanggal ACC Accounting': format_tanggal_excel(po.accounting_approved_at, pakai_jam=True),
+                    'Tanggal Tolak Accounting': format_tanggal_excel(po.accounting_rejected_at, pakai_jam=True),
+                    'Tanggal ACC Direktur': format_tanggal_excel(po.director_approved_at, pakai_jam=True),
+                    'Tanggal Tolak Direktur': format_tanggal_excel(po.director_rejected_at, pakai_jam=True),
+                    'Tanggal Ordered': format_tanggal_excel(po.ordered_at, pakai_jam=True),
+                    'Alasan Ditolak': po.reject_reason if po.reject_reason else '-',
+                    'Bukti Pemesanan': po.order_proof if po.order_proof else '-'
+                })
+        else:
             rows.append({
                 'ID PO': po.id,
-                'Pengaju': pengaju.username if pengaju else '-',
+                'Nama Pengaju': pengaju.username if pengaju else '-',
                 'Divisi': pengaju.divisi if pengaju else '-',
-                'Tanggal Pengajuan': po.created_at.strftime('%d/%m/%Y %H:%M') if po.created_at else '-',
-                'Status': po.status,
+                'Tanggal Pengajuan': format_tanggal_excel(po.created_at, pakai_jam=True),
+                'Status': label_status_po(po.status),
                 'Alasan Pembelian': po.reason,
-                'Nama Barang': item.item_name,
-                'Estimasi Harga': item.estimated_price,
-                'Qty': item.qty,
-                'Subtotal': item.estimated_price * item.qty,
+                'Nama Barang': '-',
+                'Estimasi Harga': 0,
+                'Qty': 0,
+                'Subtotal': 0,
                 'Total PO': po.total_amount,
-                'Tanggal Approve': po.approved_at.strftime('%d/%m/%Y %H:%M') if po.approved_at else '-',
-                'Tanggal Reject': po.rejected_at.strftime('%d/%m/%Y %H:%M') if po.rejected_at else '-',
-                'Tanggal Ordered': po.ordered_at.strftime('%d/%m/%Y %H:%M') if po.ordered_at else '-',
+                'Tanggal ACC Accounting': format_tanggal_excel(po.accounting_approved_at, pakai_jam=True),
+                'Tanggal Tolak Accounting': format_tanggal_excel(po.accounting_rejected_at, pakai_jam=True),
+                'Tanggal ACC Direktur': format_tanggal_excel(po.director_approved_at, pakai_jam=True),
+                'Tanggal Tolak Direktur': format_tanggal_excel(po.director_rejected_at, pakai_jam=True),
+                'Tanggal Ordered': format_tanggal_excel(po.ordered_at, pakai_jam=True),
+                'Alasan Ditolak': po.reject_reason if po.reject_reason else '-',
                 'Bukti Pemesanan': po.order_proof if po.order_proof else '-'
             })
 
-    output = io.BytesIO()
+    return buat_file_excel(
+        rows=rows,
+        sheet_name='Data PO Aktif',
+        filename_prefix='Rekap_PO_Aktif'
+    )
 
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df = pd.DataFrame(rows)
-        df.to_excel(writer, index=False, sheet_name='Data PO')
+@po_bp.route('/archive/export_excel')
+def export_po_archive_excel():
+    if 'user_id' not in session:
+        return redirect('/login')
 
-    output.seek(0)
+    user = db.session.get(User, session['user_id'])
 
-    filename = f"Data_PO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    if not user:
+        session.clear()
+        return redirect('/login')
 
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=filename
+    if user.role not in ['admin', 'direktur', 'accounting']:
+        flash('Kamu tidak memiliki akses untuk mengunduh arsip PO.', 'danger')
+        return redirect(url_for('purchase_order.archive_po'))
+
+    cutoff = datetime.utcnow() - timedelta(days=7)
+
+    query = db.session.query(PurchaseOrderRequest, User).join(
+        User, PurchaseOrderRequest.user_id == User.id
+    ).filter(
+        PurchaseOrderRequest.status == 'ordered',
+        PurchaseOrderRequest.ordered_at != None,
+        PurchaseOrderRequest.ordered_at < cutoff
+    )
+
+    purchase_orders = query.order_by(PurchaseOrderRequest.ordered_at.desc()).all()
+
+    rows = []
+
+    for po, pengaju in purchase_orders:
+        if po.items:
+            for item in po.items:
+                rows.append({
+                    'ID PO': po.id,
+                    'Nama Pengaju': pengaju.username if pengaju else '-',
+                    'Divisi': pengaju.divisi if pengaju else '-',
+                    'Tanggal Pengajuan': format_tanggal_excel(po.created_at, pakai_jam=True),
+                    'Tanggal Ordered': format_tanggal_excel(po.ordered_at, pakai_jam=True),
+                    'Status': label_status_po(po.status),
+                    'Alasan Pembelian': po.reason,
+                    'Nama Barang': item.item_name,
+                    'Estimasi Harga': item.estimated_price,
+                    'Qty': item.qty,
+                    'Subtotal': item.estimated_price * item.qty,
+                    'Total PO': po.total_amount,
+                    'Bukti Pemesanan': po.order_proof if po.order_proof else '-'
+                })
+        else:
+            rows.append({
+                'ID PO': po.id,
+                'Nama Pengaju': pengaju.username if pengaju else '-',
+                'Divisi': pengaju.divisi if pengaju else '-',
+                'Tanggal Pengajuan': format_tanggal_excel(po.created_at, pakai_jam=True),
+                'Tanggal Ordered': format_tanggal_excel(po.ordered_at, pakai_jam=True),
+                'Status': label_status_po(po.status),
+                'Alasan Pembelian': po.reason,
+                'Nama Barang': '-',
+                'Estimasi Harga': 0,
+                'Qty': 0,
+                'Subtotal': 0,
+                'Total PO': po.total_amount,
+                'Bukti Pemesanan': po.order_proof if po.order_proof else '-'
+            })
+
+    return buat_file_excel(
+        rows=rows,
+        sheet_name='Arsip PO',
+        filename_prefix='Arsip_PO'
     )
