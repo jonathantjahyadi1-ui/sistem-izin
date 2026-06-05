@@ -278,6 +278,15 @@ with app.app_context():
             conn.execute(db.text('ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 12'))
             conn.commit()
 
+    # Tambah kolom receipt_photo di reimburse_item untuk nota per item
+    if 'reimburse_item' in inspector.get_table_names():
+        reimburse_item_columns = [c['name'] for c in inspector.get_columns('reimburse_item')]
+
+        if 'receipt_photo' not in reimburse_item_columns:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE reimburse_item ADD COLUMN receipt_photo VARCHAR(255)'))
+                conn.commit()
+
     # ADMIN
     if not User.query.filter_by(username='Jonathan').first():
         db.session.add(User(

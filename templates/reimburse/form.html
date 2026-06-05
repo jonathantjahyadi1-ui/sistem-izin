@@ -5,58 +5,135 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
         * { font-family: 'Poppins', sans-serif; }
-        body { background: #f8fafc; padding-top: 56px; }
-        :root { --primary: #5b86e5; }
-        .navbar { position: fixed; top: 0; width: 100%; background: linear-gradient(135deg, var(--primary) 0%, #36d1dc 100%) !important; }
-        .card { border-radius: 12px; }
+
+        body {
+            background: #f8fafc;
+            padding-top: 56px;
+        }
+
+        :root {
+            --primary: #5b86e5;
+            --secondary: #36d1dc;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+        }
+
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .item-row {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
+
 <body>
+
 <nav class="navbar navbar-dark px-4">
     <a href="/reimburse/list" class="btn btn-light btn-sm">← Kembali</a>
     <span class="navbar-brand ms-2">Ajukan Reimburse</span>
 </nav>
 
-<div class="container mt-5 pt-4" style="max-width: 700px;">
+<div class="container mt-5 pt-4" style="max-width: 900px;">
     <div class="card p-4">
         <h4 class="mb-4">Form Pengajuan Reimburse</h4>
-        <form method="POST" enctype="multipart/form-data" id="reimbForm">
-            <div id="itemsContainer">
-                <div class="row mb-2 item-row">
-                    <div class="col-md-5"><input type="text" name="item_name[]" class="form-control" placeholder="Nama Barang" required></div>
-                    <div class="col-md-3"><input type="number" name="price[]" class="form-control" placeholder="Harga" required></div>
-                    <div class="col-md-2"><input type="number" name="qty[]" class="form-control" value="1" required></div>
-                    <div class="col-md-2"><button type="button" class="btn btn-danger btn-sm remove-row">X</button></div>
-                </div>
-            </div>
-            <button type="button" class="btn btn-secondary btn-sm mb-3" id="addRow">+ Tambah Item</button>
 
-            <div class="mb-3">
-                <label class="form-label">Foto Nota (CamScanner)</label>
-                <input type="file" name="receipt" class="form-control" required accept="image/*">
+        <form method="POST" enctype="multipart/form-data" id="reimbForm">
+
+            <div id="itemsContainer">
+
+                <div class="item-row">
+                    <div class="row g-3 align-items-end">
+
+                        <div class="col-md-4">
+                            <label class="form-label">Nama Barang</label>
+                            <input type="text" name="item_name[]" class="form-control" placeholder="Contoh: Bensin" required>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Harga</label>
+                            <input type="number" name="price[]" class="form-control" placeholder="50000" min="0" required>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Qty</label>
+                            <input type="number" name="qty[]" class="form-control" value="1" min="1" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Foto Nota</label>
+                            <input type="file" name="receipt[]" class="form-control" accept="image/*" required>
+                        </div>
+
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-danger w-100 remove-row">X</button>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
-            <button class="btn btn-primary w-100">Ajukan</button>
+
+            <button type="button" class="btn btn-secondary btn-sm mb-3" id="addRow">
+                + Tambah Item
+            </button>
+
+            <button class="btn btn-primary w-100">
+                Ajukan Reimburse
+            </button>
+
         </form>
     </div>
 </div>
 
 <script>
-document.getElementById('addRow').addEventListener('click', function(){
-    let container = document.getElementById('itemsContainer');
-    let row = document.createElement('div');
-    row.className = 'row mb-2 item-row';
-    row.innerHTML = `<div class="col-md-5"><input type="text" name="item_name[]" class="form-control" placeholder="Nama Barang" required></div>
-                    <div class="col-md-3"><input type="number" name="price[]" class="form-control" placeholder="Harga" required></div>
-                    <div class="col-md-2"><input type="number" name="qty[]" class="form-control" value="1" required></div>
-                    <div class="col-md-2"><button type="button" class="btn btn-danger btn-sm remove-row">X</button></div>`;
-    container.appendChild(row);
-    row.querySelector('.remove-row').addEventListener('click', function(){ row.remove(); });
+document.getElementById('addRow').addEventListener('click', function () {
+    const container = document.getElementById('itemsContainer');
+    const firstRow = document.querySelector('.item-row');
+    const newRow = firstRow.cloneNode(true);
+
+    newRow.querySelectorAll('input').forEach(input => {
+        if (input.name === 'qty[]') {
+            input.value = 1;
+        } else {
+            input.value = '';
+        }
+    });
+
+    container.appendChild(newRow);
 });
-document.querySelectorAll('.remove-row').forEach(btn => {
-    btn.addEventListener('click', function(){ btn.closest('.item-row').remove(); });
+
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('remove-row')) {
+        const rows = document.querySelectorAll('.item-row');
+
+        if (rows.length > 1) {
+            e.target.closest('.item-row').remove();
+        }
+    }
 });
 </script>
+
 </body>
 </html>

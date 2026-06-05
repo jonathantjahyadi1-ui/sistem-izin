@@ -175,7 +175,7 @@ def export_archive_excel():
                     'Qty': item.qty,
                     'Subtotal': item.price * item.qty,
                     'Total Reimburse': reimb.total_amount,
-                    'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                    'File Nota': item.receipt_photo if item.receipt_photo else (reimb.receipt_photo if reimb.receipt_photo else '-'),
                     'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
                 })
         else:
@@ -290,7 +290,7 @@ def export_excel():
                     'Subtotal': item.price * item.qty,
                     'Total Reimburse': reimb.total_amount,
                     'Tanggal Dibayar': format_tanggal_excel(reimb.paid_at, pakai_jam=True),
-                    'File Nota': reimb.receipt_photo if reimb.receipt_photo else '-',
+                    'File Nota': item.receipt_photo if item.receipt_photo else (reimb.receipt_photo if reimb.receipt_photo else '-'),
                     'Bukti Pembayaran': reimb.payment_proof if reimb.payment_proof else '-'
                 })
         else:
@@ -321,7 +321,9 @@ def export_excel():
 def submit():
     if 'user_id' not in session:
         return redirect('/login')
+
     user = db.session.get(User, session['user_id'])
+
     if not user:
         return redirect('/login')
 
@@ -329,6 +331,7 @@ def submit():
         item_names = request.form.getlist('item_name[]')
         prices = request.form.getlist('price[]')
         qtys = request.form.getlist('qty[]')
+        receipts = request.files.getlist('receipt[]')
 
         if not item_names:
             flash('Minimal satu item harus diisi.', 'danger')
@@ -336,35 +339,68 @@ def submit():
 
         total = 0
         items = []
-        for n, p, q in zip(item_names, prices, qtys):
-            price = int(p) if p else 0
-            qty = int(q) if q else 1
-            total += price * qty
-            items.append({'item_name': n, 'price': price, 'qty': qty})
 
-        file = request.files.get('receipt')
-        filename = None
-        if file and file.filename != '':
-            filename = f"receipt_{datetime.now().timestamp()}_{file.filename}"
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
+        for index, name in enumerate(item_names):
+            name = name.strip()
+
+            if not name:
+                continue
+
+            try:
+                price = int(prices[index]) if index < len(prices) and prices[index] else 0
+                qty = int(qtys[index]) if index < len(qtys) and qtys[index] else 1
+            except ValueError:
+                flash('Harga dan qty harus berupa angka.', 'danger')
+                return redirect(url_for('reimburse.submit'))
+
+            if price < 0 or qty <= 0:
+                flash('Harga tidak boleh minus dan qty minimal 1.', 'danger')
+                return redirect(url_for('reimburse.submit'))
+
+            receipt_file = receipts[index] if index < len(receipts) else None
+            receipt_filename = None
+
+            if receipt_file and receipt_file.filename != '':
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                receipt_filename = f"receipt_{datetime.now().timestamp()}_{receipt_file.filename}"
+                receipt_file.save(os.path.join(UPLOAD_FOLDER, receipt_filename))
+            else:
+                flash(f'Foto nota untuk item "{name}" wajib diupload.', 'danger')
+                return redirect(url_for('reimburse.submit'))
+
+            total += price * qty
+
+            items.append({
+                'item_name': name,
+                'price': price,
+                'qty': qty,
+                'receipt_photo': receipt_filename
+            })
+
+        if not items:
+            flash('Minimal satu item valid harus diisi.', 'danger')
+            return redirect(url_for('reimburse.submit'))
 
         reimb = ReimburseRequest(
             user_id=user.id,
             total_amount=total,
-            receipt_photo=filename
+            receipt_photo=None
         )
+
         db.session.add(reimb)
         db.session.flush()
 
-        for it in items:
+        for item in items:
             db.session.add(ReimburseItem(
                 reimburse_id=reimb.id,
-                item_name=it['item_name'],
-                price=it['price'],
-                qty=it['qty']
+                item_name=item['item_name'],
+                price=item['price'],
+                qty=item['qty'],
+                receipt_photo=item['receipt_photo']
             ))
 
         db.session.commit()
+
         flash('Pengajuan reimburse berhasil!', 'success')
         return redirect(url_for('reimburse.list_reimburse'))
 

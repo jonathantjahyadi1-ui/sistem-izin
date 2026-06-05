@@ -222,27 +222,45 @@
                         <td colspan="5">
                             <div class="p-3 bg-light rounded">
 
-                                <strong>Nota:</strong><br>
+                                <strong>Items & Nota:</strong>
 
-                                {% if r.receipt_photo %}
-                                    <img src="/uploads/{{ r.receipt_photo }}" 
-                                         style="max-height: 200px;" 
-                                         class="mb-2 rounded"><br>
-                                {% else %}
-                                    <span class="text-muted">Tidak ada nota</span><br>
-                                {% endif %}
+<div class="table-responsive mt-2">
+    <table class="table table-sm table-bordered bg-white">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Harga</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+                <th>Nota</th>
+            </tr>
+        </thead>
 
-                                <strong>Items:</strong>
-
-                                <ul class="mb-2">
-                                    {% for item in r.items %}
-                                        <li>
-                                            {{ item.item_name }} -
-                                            Rp {{ "{:,.0f}".format(item.price) }}
-                                            x{{ item.qty }}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
+        <tbody>
+            {% for item in r.items %}
+            <tr>
+                <td>{{ item.item_name }}</td>
+                <td>Rp {{ "{:,.0f}".format(item.price) }}</td>
+                <td>{{ item.qty }}</td>
+                <td>Rp {{ "{:,.0f}".format(item.price * item.qty) }}</td>
+                <td>
+                    {% if item.receipt_photo %}
+                        <a href="/uploads/{{ item.receipt_photo }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            Lihat Nota
+                        </a>
+                    {% elif r.receipt_photo %}
+                        <a href="/uploads/{{ r.receipt_photo }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            Lihat Nota Lama
+                        </a>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
                                 <strong>
                                     Total: Rp {{ "{:,.0f}".format(r.total_amount) }}
