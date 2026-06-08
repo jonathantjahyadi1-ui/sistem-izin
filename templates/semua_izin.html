@@ -131,19 +131,6 @@
         <i class="bi bi-file-earmark-excel"></i> Export
     </a>
 </div>
-
-<div class="col-md-2">
-    <a href="{{ url_for(
-        'export_excel',
-        status=status_filter,
-        jenis=jenis_filter,
-        search=search,
-        divisi=divisi_filter,
-        nama=nama_filter
-    ) }}" class="btn btn-success w-100">
-        <i class="bi bi-file-earmark-excel"></i> Export
-    </a>
-</div>
         </form>
     </div>
     
@@ -166,21 +153,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for i in data %}
-                    {% set pengaju = get_user(i.user_id) %}
+                    {% for i, pengaju in data %}
                     <tr>
                         <td><strong>#{{ i.id }}</strong></td>
                         <td>{{ pengaju.username if pengaju else '-' }}</td>
                         <td>
                             {% if i.file_surat %}
-                                <a href="/download/{{ i.file_surat }}" class="btn btn-sm btn-primary">📄 DL</a>
+                                <a href="{{ url_for('download_file', filename=i.file_surat) }}" 
+                                    target="_blank" 
+                                    class="btn btn-sm btn-primary">
+                                    📄 Lihat
+                                </a>
                             {% else %}
                                 -
                             {% endif %}
                         </td>
                         <td>
                             {% if i.file_chat %}
-                                <a href="/download/{{ i.file_chat }}" class="btn btn-sm btn-info">💬 DL</a>
+                                <a href="{{ url_for('download_file', filename=i.file_chat) }}" target="_blank" class="btn btn-sm btn-info">
+                                💬 Lihat
+                            </a>
                             {% else %}
                                 -
                             {% endif %}

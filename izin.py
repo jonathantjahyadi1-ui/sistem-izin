@@ -3,7 +3,8 @@ import os
 import pandas as pd
 import io
 from datetime import datetime
-from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file
+from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file, send_from_directory
+from werkzeug.utils import secure_filename
 from extensions import db
 from models import User, LeaveRequest
 from reimburse.models import ReimburseRequest, ReimburseItem
@@ -20,7 +21,8 @@ if os.getenv("RENDER") is None:
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'uploads'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -423,7 +425,9 @@ def dashboard():
     data_kehadiran = get_data_kehadiran_per_bulan(tahun_filter, bulan_filter, divisi_filter if divisi_filter else None)
     stat_divisi = get_statistik_divisi(tahun_filter, bulan_filter)
     
-    data_izin = LeaveRequest.query.all()
+    data_izin = LeaveRequest.query.order_by(
+    LeaveRequest.created_at.desc()
+    ).limit(10).all()
     sisa_cuti_pribadi = get_sisa_cuti(user)
     jenis_data = db.session.query(
         LeaveRequest.jenis_izin,
@@ -456,6 +460,18 @@ def form_izin():
         return redirect('/login')
     return render_template('izin.html')
 
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
+ALLOWED_DOCUMENT_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
+
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+
+
+def allowed_file(filename, allowed_extensions):
+    return (
+        '.' in filename and
+        filename.rsplit('.', 1)[1].lower() in allowed_extensions
+    )
+
 @app.route('/izin', methods=['POST'])
 def ajukan_izin():
     if 'user_id' not in session:
@@ -464,17 +480,35 @@ def ajukan_izin():
     mulai = datetime.strptime(request.form['mulai'], '%Y-%m-%d')
     selesai = datetime.strptime(request.form['selesai'], '%Y-%m-%d')
 
+    # Upload surat dokter
     file_surat = request.files.get('file')
     filename_surat = None
-    if file_surat and file_surat.filename != '':
-        filename_surat = f"surat_{datetime.now().timestamp()}_{file_surat.filename}"
-        file_surat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_surat))
 
+    if file_surat and file_surat.filename != '':
+        if not allowed_file(file_surat.filename, ALLOWED_DOCUMENT_EXTENSIONS):
+            flash("Format surat dokter harus PDF, JPG, JPEG, atau PNG.", "danger")
+            return redirect('/form_izin')
+
+    original_surat = secure_filename(file_surat.filename)
+    filename_surat = f"surat_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{original_surat}"
+    file_surat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_surat))
+
+    # Upload bukti chat
     file_chat = request.files.get('file_chat')
     filename_chat = None
-    if file_chat and file_chat.filename != '':
-        filename_chat = f"chat_{datetime.now().timestamp()}_{file_chat.filename}"
-        file_chat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_chat))
+
+    if not file_chat or file_chat.filename == '':
+        flash("Bukti chat wajib diupload.", "danger")
+        return redirect('/form_izin')
+
+    if not allowed_file(file_chat.filename, ALLOWED_IMAGE_EXTENSIONS):
+        flash("Format bukti chat harus JPG, JPEG, atau PNG.", "danger")
+        return redirect('/form_izin')
+        return redirect('/form_izin')
+
+    original_chat = secure_filename(file_chat.filename)
+    filename_chat = f"chat_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{original_chat}"
+    file_chat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_chat))
 
     izin = LeaveRequest(
         user_id=session['user_id'],
@@ -486,56 +520,73 @@ def ajukan_izin():
         file_surat=filename_surat,
         file_chat=filename_chat
     )
+
     db.session.add(izin)
     db.session.commit()
+
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
 
-@app.route('/download/<filename>')
+@app.route('/download/<path:filename>')
 def download_file(filename):
-    return send_file(
-        os.path.join(app.config['UPLOAD_FOLDER'], filename),
-        as_attachment=True
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    filename = secure_filename(filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    if not os.path.isfile(file_path):
+        flash(
+            'File tidak ditemukan. File lama kemungkinan sudah hilang dari server. Silakan upload ulang.',
+            'danger'
+        )
+        return redirect(request.referrer or '/dashboard')
+
+    return send_from_directory(
+        app.config['UPLOAD_FOLDER'],
+        filename,
+        as_attachment=False
     )
 
 @app.route('/semua_izin')
 def semua_izin():
     if 'user_id' not in session:
         return redirect('/login')
+
     user = User.query.get(session['user_id'])
     if user.role not in ['admin', 'hrd', 'direktur']:
         return redirect('/dashboard')
-    
-    # Ambil parameter filter
-    status_filter = request.args.get('status', '')
-    jenis_filter = request.args.get('jenis', '')
-    search = request.args.get('search', '')
-    divisi_filter = request.args.get('divisi', '')   
-    nama_filter = request.args.get('nama', '')       
-    
-    query = LeaveRequest.query
-    
+
+    status_filter = request.args.get('status', '').strip()
+    jenis_filter = request.args.get('jenis', '').strip()
+    search = request.args.get('search', '').strip()
+    divisi_filter = request.args.get('divisi', '').strip()
+    nama_filter = request.args.get('nama', '').strip()
+
+    query = db.session.query(LeaveRequest, User).join(
+        User, LeaveRequest.user_id == User.id
+    )
+
     if status_filter:
-        query = query.filter_by(status=status_filter)
+        query = query.filter(LeaveRequest.status == status_filter)
+
     if jenis_filter:
-        query = query.filter_by(jenis_izin=jenis_filter)
+        query = query.filter(LeaveRequest.jenis_izin == jenis_filter)
+
     if search:
         query = query.filter(LeaveRequest.alasan.ilike(f'%{search}%'))
-    
-    # Filter berdasarkan divisi (join dengan User)
+
     if divisi_filter:
-        query = query.join(User, LeaveRequest.user_id == User.id).filter(User.divisi == divisi_filter)
-    
-    # Filter berdasarkan nama pengaju (username)
+        query = query.filter(User.divisi == divisi_filter)
+
     if nama_filter:
-        query = query.join(User, LeaveRequest.user_id == User.id).filter(User.username.ilike(f'%{nama_filter}%'))
-    
-    data = query.order_by(LeaveRequest.created_at.desc()).all()
-    
-    # Kirim juga daftar divisi untuk dropdown
+        query = query.filter(User.username.ilike(f'%{nama_filter}%'))
+
+    data = query.order_by(LeaveRequest.created_at.desc()).limit(100).all()
+
     divisi_list = db.session.query(User.divisi).distinct().all()
     divisi_list = [d[0] for d in divisi_list if d[0]]
-    
+
     return render_template(
         'semua_izin.html',
         data=data,
