@@ -583,8 +583,8 @@ def ajukan_izin():
         flash("Format surat dokter harus PDF, JPG, JPEG, atau PNG.", "danger")
         return redirect('/form_izin')
     except Exception as e:
-        print("ERROR UPLOAD SURAT:", e)
-        flash("Gagal upload surat dokter. Coba upload ulang.", "danger")
+        print("ERROR UPLOAD SURAT:", repr(e))
+        flash(f"Gagal upload surat dokter: {str(e)}", "danger")
         return redirect('/form_izin')
 
     # =========================
@@ -607,8 +607,8 @@ def ajukan_izin():
         flash("Format bukti chat harus JPG, JPEG, atau PNG.", "danger")
         return redirect('/form_izin')
     except Exception as e:
-        print("ERROR UPLOAD CHAT:", e)
-        flash("Gagal upload bukti chat. Coba upload ulang.", "danger")
+        print("ERROR UPLOAD CHAT:", repr(e))
+        flash(f"Gagal upload bukti chat: {str(e)}", "danger")
         return redirect('/form_izin')
 
     izin = LeaveRequest(
