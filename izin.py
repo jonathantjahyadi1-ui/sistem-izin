@@ -178,7 +178,7 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
         mulai = date(tahun, bulan, 1)
         selesai = date(tahun, bulan, monthrange(tahun, bulan)[1])
         
-        # ✅ HITUNG SAKIT
+        # HITUNG SAKIT
         izin_sakit = LeaveRequest.query.filter(
             LeaveRequest.user_id == u.id,
             LeaveRequest.jenis_izin == 'sakit',
@@ -198,7 +198,7 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
         
         hari_sakit = _hitung_hari_kerja_dari_set(tanggal_sakit, u.divisi)
         
-        # ✅ HITUNG IZIN LAIN
+        # HITUNG IZIN LAIN
         izin_lain = LeaveRequest.query.filter(
             LeaveRequest.user_id == u.id,
             LeaveRequest.jenis_izin == 'izin_lain',
@@ -218,7 +218,7 @@ def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
         
         hari_izin = _hitung_hari_kerja_dari_set(tanggal_izin, u.divisi)
         
-        #HITUNG CUTI (gak motong hari kerja, cuma informasi)
+        #HITUNG CUTI
         izin_cuti = LeaveRequest.query.filter(
             LeaveRequest.user_id == u.id,
             LeaveRequest.jenis_izin == 'cuti',
@@ -342,6 +342,12 @@ with app.app_context():
 
     db.session.commit()
 
+def normalize_full_name(name):
+    return " ".join((name or "").strip().split())
+
+
+def is_valid_full_name(name):
+    return len(name.split()) >= 2
 # ========
 # ROUTES
 # ========
@@ -364,16 +370,29 @@ def login_view():
 @app.route('/register', methods=['GET', 'POST'])
 def register_view():
     if request.method == 'POST':
-        if User.query.filter_by(username=request.form['username']).first():
-            return "Username sudah dipakai"
+        username = normalize_full_name(request.form.get('username'))
+        password = request.form.get('password')
+        divisi = request.form.get('divisi')
+
+        if not is_valid_full_name(username):
+            flash("Nama wajib menggunakan nama lengkap minimal 2 kata.", "danger")
+            return redirect('/register')
+
+        if User.query.filter(func.lower(User.username) == username.lower()).first():
+            flash("Nama lengkap tersebut sudah terdaftar.", "danger")
+            return redirect('/register')
+
         user = User(
-            username=request.form['username'],
-            password=generate_password_hash(request.form['password']),
-            divisi=request.form['divisi']
+            username=username,
+            password=generate_password_hash(password),
+            divisi=divisi
         )
         db.session.add(user)
         db.session.commit()
+
+        flash("Registrasi berhasil. Silakan login.", "success")
         return redirect('/login')
+
     return render_template('register.html')
 
 @app.route('/main_dashboard')
@@ -634,9 +653,7 @@ def download_file(filename):
     if 'user_id' not in session:
         return redirect('/login')
 
-    # File baru dari Supabase Storage:
-    # izin/chat/namafile.png
-    # izin/surat/namafile.pdf
+    # File baru dari Supabase Storage
     if filename.startswith("izin/"):
         try:
             signed_url = create_supabase_signed_url(filename, expires_in=300)
@@ -724,7 +741,6 @@ def download_file(filename):
             </html>
             """, 500
 
-    # Fallback untuk file lama yang dulu disimpan lokal di folder uploads
     safe_filename = secure_filename(filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
 
@@ -832,30 +848,93 @@ def semua_izin():
 def manage_users():
     if 'user_id' not in session:
         return redirect('/login')
+
     user = User.query.get(session['user_id'])
-    if user.role != 'admin':
+    if not user or user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
-    users = User.query.all()
+
+    users = User.query.order_by(User.created_at.desc()).all()
     return render_template('manage_users.html', users=users, current_user=user)
 
 @app.route('/add_user', methods=['POST'])
 def add_user():
     if 'user_id' not in session:
         return redirect('/login')
+
     current_user = User.query.get(session['user_id'])
-    if current_user.role != 'admin':
+    if not current_user or current_user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
-    username = request.form['username']
-    password = request.form['password']
-    role = request.form['role']
-    divisi = request.form['divisi']
-    if User.query.filter_by(username=username).first():
-        flash('Username sudah ada!', 'danger')
+
+    username = normalize_full_name(request.form.get('username'))
+    password = request.form.get('password')
+    role = request.form.get('role')
+    divisi = request.form.get('divisi')
+
+    if not is_valid_full_name(username):
+        flash('Nama wajib menggunakan nama lengkap minimal 2 kata.', 'danger')
         return redirect('/manage_users')
-    new_user = User(username=username, password=generate_password_hash(password), role=role, divisi=divisi)
+
+    if User.query.filter(func.lower(User.username) == username.lower()).first():
+        flash('Nama lengkap tersebut sudah ada!', 'danger')
+        return redirect('/manage_users')
+
+    new_user = User(
+        username=username,
+        password=generate_password_hash(password),
+        role=role,
+        divisi=divisi
+    )
+
     db.session.add(new_user)
     db.session.commit()
+
     flash('User berhasil ditambahkan!', 'success')
+    return redirect('/manage_users')
+
+@app.route('/update_user/<int:id>', methods=['POST'])
+def update_user(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    current_user = User.query.get(session['user_id'])
+    if not current_user or current_user.role not in ['admin', 'hrd']:
+        return redirect('/dashboard')
+
+    user = User.query.get(id)
+    if not user:
+        flash('User tidak ditemukan.', 'danger')
+        return redirect('/manage_users')
+
+    username = normalize_full_name(request.form.get('username'))
+    divisi = request.form.get('divisi')
+    role = request.form.get('role')
+
+    if not is_valid_full_name(username):
+        flash('Nama wajib menggunakan nama lengkap minimal 2 kata.', 'danger')
+        return redirect('/manage_users')
+
+    duplicate = User.query.filter(
+        func.lower(User.username) == username.lower(),
+        User.id != id
+    ).first()
+
+    if duplicate:
+        flash('Nama lengkap tersebut sudah digunakan user lain.', 'danger')
+        return redirect('/manage_users')
+
+    user.username = username
+    user.divisi = divisi
+
+    # Role hanya boleh diubah oleh admin
+    if current_user.role == 'admin' and role:
+        user.role = role
+
+    db.session.commit()
+
+    if user.id == current_user.id:
+        session['role'] = user.role
+
+    flash('Profil user berhasil diperbarui!', 'success')
     return redirect('/manage_users')
 
 @app.route('/reset_password/<int:id>', methods=['POST'])

@@ -78,7 +78,7 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Username</th>
+                    <th>Nama Lengkap</th>
                     <th>Role</th>
                     <th>Divisi</th>
                     <th>Tanggal Daftar</th>
@@ -94,13 +94,86 @@
                     <td>{{ u.divisi }}</td>
                     <td>{{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '-' }}</td>
                     <td>
-                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" 
-                                data-bs-target="#resetModal{{ u.id }}">
-                            Reset Password
-                        </button>
-                    </td>
+    <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
+            data-bs-target="#editUserModal{{ u.id }}">
+        Edit Profil
+    </button>
+
+    {% if current_user.role == 'admin' %}
+    <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" 
+            data-bs-target="#resetModal{{ u.id }}">
+        Reset Password
+    </button>
+    {% endif %}
+</td>
                 </tr>
+                                </tr>
+
+                <!-- Modal Edit User -->
+                <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/update_user/{{ u.id }}" method="POST">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Profil - {{ u.username }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nama Lengkap</label>
+                                        <input type="text"
+                                               name="username"
+                                               class="form-control"
+                                               value="{{ u.username }}"
+                                               placeholder="Contoh: Budi Santoso"
+                                               required>
+                                        <small class="text-muted">
+                                            Wajib isi nama lengkap minimal 2 kata.
+                                        </small>
+                                    </div>
+
+                                    {% if current_user.role == 'admin' %}
+                                    <div class="mb-3">
+                                        <label class="form-label">Role</label>
+                                        <select name="role" class="form-control" required>
+                                            <option value="karyawan" {% if u.role == 'karyawan' %}selected{% endif %}>Karyawan</option>
+                                            <option value="hrd" {% if u.role == 'hrd' %}selected{% endif %}>HRD</option>
+                                            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                                            <option value="accounting" {% if u.role == 'accounting' %}selected{% endif %}>Accounting</option>
+                                            <option value="direktur" {% if u.role == 'direktur' %}selected{% endif %}>Direktur</option>
+                                        </select>
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Divisi</label>
+                                        <select name="divisi" class="form-control" required>
+                                            <option value="Marketing" {% if u.divisi == 'Marketing' %}selected{% endif %}>Marketing</option>
+                                            <option value="Operational" {% if u.divisi == 'Operational' %}selected{% endif %}>Operational</option>
+                                            <option value="Hostlive" {% if u.divisi == 'Hostlive' %}selected{% endif %}>Hostlive</option>
+                                            <option value="Creative" {% if u.divisi == 'Creative' %}selected{% endif %}>Creative</option>
+                                            <option value="Accounting" {% if u.divisi == 'Accounting' %}selected{% endif %}>Accounting</option>
+                                            <option value="IT Support" {% if u.divisi == 'IT Support' %}selected{% endif %}>IT Support</option>
+                                            <option value="HRD" {% if u.divisi == 'HRD' %}selected{% endif %}>HRD</option>
+                                            <option value="IT" {% if u.divisi == 'IT' %}selected{% endif %}>IT</option>
+                                            <option value="Direksi" {% if u.divisi == 'Direksi' %}selected{% endif %}>Direksi</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">
+                                        Simpan Perubahan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 
+                <!-- Modal Reset Password -->
+                <div class="modal fade" id="resetModal{{ u.id }}" tabindex="-1">
                 <!-- Modal Reset Password -->
                 <div class="modal fade" id="resetModal{{ u.id }}" tabindex="-1">
                     <div class="modal-dialog">
