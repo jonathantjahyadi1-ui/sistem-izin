@@ -5,6 +5,8 @@ import io
 from datetime import datetime
 from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file, send_from_directory
 from werkzeug.utils import secure_filename
+from supabase import create_client
+import mimetypes
 from extensions import db
 from models import User, LeaveRequest
 from reimburse.models import ReimburseRequest, ReimburseItem
@@ -26,6 +28,17 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "izin-files")
+
+if not SUPABASE_URL:
+    raise Exception("SUPABASE_URL belum diset di environment!")
+
+if not SUPABASE_SERVICE_ROLE_KEY:
+    raise Exception("SUPABASE_SERVICE_ROLE_KEY belum diset di environment!")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # ================
 # DATABASE CONFIG
@@ -463,7 +476,7 @@ def form_izin():
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 ALLOWED_DOCUMENT_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Maksimal 5MB
 
 
 def allowed_file(filename, allowed_extensions):
@@ -471,6 +484,68 @@ def allowed_file(filename, allowed_extensions):
         '.' in filename and
         filename.rsplit('.', 1)[1].lower() in allowed_extensions
     )
+
+
+def upload_file_to_supabase(file, folder, allowed_extensions):
+    if not file or file.filename == '':
+        return None
+
+    if not allowed_file(file.filename, allowed_extensions):
+        raise ValueError("Format file tidak didukung.")
+
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+    filename = f"{folder}_{timestamp}_{original_filename}"
+
+    storage_path = f"izin/{folder}/{filename}"
+
+    content_type = (
+        file.mimetype or
+        mimetypes.guess_type(original_filename)[0] or
+        "application/octet-stream"
+    )
+
+    file.stream.seek(0)
+    file_bytes = file.read()
+
+    supabase.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+        path=storage_path,
+        file=file_bytes,
+        file_options={
+            "content-type": content_type,
+            "cache-control": "3600",
+            "upsert": "false"
+        }
+    )
+
+    return storage_path
+
+
+def create_supabase_signed_url(storage_path, expires_in=300):
+    response = supabase.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(
+        storage_path,
+        expires_in
+    )
+
+    signed_url = None
+
+    if isinstance(response, dict):
+        signed_url = (
+            response.get("signedURL") or
+            response.get("signedUrl") or
+            response.get("signed_url")
+        )
+    else:
+        signed_url = (
+            getattr(response, "signed_url", None) or
+            getattr(response, "signedURL", None)
+        )
+
+    if signed_url and signed_url.startswith("/"):
+        signed_url = SUPABASE_URL.rstrip("/") + signed_url
+
+    return signed_url
+
 
 @app.route('/izin', methods=['POST'])
 def ajukan_izin():
@@ -480,20 +555,41 @@ def ajukan_izin():
     mulai = datetime.strptime(request.form['mulai'], '%Y-%m-%d')
     selesai = datetime.strptime(request.form['selesai'], '%Y-%m-%d')
 
+    if selesai < mulai:
+        flash("Tanggal selesai tidak boleh lebih awal dari tanggal mulai.", "danger")
+        return redirect('/form_izin')
+
+    jenis_izin = request.form.get('jenis')
+    alasan = request.form.get('alasan')
+
+    if not jenis_izin or not alasan:
+        flash("Jenis izin dan alasan wajib diisi.", "danger")
+        return redirect('/form_izin')
+
+    # =========================
     # Upload surat dokter
+    # =========================
     file_surat = request.files.get('file')
     filename_surat = None
 
-    if file_surat and file_surat.filename != '':
-        if not allowed_file(file_surat.filename, ALLOWED_DOCUMENT_EXTENSIONS):
-            flash("Format surat dokter harus PDF, JPG, JPEG, atau PNG.", "danger")
-            return redirect('/form_izin')
+    try:
+        if file_surat and file_surat.filename != '':
+            filename_surat = upload_file_to_supabase(
+                file_surat,
+                "surat",
+                ALLOWED_DOCUMENT_EXTENSIONS
+            )
+    except ValueError:
+        flash("Format surat dokter harus PDF, JPG, JPEG, atau PNG.", "danger")
+        return redirect('/form_izin')
+    except Exception as e:
+        print("ERROR UPLOAD SURAT:", e)
+        flash("Gagal upload surat dokter. Coba upload ulang.", "danger")
+        return redirect('/form_izin')
 
-    original_surat = secure_filename(file_surat.filename)
-    filename_surat = f"surat_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{original_surat}"
-    file_surat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_surat))
-
+    # =========================
     # Upload bukti chat
+    # =========================
     file_chat = request.files.get('file_chat')
     filename_chat = None
 
@@ -501,22 +597,27 @@ def ajukan_izin():
         flash("Bukti chat wajib diupload.", "danger")
         return redirect('/form_izin')
 
-    if not allowed_file(file_chat.filename, ALLOWED_IMAGE_EXTENSIONS):
+    try:
+        filename_chat = upload_file_to_supabase(
+            file_chat,
+            "chat",
+            ALLOWED_IMAGE_EXTENSIONS
+        )
+    except ValueError:
         flash("Format bukti chat harus JPG, JPEG, atau PNG.", "danger")
         return redirect('/form_izin')
+    except Exception as e:
+        print("ERROR UPLOAD CHAT:", e)
+        flash("Gagal upload bukti chat. Coba upload ulang.", "danger")
         return redirect('/form_izin')
-
-    original_chat = secure_filename(file_chat.filename)
-    filename_chat = f"chat_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{original_chat}"
-    file_chat.save(os.path.join(app.config['UPLOAD_FOLDER'], filename_chat))
 
     izin = LeaveRequest(
         user_id=session['user_id'],
-        jenis_izin=request.form['jenis'],
+        jenis_izin=jenis_izin,
         tanggal_mulai=mulai,
         tanggal_selesai=selesai,
         durasi=(selesai - mulai).days + 1,
-        alasan=request.form['alasan'],
+        alasan=alasan,
         file_surat=filename_surat,
         file_chat=filename_chat
     )
@@ -527,13 +628,105 @@ def ajukan_izin():
     flash("Izin berhasil diajukan!", "success")
     return redirect('/dashboard')
 
+
 @app.route('/download/<path:filename>')
 def download_file(filename):
     if 'user_id' not in session:
         return redirect('/login')
 
-    filename = secure_filename(filename)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # File baru dari Supabase Storage:
+    # izin/chat/namafile.png
+    # izin/surat/namafile.pdf
+    if filename.startswith("izin/"):
+        try:
+            signed_url = create_supabase_signed_url(filename, expires_in=300)
+
+            if not signed_url:
+                return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>File Tidak Bisa Dibuka</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            background: #f8fafc;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                            margin: 0;
+                        }
+                        .box {
+                            background: white;
+                            padding: 30px;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+                            max-width: 480px;
+                            text-align: center;
+                        }
+                        h3 { color: #ef4444; }
+                        p {
+                            color: #374151;
+                            line-height: 1.5;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="box">
+                        <h3>File tidak bisa dibuka</h3>
+                        <p>Gagal membuat link preview file dari Supabase Storage.</p>
+                    </div>
+                </body>
+                </html>
+                """, 500
+
+            return redirect(signed_url)
+
+        except Exception as e:
+            print("ERROR SIGNED URL:", e)
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>File Tidak Bisa Dibuka</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background: #f8fafc;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        margin: 0;
+                    }
+                    .box {
+                        background: white;
+                        padding: 30px;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+                        max-width: 480px;
+                        text-align: center;
+                    }
+                    h3 { color: #ef4444; }
+                    p {
+                        color: #374151;
+                        line-height: 1.5;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="box">
+                    <h3>File tidak bisa dibuka</h3>
+                    <p>Terjadi masalah saat mengambil file dari Supabase Storage.</p>
+                </div>
+            </body>
+            </html>
+            """, 500
+
+    # Fallback untuk file lama yang dulu disimpan lokal di folder uploads
+    safe_filename = secure_filename(filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
 
     if not os.path.isfile(file_path):
         return """
@@ -559,10 +752,7 @@ def download_file(filename):
                     max-width: 480px;
                     text-align: center;
                 }
-                h3 {
-                    color: #ef4444;
-                    margin-bottom: 10px;
-                }
+                h3 { color: #ef4444; }
                 p {
                     color: #374151;
                     line-height: 1.5;
@@ -573,9 +763,8 @@ def download_file(filename):
             <div class="box">
                 <h3>File tidak ditemukan</h3>
                 <p>
-                    File foto tidak ada di folder uploads server.
-                    Kemungkinan file lama sudah hilang karena server pernah restart/deploy ulang,
-                    atau file belum benar-benar tersimpan saat upload.
+                    File lama tidak ada di folder uploads server.
+                    Silakan upload ulang, atau gunakan data izin baru setelah sistem memakai Supabase Storage.
                 </p>
             </div>
         </body>
@@ -584,7 +773,7 @@ def download_file(filename):
 
     return send_from_directory(
         app.config['UPLOAD_FOLDER'],
-        filename,
+        safe_filename,
         as_attachment=False
     )
 
