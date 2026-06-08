@@ -536,11 +536,51 @@ def download_file(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
     if not os.path.isfile(file_path):
-        flash(
-            'File tidak ditemukan. File lama kemungkinan sudah hilang dari server. Silakan upload ulang.',
-            'danger'
-        )
-        return redirect(request.referrer or '/dashboard')
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>File Tidak Ditemukan</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f8fafc;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                }
+                .box {
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+                    max-width: 480px;
+                    text-align: center;
+                }
+                h3 {
+                    color: #ef4444;
+                    margin-bottom: 10px;
+                }
+                p {
+                    color: #374151;
+                    line-height: 1.5;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="box">
+                <h3>File tidak ditemukan</h3>
+                <p>
+                    File foto tidak ada di folder uploads server.
+                    Kemungkinan file lama sudah hilang karena server pernah restart/deploy ulang,
+                    atau file belum benar-benar tersimpan saat upload.
+                </p>
+            </div>
+        </body>
+        </html>
+        """, 404
 
     return send_from_directory(
         app.config['UPLOAD_FOLDER'],

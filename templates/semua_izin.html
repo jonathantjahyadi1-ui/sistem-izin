@@ -51,6 +51,54 @@
             background: #fee2e2 !important;
             color: #7f1d1d !important;
         }
+        .file-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.file-modal-content {
+    background: white;
+    width: 90%;
+    height: 90%;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+.file-modal-header {
+    height: 52px;
+    background: #1f2937;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    font-weight: 600;
+}
+
+.file-modal-close {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.file-modal-frame {
+    width: 100%;
+    height: calc(100% - 52px);
+    border: none;
+    background: #f8fafc;
+}
     </style>
 </head>
 <body>
@@ -159,20 +207,22 @@
                         <td>{{ pengaju.username if pengaju else '-' }}</td>
                         <td>
                             {% if i.file_surat %}
-                                <a href="{{ url_for('download_file', filename=i.file_surat) }}" 
-                                    target="_blank" 
-                                    class="btn btn-sm btn-primary">
-                                    📄 Lihat
-                                </a>
+                                <button type="button"
+            class="btn btn-sm btn-primary"
+            onclick="openFileModal('{{ url_for('download_file', filename=i.file_surat) }}')">
+        📄 Lihat
+    </button>
                             {% else %}
                                 -
                             {% endif %}
                         </td>
                         <td>
                             {% if i.file_chat %}
-                                <a href="{{ url_for('download_file', filename=i.file_chat) }}" target="_blank" class="btn btn-sm btn-info">
+                                <button type="button"
+                                class="btn btn-sm btn-info"
+                                onclick="openFileModal('{{ url_for('download_file', filename=i.file_chat) }}')">
                                 💬 Lihat
-                            </a>
+                                </button>
                             {% else %}
                                 -
                             {% endif %}
@@ -215,6 +265,37 @@ function toggleSidebar() {
     document.getElementById("sidebar").classList.toggle("active");
     document.getElementById("mainContent").classList.toggle("shift");
 }
+
+function openFileModal(fileUrl) {
+    document.getElementById("filePreviewFrame").src = fileUrl;
+    document.getElementById("fileModal").style.display = "flex";
+}
+
+function closeFileModal() {
+    document.getElementById("filePreviewFrame").src = "";
+    document.getElementById("fileModal").style.display = "none";
+}
+
+function closeFileModalOnBackground(event) {
+    if (event.target.id === "fileModal") {
+        closeFileModal();
+    }
+}
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        closeFileModal();
+    }
+});
 </script>
+<div id="fileModal" class="file-modal" onclick="closeFileModalOnBackground(event)">
+    <div class="file-modal-content">
+        <div class="file-modal-header">
+            <span>Preview File</span>
+            <button type="button" class="file-modal-close" onclick="closeFileModal()">Tutup</button>
+        </div>
+        <iframe id="filePreviewFrame" class="file-modal-frame"></iframe>
+    </div>
+</div>
 </body>
 </html>
