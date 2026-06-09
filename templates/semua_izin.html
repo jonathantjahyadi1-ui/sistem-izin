@@ -99,6 +99,54 @@
     border: none;
     background: #f8fafc;
 }
+
+.reason-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.reason-modal-content {
+    background: white;
+    width: 520px;
+    max-width: 95%;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    overflow: hidden;
+}
+
+.reason-modal-header {
+    background: #1f2937;
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+}
+
+.reason-modal-body {
+    padding: 20px;
+    color: #1f2937;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.reason-modal-close {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
     </style>
 </head>
 <body>
@@ -230,7 +278,28 @@
                         <td>{{ i.jenis_izin }}</td>
                         <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
                         <td>{{ i.durasi }} hari</td>
-                        <td>{{ i.alasan[:30] }}{% if i.alasan|length > 30 %}...{% endif %}</td>
+                        <td style="max-width: 260px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="
+            display: inline-block;
+            max-width: 190px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        ">
+            {{ i.alasan }}
+        </span>
+
+        {% if i.alasan|length > 30 %}
+        <button type="button"
+                class="btn btn-sm btn-outline-primary"
+                data-alasan="{{ i.alasan|e }}"
+                onclick="openReasonModal(this)">
+            Lihat
+        </button>
+        {% endif %}
+    </div>
+</td>
                         <td>
                             {% if i.status == 'pending' %}
                                 <span class="badge bg-warning">Pending</span>
@@ -285,8 +354,25 @@ function closeFileModalOnBackground(event) {
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         closeFileModal();
+        closeReasonModal();
     }
 });
+function openReasonModal(button) {
+    const alasan = button.getAttribute("data-alasan");
+    document.getElementById("reasonModalText").innerText = alasan;
+    document.getElementById("reasonModal").style.display = "flex";
+}
+
+function closeReasonModal() {
+    document.getElementById("reasonModalText").innerText = "";
+    document.getElementById("reasonModal").style.display = "none";
+}
+
+function closeReasonModalOnBackground(event) {
+    if (event.target.id === "reasonModal") {
+        closeReasonModal();
+    }
+}
 </script>
 <div id="fileModal" class="file-modal" onclick="closeFileModalOnBackground(event)">
     <div class="file-modal-content">
@@ -295,6 +381,24 @@ document.addEventListener("keydown", function(event) {
             <button type="button" class="file-modal-close" onclick="closeFileModal()">Tutup</button>
         </div>
         <iframe id="filePreviewFrame" class="file-modal-frame"></iframe>
+    </div>
+</div>
+<div id="reasonModal" class="reason-modal" onclick="closeReasonModalOnBackground(event)">
+    <div class="reason-modal-content">
+        <div class="reason-modal-header">
+            <span>Alasan Lengkap</span>
+            <button type="button" class="reason-modal-close" onclick="closeReasonModal()">Tutup</button>
+        </div>
+        <div class="reason-modal-body" id="reasonModalText"></div>
+    </div>
+</div>
+<div id="reasonModal" class="reason-modal" onclick="closeReasonModalOnBackground(event)">
+    <div class="reason-modal-content">
+        <div class="reason-modal-header">
+            <span>Alasan Lengkap</span>
+            <button type="button" class="reason-modal-close" onclick="closeReasonModal()">Tutup</button>
+        </div>
+        <div class="reason-modal-body" id="reasonModalText"></div>
     </div>
 </div>
 </body>
