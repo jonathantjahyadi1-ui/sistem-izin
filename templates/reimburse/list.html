@@ -245,16 +245,16 @@
                 <td>Rp {{ "{:,.0f}".format(item.price * item.qty) }}</td>
                 <td>
                     {% if item.receipt_photo %}
-                        <a href="/uploads/{{ item.receipt_photo }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            Lihat Nota
-                        </a>
-                    {% elif r.receipt_photo %}
-                        <a href="/uploads/{{ r.receipt_photo }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            Lihat Nota Lama
-                        </a>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
+    <a href="{{ reimburse_file_url(item.receipt_photo) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+        Lihat Nota
+    </a>
+{% elif r.receipt_photo %}
+    <a href="{{ reimburse_file_url(r.receipt_photo) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+        Lihat Nota Lama
+    </a>
+{% else %}
+    <span class="text-muted">-</span>
+{% endif %}
                 </td>
             </tr>
             {% endfor %}

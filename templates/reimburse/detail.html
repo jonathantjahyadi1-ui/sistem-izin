@@ -95,12 +95,12 @@
 
                             <td>
                                 {% if item.receipt_photo %}
-    <a href="{{ url_for('uploaded_file', filename=item.receipt_photo) }}" target="_blank">
-        <img src="{{ url_for('uploaded_file', filename=item.receipt_photo) }}" class="nota-img">
+    <a href="{{ reimburse_file_url(item.receipt_photo) }}" target="_blank">
+        <img src="{{ reimburse_file_url(item.receipt_photo) }}" class="nota-img">
     </a>
 {% elif reimb.receipt_photo %}
-    <a href="{{ url_for('uploaded_file', filename=reimb.receipt_photo) }}" target="_blank">
-        <img src="{{ url_for('uploaded_file', filename=reimb.receipt_photo) }}" class="nota-img">
+    <a href="{{ reimburse_file_url(reimb.receipt_photo) }}" target="_blank">
+        <img src="{{ reimburse_file_url(reimb.receipt_photo) }}" class="nota-img">
     </a>
 {% else %}
     <span class="text-muted">Tidak ada nota</span>
@@ -140,9 +140,9 @@
 
                     <h6>Bukti Pembayaran</h6>
 
-                    <a href="/uploads/{{ reimb.payment_proof }}" target="_blank">
-                        <img src="/uploads/{{ reimb.payment_proof }}" class="img-fluid rounded">
-                    </a>
+                    <a href="{{ reimburse_file_url(reimb.payment_proof) }}" target="_blank">
+    <img src="{{ reimburse_file_url(reimb.payment_proof) }}" class="img-fluid rounded">
+</a>
 
                 {% elif user.role == 'direktur' %}
                     <hr>

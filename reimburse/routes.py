@@ -1,24 +1,115 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file, current_app
-from werkzeug.utils import secure_filename
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file
 from extensions import db
 from models import User
 from .models import ReimburseRequest, ReimburseItem
 from datetime import datetime, timedelta
+from werkzeug.utils import secure_filename
+from supabase import create_client
 import os
 import io
 import pandas as pd
+import mimetypes
 
 reimburse_bp = Blueprint('reimburse', __name__, template_folder='../templates/reimburse')
-def save_upload_file(file, prefix):
-    upload_folder = current_app.config['UPLOAD_FOLDER']
-    os.makedirs(upload_folder, exist_ok=True)
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "izin-files")
+
+if not SUPABASE_URL:
+    raise Exception("SUPABASE_URL belum diset di environment!")
+
+if not SUPABASE_SERVICE_ROLE_KEY:
+    raise Exception("SUPABASE_SERVICE_ROLE_KEY belum diset di environment!")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+ALLOWED_REIMBURSE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
+
+
+def allowed_reimburse_file(filename):
+    return (
+        '.' in filename and
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_REIMBURSE_EXTENSIONS
+    )
+
+
+def upload_reimburse_to_supabase(file, folder):
+    if not file or file.filename == '':
+        return None
+
+    if not allowed_reimburse_file(file.filename):
+        raise ValueError("Format file reimburse harus JPG, JPEG, atau PNG.")
 
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
-    filename = f"{prefix}_{timestamp}_{original_filename}"
+    filename = f"{folder}_{timestamp}_{original_filename}"
 
-    file.save(os.path.join(upload_folder, filename))
-    return filename
+    storage_path = f"reimburse/{folder}/{filename}"
+
+    content_type = (
+        file.mimetype or
+        mimetypes.guess_type(original_filename)[0] or
+        "application/octet-stream"
+    )
+
+    file.stream.seek(0)
+    file_bytes = file.read()
+
+    supabase.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+        path=storage_path,
+        file=file_bytes,
+        file_options={
+            "content-type": content_type,
+            "cache-control": "3600",
+            "upsert": "false"
+        }
+    )
+
+    return storage_path
+
+
+def create_reimburse_signed_url(storage_path, expires_in=300):
+    response = supabase.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(
+        storage_path,
+        expires_in
+    )
+
+    signed_url = None
+
+    if isinstance(response, dict):
+        signed_url = (
+            response.get("signedURL") or
+            response.get("signedUrl") or
+            response.get("signed_url")
+        )
+    else:
+        signed_url = (
+            getattr(response, "signed_url", None) or
+            getattr(response, "signedURL", None)
+        )
+
+    if signed_url and signed_url.startswith("/"):
+        signed_url = SUPABASE_URL.rstrip("/") + signed_url
+
+    return signed_url
+
+
+def reimburse_file_url(path):
+    if not path:
+        return ""
+
+    # File baru dari Supabase Storage
+    if path.startswith("reimburse/"):
+        return url_for("reimburse.reimburse_file", storage_path=path)
+
+    # Fallback untuk file lama yang masih tersimpan di folder uploads
+    return f"/uploads/{path}"
+
+
+@reimburse_bp.app_context_processor
+def reimburse_template_helpers():
+    return dict(reimburse_file_url=reimburse_file_url)
 
 def get_user(user_id):
     return db.session.get(User, user_id)
@@ -74,6 +165,44 @@ def buat_file_excel(rows, sheet_name, filename_prefix):
         download_name=filename
     )
 
+@reimburse_bp.route('/file/<path:storage_path>')
+def reimburse_file(storage_path):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        return redirect('/login')
+
+    if not storage_path.startswith("reimburse/"):
+        flash("File tidak valid.", "danger")
+        return redirect(url_for('reimburse.list_reimburse'))
+
+    item = ReimburseItem.query.filter_by(receipt_photo=storage_path).first()
+
+    if item:
+        reimb = item.request
+    else:
+        reimb = ReimburseRequest.query.filter(
+            (ReimburseRequest.payment_proof == storage_path) |
+            (ReimburseRequest.receipt_photo == storage_path)
+        ).first()
+
+    if not reimb:
+        flash("File tidak ditemukan di data reimburse.", "danger")
+        return redirect(url_for('reimburse.list_reimburse'))
+
+    if user.role not in ['admin', 'direktur', 'accounting'] and reimb.user_id != user.id:
+        flash("Kamu tidak punya akses ke file ini.", "danger")
+        return redirect(url_for('reimburse.list_reimburse'))
+
+    signed_url = create_reimburse_signed_url(storage_path, expires_in=300)
+
+    if not signed_url:
+        flash("File tidak bisa dibuka.", "danger")
+        return redirect(url_for('reimburse.list_reimburse'))
+
+    return redirect(signed_url)
 
 @reimburse_bp.route('/list')
 def list_reimburse():
@@ -231,14 +360,27 @@ def detail(id):
             return redirect(url_for('reimburse.detail', id=id))
 
         file = request.files.get('payment_proof')
+
         if file and file.filename != '':
-            filename = save_upload_file(file, "payment")
+            try:
+                filename = upload_reimburse_to_supabase(file, "payment")
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('reimburse.detail', id=id))
+            except Exception as e:
+                print("ERROR UPLOAD BUKTI PEMBAYARAN:", repr(e))
+                flash("Gagal upload bukti pembayaran.", "danger")
+                return redirect(url_for('reimburse.detail', id=id))
+
             reimb.payment_proof = filename
             reimb.paid_at = datetime.utcnow()
             reimb.status = 'paid'
             db.session.commit()
-            flash('Bukti pembayaran berhasil diunggah.', 'success')
 
+            flash('Bukti pembayaran berhasil diunggah.', 'success')
+            return redirect(url_for('reimburse.detail', id=id))
+
+        flash('Bukti pembayaran wajib diupload.', 'danger')
         return redirect(url_for('reimburse.detail', id=id))
 
     return render_template(
@@ -369,7 +511,15 @@ def submit():
             receipt_filename = None
 
             if receipt_file and receipt_file.filename != '':
-                receipt_filename = save_upload_file(receipt_file, "receipt")
+                try:
+                    receipt_filename = upload_reimburse_to_supabase(receipt_file, "receipt")
+                except ValueError as e:
+                    flash(str(e), 'danger')
+                    return redirect(url_for('reimburse.submit'))
+                except Exception as e:
+                    print("ERROR UPLOAD NOTA REIMBURSE:", repr(e))
+                    flash(f'Gagal upload nota untuk item "{name}".', 'danger')
+                    return redirect(url_for('reimburse.submit'))
             else:
                 flash(f'Foto nota untuk item "{name}" wajib diupload.', 'danger')
                 return redirect(url_for('reimburse.submit'))
