@@ -409,8 +409,6 @@ def export_excel():
     now = datetime.utcnow()
     cutoff = now - timedelta(days=7)
 
-    # Sama seperti /reimburse/list:
-    # hanya data aktif, bukan arsip
     query = db.session.query(ReimburseRequest, User).join(
         User, ReimburseRequest.user_id == User.id
     ).filter(

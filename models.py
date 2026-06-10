@@ -15,7 +15,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='karyawan')
     divisi = db.Column(db.String(50))
-    kuota_cuti = db.Column(db.Integer, default=12)
+    kuota_cuti = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

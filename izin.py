@@ -72,22 +72,80 @@ db.init_app(app)
 # ==================
 # FUNGSI BANTU CUTI
 # ==================
-def get_total_cuti_approved_this_year(user_id, tahun=None):
-    """Total durasi cuti (jenis='cuti') yang sudah approved pada tahun tertentu"""
-    if tahun is None:
-        tahun = datetime.now().year
+def tambah_bulan(tanggal_awal, jumlah_bulan):
+    """
+    Menambahkan bulan ke tanggal.
+    Aman untuk tanggal akhir bulan, misalnya 31 Januari + 1 bulan = 28/29 Februari.
+    """
+    bulan = tanggal_awal.month - 1 + jumlah_bulan
+    tahun = tanggal_awal.year + bulan // 12
+    bulan = bulan % 12 + 1
+    hari = min(tanggal_awal.day, monthrange(tahun, bulan)[1])
+
+    return date(tahun, bulan, hari)
+
+
+def get_total_cuti_approved(user_id):
+    """
+    Total semua cuti approved milik user.
+    Tidak dibatasi tahun supaya saldo minus bisa terbawa dan berkurang otomatis tiap bulan.
+    """
     total = db.session.query(func.sum(LeaveRequest.durasi)) \
         .filter(LeaveRequest.user_id == user_id) \
         .filter(LeaveRequest.jenis_izin == 'cuti') \
         .filter(LeaveRequest.status == 'approved') \
-        .filter(extract('year', LeaveRequest.tanggal_mulai) == tahun) \
         .scalar() or 0
+
     return total
 
+
+def get_hak_cuti_otomatis(user, today=None):
+    """
+    Aturan:
+    - join_date kosong = hak cuti 0
+    - setelah 6 bulan kerja = dapat 1 cuti
+    - setiap bulan berikutnya = tambah 1 cuti
+    """
+    if today is None:
+        today = date.today()
+
+    if not user or not user.join_date:
+        return 0
+
+    tanggal_cuti_pertama = tambah_bulan(user.join_date, 6)
+
+    if today < tanggal_cuti_pertama:
+        return 0
+
+    selisih_bulan = (
+        (today.year - tanggal_cuti_pertama.year) * 12
+        + (today.month - tanggal_cuti_pertama.month)
+    )
+
+    tanggal_jatah_bulan_ini = tambah_bulan(tanggal_cuti_pertama, selisih_bulan)
+
+    if today < tanggal_jatah_bulan_ini:
+        selisih_bulan -= 1
+
+    return max(0, selisih_bulan + 1)
+
+
 def get_sisa_cuti(user):
-    """Menghitung sisa cuti user berdasarkan kuota dan total cuti approved tahun ini"""
-    total_dipakai = get_total_cuti_approved_this_year(user.id)
-    return user.kuota_cuti - total_dipakai
+    """
+    Sisa cuti otomatis:
+    hak cuti dari join_date - total cuti approved.
+    Bisa minus.
+    Contoh:
+    hak cuti 1, cuti terpakai 4 = sisa -3
+    bulan berikutnya hak cuti 2, cuti terpakai 4 = sisa -2
+    """
+    if not user:
+        return 0
+
+    hak_cuti = get_hak_cuti_otomatis(user)
+    total_dipakai = get_total_cuti_approved(user.id)
+
+    return hak_cuti - total_dipakai
 
 # ================
 # FUNGSI KEHADIRAN
@@ -319,7 +377,11 @@ with app.app_context():
 
     if 'kuota_cuti' not in user_columns:
         with db.engine.connect() as conn:
-            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 12'))
+            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 0'))
+            conn.commit()
+    else:
+        with db.engine.connect() as conn:
+            conn.execute(db.text('ALTER TABLE "user" ALTER COLUMN kuota_cuti SET DEFAULT 0'))
             conn.commit()
 
     # Tambah kolom receipt_photo di reimburse_item untuk nota per item
@@ -407,6 +469,7 @@ def parse_date_or_none(value):
     if not value:
         return None
     return datetime.strptime(value, "%Y-%m-%d").date()
+
 # ========
 # ROUTES
 # ========
@@ -1152,23 +1215,49 @@ def logout_view():
 
 @app.route('/approve/<int:id>', methods=['POST'])
 def approve(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    current_user = User.query.get(session['user_id'])
+    if not current_user or current_user.role not in ['admin', 'hrd', 'direktur']:
+        flash('Kamu tidak memiliki akses untuk approve izin.', 'danger')
+        return redirect('/dashboard')
+
     izin = LeaveRequest.query.get(id)
     if not izin:
-        flash('Izin tidak ditemukan', 'danger')
+        flash('Izin tidak ditemukan.', 'danger')
         return redirect(request.referrer or '/dashboard')
-    
-    # Validasi kuota cuti
-    if izin.jenis_izin == 'cuti':
-        user = User.query.get(izin.user_id)
-        sisa = get_sisa_cuti(user)
-        if izin.durasi > sisa:
-            flash(f'Gagal approve! Sisa cuti {user.username} hanya {sisa} hari, '
-                  f'sedangkan cuti yang diajukan {izin.durasi} hari.', 'danger')
-            return redirect(request.referrer or '/dashboard')
-    
+
+    if izin.status != 'pending':
+        flash('Izin ini sudah diproses sebelumnya.', 'warning')
+        return redirect(request.referrer or '/dashboard')
+
+    pengaju = User.query.get(izin.user_id)
+
+    sisa_sebelum = None
+    sisa_setelah = None
+
+    if izin.jenis_izin == 'cuti' and pengaju:
+        sisa_sebelum = get_sisa_cuti(pengaju)
+        sisa_setelah = sisa_sebelum - izin.durasi
+
     izin.status = 'approved'
     db.session.commit()
-    flash('Izin berhasil di-approve.', 'success')
+
+    if izin.jenis_izin == 'cuti' and pengaju:
+        if sisa_setelah < 0:
+            flash(
+                f'Cuti berhasil di-approve. Saldo cuti {pengaju.username} sekarang {sisa_setelah} hari.',
+                'warning'
+            )
+        else:
+            flash(
+                f'Cuti berhasil di-approve. Sisa cuti {pengaju.username} sekarang {sisa_setelah} hari.',
+                'success'
+            )
+    else:
+        flash('Izin berhasil di-approve.', 'success')
+
     return redirect(request.referrer or '/dashboard')
 
 @app.route('/reject/<int:id>', methods=['POST'])
@@ -1187,20 +1276,29 @@ def reject(id):
 def manage_quota():
     if 'user_id' not in session:
         return redirect('/login')
+
     user = User.query.get(session['user_id'])
-    if user.role not in ['admin', 'hrd']:
+    if not user or user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
-    # Tampilkan semua user dengan role karyawan
+
     users = User.query.filter(User.role != 'direktur').all()
+
     user_data = []
     for u in users:
+        hak_cuti = get_hak_cuti_otomatis(u)
+        cuti_terpakai = get_total_cuti_approved(u.id)
+        sisa_cuti = get_sisa_cuti(u)
+
         user_data.append({
             'id': u.id,
             'username': u.username,
             'divisi': u.divisi,
-            'kuota': u.kuota_cuti,
-            'sisa': get_sisa_cuti(u)
+            'join_date': u.join_date,
+            'hak_cuti': hak_cuti,
+            'cuti_terpakai': cuti_terpakai,
+            'sisa': sisa_cuti
         })
+
     return render_template('manage_quota.html', users=user_data, current_user=user)
 
 @app.route('/update_quota/<int:user_id>', methods=['POST'])

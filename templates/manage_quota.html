@@ -58,53 +58,44 @@
     <div class="card p-4">
         <div class="table-responsive">
             <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Divisi</th>
-                        <th>Kuota (hari)</th>
-                        <th>Sisa Cuti</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for u in users %}
-                    <tr>
-                        <td><strong>#{{ u.id }}</strong></td>
-                        <td>{{ u.username }}</td>
-                        <td>{{ u.divisi }}</td>
-                        <td>{{ u.kuota }}</td>
-                        <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning{% else %}text-success{% endif %}">
-                            {{ u.sisa }}
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ u.id }}">Edit</button>
-                        </td>
-                    </tr>
-                    <!-- Modal Edit -->
-                    <div class="modal fade" id="editModal{{ u.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <form action="/update_quota/{{ u.id }}" method="POST">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Edit Kuota - {{ u.username }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <label class="form-label">Kuota Cuti (hari/tahun)</label>
-                                        <input type="number" name="kuota" class="form-control" value="{{ u.kuota }}" required>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="submit" class="btn btn-primary">Simpan</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Divisi</th>
+            <th>Join Date</th>
+            <th>Hak Cuti Otomatis</th>
+            <th>Cuti Terpakai</th>
+            <th>Sisa Cuti</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td><strong>#{{ u.id }}</strong></td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.divisi }}</td>
+            <td>
+                {{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}
+            </td>
+            <td>
+                <span class="badge bg-primary">
+                    {{ u.hak_cuti }} hari
+                </span>
+            </td>
+            <td>
+                <span class="badge bg-secondary">
+                    {{ u.cuti_terpakai }} hari
+                </span>
+            </td>
+            <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning fw-bold{% else %}text-success fw-bold{% endif %}">
+                {{ u.sisa }} hari
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
         </div>
     </div>
 </div>
