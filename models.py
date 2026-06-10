@@ -4,7 +4,14 @@ from datetime import datetime
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+
     username = db.Column(db.String(100), unique=True, nullable=False)
+    nama_lengkap = db.Column(db.String(150))
+
+    tempat_lahir = db.Column(db.String(100))
+    tanggal_lahir = db.Column(db.Date)
+    join_date = db.Column(db.Date)
+
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='karyawan')
     divisi = db.Column(db.String(50))

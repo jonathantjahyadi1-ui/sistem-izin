@@ -1,4 +1,5 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session, send_file, current_app
+from werkzeug.utils import secure_filename
 from extensions import db
 from models import User
 from .models import ReimburseRequest, ReimburseItem
@@ -8,8 +9,16 @@ import io
 import pandas as pd
 
 reimburse_bp = Blueprint('reimburse', __name__, template_folder='../templates/reimburse')
-UPLOAD_FOLDER = 'uploads'
+def save_upload_file(file, prefix):
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_folder, exist_ok=True)
 
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+    filename = f"{prefix}_{timestamp}_{original_filename}"
+
+    file.save(os.path.join(upload_folder, filename))
+    return filename
 
 def get_user(user_id):
     return db.session.get(User, user_id)
@@ -223,8 +232,7 @@ def detail(id):
 
         file = request.files.get('payment_proof')
         if file and file.filename != '':
-            filename = f"payment_{datetime.now().timestamp()}_{file.filename}"
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
+            filename = save_upload_file(file, "payment")
             reimb.payment_proof = filename
             reimb.paid_at = datetime.utcnow()
             reimb.status = 'paid'
@@ -361,9 +369,7 @@ def submit():
             receipt_filename = None
 
             if receipt_file and receipt_file.filename != '':
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                receipt_filename = f"receipt_{datetime.now().timestamp()}_{receipt_file.filename}"
-                receipt_file.save(os.path.join(UPLOAD_FOLDER, receipt_filename))
+                receipt_filename = save_upload_file(receipt_file, "receipt")
             else:
                 flash(f'Foto nota untuk item "{name}" wajib diupload.', 'danger')
                 return redirect(url_for('reimburse.submit'))

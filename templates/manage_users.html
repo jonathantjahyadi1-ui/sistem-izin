@@ -73,41 +73,53 @@
     {% endwith %}
     
     <!-- TABLE USERS -->
-    <div class="card p-3">
-        <table class="table table-hover">
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Username Login</th>
                     <th>Nama Lengkap</th>
+                    <th>Tempat Lahir</th>
+                    <th>Tanggal Lahir</th>
+                    <th>Join Date</th>
                     <th>Role</th>
                     <th>Divisi</th>
-                    <th>Tanggal Daftar</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
+
             <tbody>
             {% for u in users %}
                 <tr>
                     <td><strong>#{{ u.id }}</strong></td>
                     <td>{{ u.username }}</td>
+                    <td>{{ u.nama_lengkap or '-' }}</td>
+                    <td>{{ u.tempat_lahir or '-' }}</td>
+                    <td>{{ u.tanggal_lahir.strftime('%d/%m/%Y') if u.tanggal_lahir else '-' }}</td>
+                    <td>{{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}</td>
                     <td><span class="badge bg-info">{{ u.role }}</span></td>
                     <td>{{ u.divisi }}</td>
-                    <td>{{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '-' }}</td>
                     <td>
-    <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
-            data-bs-target="#editUserModal{{ u.id }}">
-        Edit Profil
-    </button>
+                        <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
+                                data-bs-target="#editUserModal{{ u.id }}">
+                            Edit Data
+                        </button>
 
-    {% if current_user.role == 'admin' %}
-    <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" 
-            data-bs-target="#resetModal{{ u.id }}">
-        Reset Password
-    </button>
-    {% endif %}
-</td>
+                        {% if current_user.role == 'admin' %}
+                        <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
+        data-bs-target="#editUserModal{{ u.id }}">
+    Edit Data
+</button>
+
+<button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" 
+        data-bs-target="#resetModal{{ u.id }}">
+    Reset Password
+</button>
+                        {% endif %}
+                    </td>
                 </tr>
-                                </tr>
 
                 <!-- Modal Edit User -->
                 <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
@@ -115,22 +127,54 @@
                         <div class="modal-content">
                             <form action="/update_user/{{ u.id }}" method="POST">
                                 <div class="modal-header">
-                                    <h5 class="modal-title">Edit Profil - {{ u.username }}</h5>
+                                    <h5 class="modal-title">Edit Data Diri - {{ u.username }}</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
 
                                 <div class="modal-body">
                                     <div class="mb-3">
-                                        <label class="form-label">Nama Lengkap</label>
+                                        <label class="form-label">Username Login</label>
                                         <input type="text"
-                                               name="username"
                                                class="form-control"
                                                value="{{ u.username }}"
-                                               placeholder="Contoh: Budi Santoso"
-                                               required>
+                                               disabled>
                                         <small class="text-muted">
-                                            Wajib isi nama lengkap minimal 2 kata.
+                                            Username login tidak diubah dari sini.
                                         </small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Nama Lengkap</label>
+                                        <input type="text"
+                                               name="nama_lengkap"
+                                               class="form-control"
+                                               value="{{ u.nama_lengkap or '' }}"
+                                               placeholder="Contoh: Muhammad Alfiqih">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Tempat Lahir</label>
+                                        <input type="text"
+                                               name="tempat_lahir"
+                                               class="form-control"
+                                               value="{{ u.tempat_lahir or '' }}"
+                                               placeholder="Contoh: Jakarta">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Tanggal Lahir</label>
+                                        <input type="date"
+                                               name="tanggal_lahir"
+                                               class="form-control"
+                                               value="{{ u.tanggal_lahir.strftime('%Y-%m-%d') if u.tanggal_lahir else '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Join Date</label>
+                                        <input type="date"
+                                                name="join_date"
+                                                class="form-control"
+                                                value="{{ u.join_date.strftime('%Y-%m-%d') if u.join_date else '' }}">
                                     </div>
 
                                     {% if current_user.role == 'admin' %}
@@ -144,6 +188,8 @@
                                             <option value="direktur" {% if u.role == 'direktur' %}selected{% endif %}>Direktur</option>
                                         </select>
                                     </div>
+                                    {% else %}
+                                        <input type="hidden" name="role" value="{{ u.role }}">
                                     {% endif %}
 
                                     <div class="mb-3">
@@ -164,16 +210,108 @@
 
                                 <div class="modal-footer">
                                     <button type="submit" class="btn btn-primary">
-                                        Simpan Perubahan
+                                        Simpan Data
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Modal Reset Password -->
-                <div class="modal fade" id="resetModal{{ u.id }}" tabindex="-1">
+
+                <!-- Modal Edit User -->
+<div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/update_user/{{ u.id }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Data Diri - {{ u.username }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username Login</label>
+                        <input type="text" class="form-control" value="{{ u.username }}" disabled>
+                        <small class="text-muted">
+                            Username login tidak diubah dari sini.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input type="text"
+                               name="nama_lengkap"
+                               class="form-control"
+                               value="{{ u.nama_lengkap or '' }}"
+                               placeholder="Contoh: Muhammad Alfiqih">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tempat Lahir</label>
+                        <input type="text"
+                               name="tempat_lahir"
+                               class="form-control"
+                               value="{{ u.tempat_lahir or '' }}"
+                               placeholder="Contoh: Jakarta">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tanggal Lahir</label>
+                        <input type="date"
+                               name="tanggal_lahir"
+                               class="form-control"
+                               value="{{ u.tanggal_lahir.strftime('%Y-%m-%d') if u.tanggal_lahir else '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Join Date</label>
+                        <input type="date"
+                               name="join_date"
+                               class="form-control"
+                               value="{{ u.join_date.strftime('%Y-%m-%d') if u.join_date else '' }}">
+                    </div>
+
+                    {% if current_user.role == 'admin' %}
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-control" required>
+                            <option value="karyawan" {% if u.role == 'karyawan' %}selected{% endif %}>Karyawan</option>
+                            <option value="hrd" {% if u.role == 'hrd' %}selected{% endif %}>HRD</option>
+                            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                            <option value="accounting" {% if u.role == 'accounting' %}selected{% endif %}>Accounting</option>
+                            <option value="direktur" {% if u.role == 'direktur' %}selected{% endif %}>Direktur</option>
+                        </select>
+                    </div>
+                    {% else %}
+                        <input type="hidden" name="role" value="{{ u.role }}">
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Divisi</label>
+                        <select name="divisi" class="form-control" required>
+                            <option value="Marketing" {% if u.divisi == 'Marketing' %}selected{% endif %}>Marketing</option>
+                            <option value="Operational" {% if u.divisi == 'Operational' %}selected{% endif %}>Operational</option>
+                            <option value="Hostlive" {% if u.divisi == 'Hostlive' %}selected{% endif %}>Hostlive</option>
+                            <option value="Creative" {% if u.divisi == 'Creative' %}selected{% endif %}>Creative</option>
+                            <option value="Accounting" {% if u.divisi == 'Accounting' %}selected{% endif %}>Accounting</option>
+                            <option value="IT Support" {% if u.divisi == 'IT Support' %}selected{% endif %}>IT Support</option>
+                            <option value="HRD" {% if u.divisi == 'HRD' %}selected{% endif %}>HRD</option>
+                            <option value="IT" {% if u.divisi == 'IT' %}selected{% endif %}>IT</option>
+                            <option value="Direksi" {% if u.divisi == 'Direksi' %}selected{% endif %}>Direksi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>z
+
                 <!-- Modal Reset Password -->
                 <div class="modal fade" id="resetModal{{ u.id }}" tabindex="-1">
                     <div class="modal-dialog">
@@ -183,12 +321,16 @@
                                     <h5 class="modal-title">Reset Password - {{ u.username }}</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
+
                                 <div class="modal-body">
                                     <label class="form-label">Password Baru</label>
                                     <input type="text" name="new_password" class="form-control" required>
                                 </div>
+
                                 <div class="modal-footer">
-                                    <button type="submit" class="btn btn-warning">Reset</button>
+                                    <button type="submit" class="btn btn-warning">
+                                        Reset
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -214,6 +356,35 @@
                         <label class="form-label">Username</label>
                         <input type="text" name="username" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+    <label class="form-label">Nama Lengkap</label>
+    <input type="text"
+           name="nama_lengkap"
+           class="form-control"
+           placeholder="Boleh dikosongkan dulu">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Tempat Lahir</label>
+    <input type="text"
+           name="tempat_lahir"
+           class="form-control"
+           placeholder="Boleh dikosongkan dulu">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Tanggal Lahir</label>
+    <input type="date"
+           name="tanggal_lahir"
+           class="form-control">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Join Date</label>
+    <input type="date"
+           name="join_date"
+           class="form-control">
+</div>
                     <div class="mb-3">
                         <label class="form-label">Password</label>
                         <input type="text" name="password" class="form-control" required>

@@ -288,18 +288,51 @@ with app.app_context():
     db.create_all()
 
     inspector = db.inspect(db.engine)
-    if 'kuota_cuti' not in [c['name'] for c in inspector.get_columns('user')]:
+    table_names = inspector.get_table_names()
+
+    user_columns = [c['name'] for c in inspector.get_columns('user')]
+
+    if 'nama_lengkap' not in user_columns:
+        with db.engine.connect() as conn:
+            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN nama_lengkap VARCHAR(150)'))
+            conn.execute(db.text("""
+                UPDATE "user"
+                SET nama_lengkap = username
+                WHERE nama_lengkap IS NULL OR nama_lengkap = ''
+            """))
+            conn.commit()
+
+    if 'tempat_lahir' not in user_columns:
+        with db.engine.connect() as conn:
+            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN tempat_lahir VARCHAR(100)'))
+            conn.commit()
+
+    if 'tanggal_lahir' not in user_columns:
+        with db.engine.connect() as conn:
+            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN tanggal_lahir DATE'))
+            conn.commit()
+
+    if 'join_date' not in user_columns:
+        with db.engine.connect() as conn:
+            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN join_date DATE'))
+            conn.commit()
+
+    if 'kuota_cuti' not in user_columns:
         with db.engine.connect() as conn:
             conn.execute(db.text('ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 12'))
             conn.commit()
 
     # Tambah kolom receipt_photo di reimburse_item untuk nota per item
-    if 'reimburse_item' in inspector.get_table_names():
-        reimburse_item_columns = [c['name'] for c in inspector.get_columns('reimburse_item')]
+    if 'reimburse_item' in table_names:
+        reimburse_item_columns = [
+            c['name'] for c in inspector.get_columns('reimburse_item')
+        ]
 
         if 'receipt_photo' not in reimburse_item_columns:
             with db.engine.connect() as conn:
-                conn.execute(db.text('ALTER TABLE reimburse_item ADD COLUMN receipt_photo VARCHAR(255)'))
+                conn.execute(db.text(
+                    'ALTER TABLE reimburse_item ADD COLUMN receipt_photo VARCHAR(255)'
+                ))
                 conn.commit()
 
     # ADMIN
@@ -332,13 +365,14 @@ with app.app_context():
             divisi='Direksi'
         ))
 
+    # ACCOUNTING
     if not User.query.filter_by(username='aul').first():
         db.session.add(User(
-        username='aul',
-        password=generate_password_hash('aul@accounting'),
-        role='accounting',
-        divisi='Accounting'
-    ))
+            username='aul',
+            password=generate_password_hash('aul@accounting'),
+            role='accounting',
+            divisi='Accounting'
+        ))
 
     db.session.commit()
 
@@ -348,6 +382,11 @@ def normalize_full_name(name):
 
 def is_valid_full_name(name):
     return len(name.split()) >= 2
+
+def parse_date_or_none(value):
+    if not value:
+        return None
+    return datetime.strptime(value, "%Y-%m-%d").date()
 # ========
 # ROUTES
 # ========
@@ -492,10 +531,10 @@ def form_izin():
         return redirect('/login')
     return render_template('izin.html')
 
-ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 ALLOWED_DOCUMENT_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Maksimal 5MB
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 
 
 
 def allowed_file(filename, allowed_extensions):
@@ -865,10 +904,14 @@ def add_user():
     if not current_user or current_user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
 
-    username = normalize_full_name(request.form.get('username'))
-    password = request.form.get('password')
-    role = request.form.get('role')
-    divisi = request.form.get('divisi')
+    username = request.form['username'].strip()
+    nama_lengkap = request.form.get('nama_lengkap', '').strip()
+    tempat_lahir = request.form.get('tempat_lahir', '').strip()
+    tanggal_lahir = parse_date_or_none(request.form.get('tanggal_lahir'))
+    join_date = parse_date_or_none(request.form.get('join_date'))
+    password = request.form['password']
+    role = request.form['role']
+    divisi = request.form['divisi']
 
     if not is_valid_full_name(username):
         flash('Nama wajib menggunakan nama lengkap minimal 2 kata.', 'danger')
@@ -880,10 +923,14 @@ def add_user():
 
     new_user = User(
         username=username,
+        nama_lengkap=nama_lengkap if nama_lengkap else username,
+        tempat_lahir=tempat_lahir,
+        tanggal_lahir=tanggal_lahir,
+        join_date=join_date,
         password=generate_password_hash(password),
         role=role,
         divisi=divisi
-    )
+)
 
     db.session.add(new_user)
     db.session.commit()
@@ -905,9 +952,8 @@ def update_user(id):
         flash('User tidak ditemukan.', 'danger')
         return redirect('/manage_users')
 
-    username = normalize_full_name(request.form.get('username'))
-    divisi = request.form.get('divisi')
-    role = request.form.get('role')
+    username_input = request.form.get('username') or request.form.get('nama_lengkap')
+    username = normalize_full_name(username_input)
 
     if not is_valid_full_name(username):
         flash('Nama wajib menggunakan nama lengkap minimal 2 kata.', 'danger')
@@ -923,34 +969,24 @@ def update_user(id):
         return redirect('/manage_users')
 
     user.username = username
-    user.divisi = divisi
+    user.nama_lengkap = request.form.get('nama_lengkap', '').strip() or username
+    user.tempat_lahir = request.form.get('tempat_lahir', '').strip()
+    user.tanggal_lahir = parse_date_or_none(request.form.get('tanggal_lahir'))
+    user.join_date = parse_date_or_none(request.form.get('join_date'))
+    user.divisi = request.form.get('divisi')
 
-    # Role hanya boleh diubah oleh admin
-    if current_user.role == 'admin' and role:
-        user.role = role
+    if current_user.role == 'admin':
+        role = request.form.get('role')
+        if role:
+            user.role = role
 
     db.session.commit()
 
     if user.id == current_user.id:
         session['role'] = user.role
 
-    flash('Profil user berhasil diperbarui!', 'success')
+    flash('Data user berhasil diperbarui!', 'success')
     return redirect('/manage_users')
-
-@app.route('/reset_password/<int:id>', methods=['POST'])
-def reset_password(id):
-    if 'user_id' not in session:
-        return redirect('/login')
-    current_user = User.query.get(session['user_id'])
-    if current_user.role != 'admin':
-        return redirect('/dashboard')
-    user = User.query.get(id)
-    new_password = request.form['new_password']
-    user.password = generate_password_hash(new_password)
-    db.session.commit()
-    flash(f'Password {user.username} berhasil direset!', 'success')
-    return redirect('/manage_users')
-
 # =========================
 # EXPORT EXCEL IZIN
 # =========================
@@ -1125,7 +1161,7 @@ def reject(id):
     return redirect(request.referrer or '/dashboard')
 
 # =========================
-# ROUTE MANAJEMEN KUOTA CUTI (HRD/ADMIN)
+# ROUTE MANAJEMEN KUOTA CUTI
 # =========================
 @app.route('/manage_quota')
 def manage_quota():

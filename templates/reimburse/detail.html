@@ -95,16 +95,16 @@
 
                             <td>
                                 {% if item.receipt_photo %}
-                                    <a href="/uploads/{{ item.receipt_photo }}" target="_blank">
-                                        <img src="/uploads/{{ item.receipt_photo }}" class="nota-img">
-                                    </a>
-                                {% elif reimb.receipt_photo %}
-                                    <a href="/uploads/{{ reimb.receipt_photo }}" target="_blank">
-                                        <img src="/uploads/{{ reimb.receipt_photo }}" class="nota-img">
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">Tidak ada nota</span>
-                                {% endif %}
+    <a href="{{ url_for('uploaded_file', filename=item.receipt_photo) }}" target="_blank">
+        <img src="{{ url_for('uploaded_file', filename=item.receipt_photo) }}" class="nota-img">
+    </a>
+{% elif reimb.receipt_photo %}
+    <a href="{{ url_for('uploaded_file', filename=reimb.receipt_photo) }}" target="_blank">
+        <img src="{{ url_for('uploaded_file', filename=reimb.receipt_photo) }}" class="nota-img">
+    </a>
+{% else %}
+    <span class="text-muted">Tidak ada nota</span>
+{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
