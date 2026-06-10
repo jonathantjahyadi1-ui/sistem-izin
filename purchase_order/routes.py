@@ -169,7 +169,8 @@ def submit_po():
         item_names = request.form.getlist('item_name[]')
         prices = request.form.getlist('estimated_price[]')
         qtys = request.form.getlist('qty[]')
-        notes = request.form.getlist('note[]')
+        product_links = request.form.getlist('product_link[]')
+        store_names = request.form.getlist('store_name[]')
         reason = request.form.get('reason', '').strip()
 
         if not reason:
@@ -179,9 +180,10 @@ def submit_po():
         total = 0
         items = []
 
-        for name, price, qty, note in zip(item_names, prices, qtys, notes):
+        for name, price, qty, product_link, store_name in zip(item_names, prices, qtys, product_links, store_names):
             name = name.strip()
-            note = note.strip() if note else ''
+            product_link = product_link.strip() if product_link else ''
+            store_name = store_name.strip() if store_name else ''
 
             if not name:
                 continue
@@ -203,7 +205,8 @@ def submit_po():
                 'item_name': name,
                 'estimated_price': estimated_price,
                 'qty': quantity,
-                'note': note
+                'product_link': product_link,
+                'store_name': store_name
             })
 
         if not items:
@@ -226,7 +229,8 @@ def submit_po():
                 item_name=item['item_name'],
                 estimated_price=item['estimated_price'],
                 qty=item['qty'],
-                note=item['note']
+                product_link=item['product_link'],
+                store_name=item['store_name']
             ))
 
         db.session.commit()
@@ -405,6 +409,8 @@ def export_po_excel():
                     'Status': label_status_po(po.status),
                     'Alasan Pembelian': po.reason,
                     'Nama Barang': item.item_name,
+                    'Nama Toko': item.store_name if item.store_name else '-',
+                    'Link Produk': item.product_link if item.product_link else '-',
                     'Estimasi Harga': item.estimated_price,
                     'Qty': item.qty,
                     'Subtotal': item.estimated_price * item.qty,
@@ -426,6 +432,8 @@ def export_po_excel():
                 'Status': label_status_po(po.status),
                 'Alasan Pembelian': po.reason,
                 'Nama Barang': '-',
+                'Nama Toko': '-',
+                'Link Produk': '-',
                 'Estimasi Harga': 0,
                 'Qty': 0,
                 'Subtotal': 0,
@@ -486,6 +494,8 @@ def export_po_archive_excel():
                     'Status': label_status_po(po.status),
                     'Alasan Pembelian': po.reason,
                     'Nama Barang': item.item_name,
+                    'Nama Toko': item.store_name if item.store_name else '-',
+                    'Link Produk': item.product_link if item.product_link else '-',
                     'Estimasi Harga': item.estimated_price,
                     'Qty': item.qty,
                     'Subtotal': item.estimated_price * item.qty,
@@ -502,6 +512,8 @@ def export_po_archive_excel():
                 'Status': label_status_po(po.status),
                 'Alasan Pembelian': po.reason,
                 'Nama Barang': '-',
+                'Nama Toko': '-',
+                'Link Produk': '-',
                 'Estimasi Harga': 0,
                 'Qty': 0,
                 'Subtotal': 0,

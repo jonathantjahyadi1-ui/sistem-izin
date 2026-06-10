@@ -74,29 +74,39 @@
 
         <h5>Daftar Barang</h5>
 
-        <table class="table table-bordered">
-            <thead class="table-light">
-                <tr>
-                    <th>Barang</th>
-                    <th>Harga Estimasi</th>
-                    <th>Qty</th>
-                    <th>Subtotal</th>
-                    <th>Keterangan</th>
-                </tr>
-            </thead>
+        <div class="table-responsive">
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Barang</th>
+                <th>Nama Toko</th>
+                <th>Link Produk</th>
+                <th>Harga Estimasi</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
 
-            <tbody>
-                {% for item in po.items %}
-                <tr>
-                    <td>{{ item.item_name }}</td>
-                    <td>Rp {{ "{:,.0f}".format(item.estimated_price) }}</td>
-                    <td>{{ item.qty }}</td>
-                    <td>Rp {{ "{:,.0f}".format(item.estimated_price * item.qty) }}</td>
-                    <td>{{ item.note or '-' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <tbody>
+            {% for item in po.items %}
+            <tr>
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.store_name or '-' }}</td>
+                <td>
+                    {% if item.product_link %}
+                        <a href="{{ item.product_link }}" target="_blank" rel="noopener">Buka Link</a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>Rp {{ "{:,.0f}".format(item.estimated_price) }}</td>
+                <td>{{ item.qty }}</td>
+                <td>Rp {{ "{:,.0f}".format(item.estimated_price * item.qty) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
         <h5 class="text-end">
             Total: Rp {{ "{:,.0f}".format(po.total_amount) }}

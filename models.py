@@ -78,4 +78,5 @@ class PurchaseOrderItem(db.Model):
     item_name = db.Column(db.String(200), nullable=False)
     estimated_price = db.Column(db.Integer, default=0)
     qty = db.Column(db.Integer, default=1)
-    note = db.Column(db.Text)
+    product_link = db.Column(db.String(500))
+    store_name = db.Column(db.String(200))

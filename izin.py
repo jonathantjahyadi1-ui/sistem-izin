@@ -335,6 +335,26 @@ with app.app_context():
                 ))
                 conn.commit()
 
+        # Tambah kolom baru di purchase_order_item untuk link produk dan nama toko
+    if 'purchase_order_item' in table_names:
+        po_item_columns = [
+            c['name'] for c in inspector.get_columns('purchase_order_item')
+        ]
+
+        if 'product_link' not in po_item_columns:
+            with db.engine.connect() as conn:
+                conn.execute(db.text(
+                    'ALTER TABLE purchase_order_item ADD COLUMN product_link VARCHAR(500)'
+                ))
+                conn.commit()
+
+        if 'store_name' not in po_item_columns:
+            with db.engine.connect() as conn:
+                conn.execute(db.text(
+                    'ALTER TABLE purchase_order_item ADD COLUMN store_name VARCHAR(200)'
+                ))
+                conn.commit()
+
     # ADMIN
     if not User.query.filter_by(username='Jonathan').first():
         db.session.add(User(

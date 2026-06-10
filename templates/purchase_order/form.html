@@ -10,27 +10,42 @@
     <span class="navbar-brand ms-2">Ajukan Purchase Order</span>
 </nav>
 
-<div class="container mt-5" style="max-width: 800px;">
+<div class="container mt-5" style="max-width: 1100px;">
     <div class="card p-4">
         <h4 class="mb-4">Form Purchase Order</h4>
 
         <form method="POST" id="poForm">
             <div id="itemsContainer">
-                <div class="row mb-2 item-row">
-                    <div class="col-md-4">
-                        <input type="text" name="item_name[]" class="form-control" placeholder="Nama Barang" required>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="number" name="estimated_price[]" class="form-control" placeholder="Estimasi Harga" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" name="qty[]" class="form-control" value="1" required>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="text" name="note[]" class="form-control" placeholder="Keterangan">
-                    </div>
-                    <div class="col-md-1">
-                        <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                <div class="border rounded p-3 mb-3 item-row bg-light">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Nama Barang</label>
+                            <input type="text" name="item_name[]" class="form-control" placeholder="Contoh: Keyboard Logitech" required>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Estimasi Harga</label>
+                            <input type="number" name="estimated_price[]" class="form-control" placeholder="Harga" min="0" required>
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Qty</label>
+                            <input type="number" name="qty[]" class="form-control" value="1" min="1" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Nama Toko</label>
+                            <input type="text" name="store_name[]" class="form-control" placeholder="Contoh: Official Store">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Link Produk</label>
+                            <input type="url" name="product_link[]" class="form-control" placeholder="https://...">
+                        </div>
+
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-danger remove-row">X</button>
+                        </div>
                     </div>
                 </div>
             </div>
