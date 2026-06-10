@@ -67,15 +67,13 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 db.init_app(app)
 
-
-
 # ==================
 # FUNGSI BANTU CUTI
 # ==================
 def tambah_bulan(tanggal_awal, jumlah_bulan):
     """
-    Menambahkan bulan ke tanggal.
-    Aman untuk tanggal akhir bulan, misalnya 31 Januari + 1 bulan = 28/29 Februari.
+    Menambahkan bulan dengan aman.
+    Contoh: 31 Januari + 1 bulan = 28/29 Februari.
     """
     bulan = tanggal_awal.month - 1 + jumlah_bulan
     tahun = tanggal_awal.year + bulan // 12
@@ -85,67 +83,81 @@ def tambah_bulan(tanggal_awal, jumlah_bulan):
     return date(tahun, bulan, hari)
 
 
-def get_total_cuti_approved(user_id):
-    """
-    Total semua cuti approved milik user.
-    Tidak dibatasi tahun supaya saldo minus bisa terbawa dan berkurang otomatis tiap bulan.
-    """
+def get_total_cuti_approved_this_year(user_id, tahun=None):
+    """Total durasi cuti approved pada tahun berjalan."""
+    if tahun is None:
+        tahun = datetime.now().year
+
     total = db.session.query(func.sum(LeaveRequest.durasi)) \
         .filter(LeaveRequest.user_id == user_id) \
         .filter(LeaveRequest.jenis_izin == 'cuti') \
         .filter(LeaveRequest.status == 'approved') \
+        .filter(extract('year', LeaveRequest.tanggal_mulai) == tahun) \
         .scalar() or 0
 
     return total
 
 
-def get_hak_cuti_otomatis(user, today=None):
+def proses_jatah_cuti_otomatis(user):
     """
-    Aturan:
-    - join_date kosong = hak cuti 0
-    - setelah 6 bulan kerja = dapat 1 cuti
-    - setiap bulan berikutnya = tambah 1 cuti
-    """
-    if today is None:
-        today = date.today()
+    Menambahkan +1 ke kuota_cuti jika karyawan sudah eligible.
 
+    Aturan:
+    - join_date kosong: tidak tambah
+    - belum 6 bulan kerja: tidak tambah
+    - setelah 6 bulan: tambah 1
+    - setiap bulan berikutnya: tambah 1
+    - kuota_cuti tetap bisa diedit manual oleh HRD/admin
+    """
     if not user or not user.join_date:
         return 0
 
-    tanggal_cuti_pertama = tambah_bulan(user.join_date, 6)
+    today = date.today()
+    tanggal_mulai_dapat_cuti = tambah_bulan(user.join_date, 6)
 
-    if today < tanggal_cuti_pertama:
+    if today < tanggal_mulai_dapat_cuti:
         return 0
 
-    selisih_bulan = (
-        (today.year - tanggal_cuti_pertama.year) * 12
-        + (today.month - tanggal_cuti_pertama.month)
-    )
+    if user.kuota_cuti is None:
+        user.kuota_cuti = 0
 
-    tanggal_jatah_bulan_ini = tambah_bulan(tanggal_cuti_pertama, selisih_bulan)
+    total_ditambahkan = 0
 
-    if today < tanggal_jatah_bulan_ini:
-        selisih_bulan -= 1
+    if user.last_cuti_accrual_date is None:
+        if user.kuota_cuti > 0:
+            user.last_cuti_accrual_date = today
+            db.session.commit()
+            return 0
 
-    return max(0, selisih_bulan + 1)
+        user.last_cuti_accrual_date = tambah_bulan(user.join_date, 5)
+
+    while True:
+        tanggal_jatah_berikutnya = tambah_bulan(user.last_cuti_accrual_date, 1)
+
+        if tanggal_jatah_berikutnya > today:
+            break
+
+        user.kuota_cuti += 1
+        user.last_cuti_accrual_date = tanggal_jatah_berikutnya
+        total_ditambahkan += 1
+
+    if total_ditambahkan > 0:
+        db.session.commit()
+
+    return total_ditambahkan
 
 
 def get_sisa_cuti(user):
     """
-    Sisa cuti otomatis:
-    hak cuti dari join_date - total cuti approved.
-    Bisa minus.
-    Contoh:
-    hak cuti 1, cuti terpakai 4 = sisa -3
-    bulan berikutnya hak cuti 2, cuti terpakai 4 = sisa -2
+    Sisa cuti = kuota_cuti manual/hasil auto - total cuti approved tahun ini.
     """
     if not user:
         return 0
 
-    hak_cuti = get_hak_cuti_otomatis(user)
-    total_dipakai = get_total_cuti_approved(user.id)
+    proses_jatah_cuti_otomatis(user)
 
-    return hak_cuti - total_dipakai
+    total_dipakai = get_total_cuti_approved_this_year(user.id)
+    return (user.kuota_cuti or 0) - total_dipakai
 
 # ================
 # FUNGSI KEHADIRAN
@@ -376,13 +388,16 @@ with app.app_context():
             conn.commit()
 
     if 'kuota_cuti' not in user_columns:
-        with db.engine.connect() as conn:
-            conn.execute(db.text('ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 0'))
-            conn.commit()
-    else:
-        with db.engine.connect() as conn:
-            conn.execute(db.text('ALTER TABLE "user" ALTER COLUMN kuota_cuti SET DEFAULT 0'))
-            conn.commit()
+        with db.engine.begin() as conn:
+            conn.execute(db.text(
+            'ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 12'
+        ))
+
+    if 'last_cuti_accrual_date' not in user_columns:
+        with db.engine.begin() as conn:
+            conn.execute(db.text(
+            'ALTER TABLE "user" ADD COLUMN last_cuti_accrual_date DATE'
+        ))
 
     # Tambah kolom receipt_photo di reimburse_item untuk nota per item
     if 'reimburse_item' in table_names:
@@ -1285,18 +1300,16 @@ def manage_quota():
 
     user_data = []
     for u in users:
-        hak_cuti = get_hak_cuti_otomatis(u)
-        cuti_terpakai = get_total_cuti_approved(u.id)
-        sisa_cuti = get_sisa_cuti(u)
+        proses_jatah_cuti_otomatis(u)
 
         user_data.append({
             'id': u.id,
             'username': u.username,
             'divisi': u.divisi,
             'join_date': u.join_date,
-            'hak_cuti': hak_cuti,
-            'cuti_terpakai': cuti_terpakai,
-            'sisa': sisa_cuti
+            'kuota': u.kuota_cuti or 0,
+            'sisa': get_sisa_cuti(u),
+            'last_cuti_accrual_date': u.last_cuti_accrual_date
         })
 
     return render_template('manage_quota.html', users=user_data, current_user=user)

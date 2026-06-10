@@ -64,9 +64,10 @@
             <th>Username</th>
             <th>Divisi</th>
             <th>Join Date</th>
-            <th>Hak Cuti Otomatis</th>
-            <th>Cuti Terpakai</th>
+            <th>Kuota Saat Ini</th>
             <th>Sisa Cuti</th>
+            <th>Terakhir Auto +1</th>
+            <th>Aksi</th>
         </tr>
     </thead>
 
@@ -79,26 +80,81 @@
             <td>
                 {{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}
             </td>
+
             <td>
                 <span class="badge bg-primary">
-                    {{ u.hak_cuti }} hari
+                    {{ u.kuota }} hari
                 </span>
             </td>
-            <td>
-                <span class="badge bg-secondary">
-                    {{ u.cuti_terpakai }} hari
-                </span>
-            </td>
+
             <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning fw-bold{% else %}text-success fw-bold{% endif %}">
                 {{ u.sisa }} hari
             </td>
+
+            <td>
+                {{ u.last_cuti_accrual_date.strftime('%d/%m/%Y') if u.last_cuti_accrual_date else '-' }}
+            </td>
+
+            <td>
+                <button class="btn btn-sm btn-warning"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal{{ u.id }}">
+                    Edit
+                </button>
+            </td>
         </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+        <!-- Modal Edit Kuota -->
+        <div class="modal fade" id="editModal{{ u.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <form action="/update_quota/{{ u.id }}" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                Edit Kuota Cuti - {{ u.username }}
+                            </h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal">
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+                            <label class="form-label">
+                                Kuota Cuti Saat Ini
+                            </label>
+
+                            <input type="number"
+                                   name="kuota"
+                                   class="form-control"
+                                   value="{{ u.kuota }}"
+                                   required>
+
+                            <small class="text-muted d-block mt-2">
+                                Kuota ini bisa diedit manual oleh HRD/Admin.
+                                Sistem tetap akan menambah +1 otomatis setiap bulan
+                                jika karyawan sudah melewati masa kerja 6 bulan.
+                            </small>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Batal
+                            </button>
+
+                            <button type="submit" class="btn btn-primary">
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+        {% endfor %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>

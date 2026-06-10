@@ -15,7 +15,13 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='karyawan')
     divisi = db.Column(db.String(50))
+
+    # Tetap dipakai untuk saldo/jatah cuti yang bisa diedit HRD/admin
     kuota_cuti = db.Column(db.Integer, default=0)
+
+    # Dipakai agar sistem tahu kapan terakhir kali menambah +1 otomatis
+    last_cuti_accrual_date = db.Column(db.Date)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
