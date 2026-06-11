@@ -180,10 +180,12 @@ def submit_po():
         total = 0
         items = []
 
-        for name, price, qty, product_link, store_name in zip(item_names, prices, qtys, product_links, store_names):
-            name = name.strip()
-            product_link = product_link.strip() if product_link else ''
-            store_name = store_name.strip() if store_name else ''
+        for i in range(len(item_names)):
+            name = item_names[i].strip() if i < len(item_names) else ''
+            price = prices[i] if i < len(prices) else '0'
+            qty = qtys[i] if i < len(qtys) else '1'
+            product_link = product_links[i].strip() if i < len(product_links) else ''
+            store_name = store_names[i].strip() if i < len(store_names) else ''
 
             if not name:
                 continue
@@ -233,7 +235,13 @@ def submit_po():
                 store_name=item['store_name']
             ))
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("ERROR SUBMIT PO:", repr(e))
+            flash(f"Gagal mengajukan Purchase Order: {str(e)}", "danger")
+            return redirect(url_for('purchase_order.submit_po'))
 
         flash('Purchase Order berhasil diajukan.', 'success')
         return redirect(url_for('purchase_order.list_po'))
