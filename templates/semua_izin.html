@@ -147,6 +147,25 @@
     cursor: pointer;
     font-weight: 600;
 }
+
+.alasan-cell {
+    min-width: 320px;
+    max-width: 420px;
+}
+
+.alasan-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alasan-preview {
+    display: inline-block;
+    max-width: 260px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
     </style>
 </head>
 <body>
@@ -278,19 +297,13 @@
                         <td>{{ i.jenis_izin }}</td>
                         <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
                         <td>{{ i.durasi }} hari</td>
-                        <td style="max-width: 260px;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="
-            display: inline-block;
-            max-width: 190px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        ">
-            {{ i.alasan }}
+                        <td class="alasan-cell">
+    <div class="alasan-wrapper">
+        <span class="alasan-preview">
+            {{ i.alasan or '-' }}
         </span>
 
-        {% if i.alasan|length > 30 %}
+        {% if i.alasan %}
         <button type="button"
                 class="btn btn-sm btn-outline-primary"
                 data-alasan="{{ i.alasan|e }}"
@@ -392,14 +405,7 @@ function closeReasonModalOnBackground(event) {
         <div class="reason-modal-body" id="reasonModalText"></div>
     </div>
 </div>
-<div id="reasonModal" class="reason-modal" onclick="closeReasonModalOnBackground(event)">
-    <div class="reason-modal-content">
-        <div class="reason-modal-header">
-            <span>Alasan Lengkap</span>
-            <button type="button" class="reason-modal-close" onclick="closeReasonModal()">Tutup</button>
-        </div>
-        <div class="reason-modal-body" id="reasonModalText"></div>
-    </div>
+
 </div>
 </body>
 </html>
