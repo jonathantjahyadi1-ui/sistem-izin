@@ -1046,6 +1046,40 @@ def update_user(id):
 
     flash('Data user berhasil diperbarui!', 'success')
     return redirect('/manage_users')
+
+@app.route('/reset_password/<int:id>', methods=['POST'])
+def reset_password(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    current_user = User.query.get(session['user_id'])
+
+    # Hanya admin yang boleh reset password
+    if not current_user or current_user.role != 'admin':
+        flash('Hanya admin yang bisa reset password.', 'danger')
+        return redirect('/dashboard')
+
+    user = User.query.get(id)
+
+    if not user:
+        flash('User tidak ditemukan.', 'danger')
+        return redirect('/manage_users')
+
+    new_password = request.form.get('new_password', '').strip()
+
+    if not new_password:
+        flash('Password baru wajib diisi.', 'danger')
+        return redirect('/manage_users')
+
+    if len(new_password) < 6:
+        flash('Password baru minimal 6 karakter.', 'danger')
+        return redirect('/manage_users')
+
+    user.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    flash(f'Password untuk {user.username} berhasil direset.', 'success')
+    return redirect('/manage_users')
 # =========================
 # EXPORT EXCEL IZIN
 # =========================
