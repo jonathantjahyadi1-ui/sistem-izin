@@ -9,7 +9,7 @@ from supabase import create_client
 import mimetypes
 from extensions import db
 from models import User, LeaveRequest
-from reimburse.models import ReimburseRequest, ReimburseItem
+from overtime.models import OvertimeRequest
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
@@ -399,38 +399,6 @@ with app.app_context():
             'ALTER TABLE "user" ADD COLUMN last_cuti_accrual_date DATE'
         ))
 
-    # Tambah kolom receipt_photo di reimburse_item untuk nota per item
-    if 'reimburse_item' in table_names:
-        reimburse_item_columns = [
-            c['name'] for c in inspector.get_columns('reimburse_item')
-        ]
-
-        if 'receipt_photo' not in reimburse_item_columns:
-            with db.engine.connect() as conn:
-                conn.execute(db.text(
-                    'ALTER TABLE reimburse_item ADD COLUMN receipt_photo VARCHAR(255)'
-                ))
-                conn.commit()
-
-        # Tambah kolom baru di purchase_order_item untuk link produk dan nama toko
-    if 'purchase_order_item' in table_names:
-        po_item_columns = [
-            c['name'] for c in inspector.get_columns('purchase_order_item')
-        ]
-
-        if 'product_link' not in po_item_columns:
-            with db.engine.connect() as conn:
-                conn.execute(db.text(
-                    'ALTER TABLE purchase_order_item ADD COLUMN product_link VARCHAR(500)'
-                ))
-                conn.commit()
-
-        if 'store_name' not in po_item_columns:
-            with db.engine.connect() as conn:
-                conn.execute(db.text(
-                    'ALTER TABLE purchase_order_item ADD COLUMN store_name VARCHAR(200)'
-                ))
-                conn.commit()
 
     # ADMIN
     if not User.query.filter_by(username='Jonathan').first():
@@ -548,22 +516,15 @@ def main_dashboard():
         session['active_system'] = 'izin'
         return redirect('/dashboard')
 
-    elif selected_system == 'reimburse':
-        session['active_system'] = 'reimburse'
-        return redirect('/reimburse/list')
-
-    elif selected_system == 'purchase_order':
-        session['active_system'] = 'purchase_order'
-        return redirect('/purchase-order/list')
+    elif selected_system == 'overtime':
+        session['active_system'] = 'overtime'
+        return redirect('/overtime/list')
 
     if session.get('active_system') == 'izin':
         return redirect('/dashboard')
 
-    elif session.get('active_system') == 'reimburse':
-        return redirect('/reimburse/list')
-
-    elif session.get('active_system') == 'purchase_order':
-        return redirect('/purchase-order/list')
+    elif session.get('active_system') == 'overtime':
+        return redirect('/overtime/list')
     
     return render_template('main_dashboard.html', user=user)
 
@@ -1329,17 +1290,15 @@ def update_quota(user_id):
         flash(f'Kuota cuti {user.username} diperbarui menjadi {new_kuota} hari.', 'success')
     return redirect('/manage_quota')
 
-# Di izin.py, setelah app initialization
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     from flask import send_from_directory
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-from reimburse.routes import reimburse_bp
-app.register_blueprint(reimburse_bp, url_prefix='/reimburse')
 
-from purchase_order.routes import po_bp
-app.register_blueprint(po_bp, url_prefix='/purchase-order')
+from overtime.routes import overtime_bp
+app.register_blueprint(overtime_bp, url_prefix='/overtime')
+
 
 if __name__ == "__main__":
     app.run(debug=True)
