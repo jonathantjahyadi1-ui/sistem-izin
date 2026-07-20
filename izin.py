@@ -421,11 +421,11 @@ with app.app_context():
     # DIREKTUR
     user = User.query.filter_by(username='Martin').first()
     if user:
-        user.password = generate_password_hash('Martin@direktur')
+        user.password = generate_password_hash('123456')
     else:
         db.session.add(User(
             username='Martin',
-            password=generate_password_hash('Martin@direktur'),
+            password=generate_password_hash('123456'),
             role='direktur',
             divisi='Direksi'
         ))
