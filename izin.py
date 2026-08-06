@@ -14,7 +14,8 @@ from meeting_room.models import MeetingRoom, RoomBooking
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
-from sqlalchemy import func, extract
+from sqlalchemy import case, func, extract
+from zoneinfo import ZoneInfo
 
 # =========================
 # LOAD ENV
@@ -45,13 +46,13 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 # DATABASE CONFIG
 # ================
 uri = os.getenv("DATABASE_URL")
-if not uri: 
+if not uri:
     raise Exception("DATABASE_URL belum diset di environment!")
 
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-if "sslmode" not in uri:
+if uri.startswith("postgresql://") and "sslmode" not in uri:
     if "?" in uri:
         uri += "&sslmode=require"
     else:
@@ -59,18 +60,40 @@ if "sslmode" not in uri:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "supersecret")
+secret_key = os.getenv("SECRET_KEY")
+if not secret_key and os.getenv("RENDER"):
+    raise Exception("SECRET_KEY belum diset di environment Render!")
+app.config['SECRET_KEY'] = secret_key or "development-only-change-me"
 
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+engine_options = {
     "pool_pre_ping": True,
     "pool_recycle": 300,
 }
+if uri.startswith("postgresql://"):
+    engine_options.update({
+        "pool_size": 5,
+        "max_overflow": 5,
+        "pool_timeout": 30,
+    })
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 db.init_app(app)
 
 # ==================
 # FUNGSI BANTU CUTI
 # ==================
+JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
+DIVISI_LIST = [
+    'Marketing', 'Operational', 'Hostlive', 'Creative',
+    'Accounting', 'IT Support', 'HRD'
+]
+
+
+def tanggal_hari_ini_jakarta():
+    """Tanggal bisnis aplikasi. Render memakai UTC, kantor memakai WIB."""
+    return datetime.now(JAKARTA_TZ).date()
+
+
 def tambah_bulan(tanggal_awal, jumlah_bulan):
     """
     Menambahkan bulan dengan aman.
@@ -84,10 +107,18 @@ def tambah_bulan(tanggal_awal, jumlah_bulan):
     return date(tahun, bulan, hari)
 
 
+def tanggal_accrual_pertama(join_date):
+    """Tanggal 1 pertama saat masa kerja sudah genap enam bulan."""
+    eligible_date = tambah_bulan(join_date, 6)
+    if eligible_date.day == 1:
+        return eligible_date
+    return tambah_bulan(date(eligible_date.year, eligible_date.month, 1), 1)
+
+
 def get_total_cuti_approved_this_year(user_id, tahun=None):
     """Total durasi cuti approved pada tahun berjalan."""
     if tahun is None:
-        tahun = datetime.now().year
+        tahun = tanggal_hari_ini_jakarta().year
 
     total = db.session.query(func.sum(LeaveRequest.durasi)) \
         .filter(LeaveRequest.user_id == user_id) \
@@ -99,22 +130,25 @@ def get_total_cuti_approved_this_year(user_id, tahun=None):
     return total
 
 
-def proses_jatah_cuti_otomatis(user):
+def proses_jatah_cuti_otomatis(user, today=None):
     """
     Menambahkan +1 ke kuota_cuti jika karyawan sudah eligible.
 
     Aturan:
     - join_date kosong: tidak tambah
     - belum 6 bulan kerja: tidak tambah
-    - setelah 6 bulan: tambah 1
-    - setiap bulan berikutnya: tambah 1
+    - setelah 6 bulan: tambah 1 pada tanggal 1 berikutnya
+    - setiap tanggal 1 berikutnya: tambah 1
     - kuota_cuti tetap bisa diedit manual oleh HRD/admin
+
+    Fungsi ini hanya mengubah object SQLAlchemy. Commit dilakukan satu kali oleh
+    proses_semua_jatah_cuti(), bukan berulang kali untuk setiap karyawan.
     """
-    if not user or not user.join_date:
+    if not user or user.role != 'karyawan' or not user.join_date:
         return 0
 
-    today = date.today()
-    tanggal_mulai_dapat_cuti = tambah_bulan(user.join_date, 6)
+    today = today or tanggal_hari_ini_jakarta()
+    tanggal_mulai_dapat_cuti = tanggal_accrual_pertama(user.join_date)
 
     if today < tanggal_mulai_dapat_cuti:
         return 0
@@ -122,30 +156,75 @@ def proses_jatah_cuti_otomatis(user):
     if user.kuota_cuti is None:
         user.kuota_cuti = 0
 
-    total_ditambahkan = 0
-
     if user.last_cuti_accrual_date is None:
+        # Data lama yang sudah mempunyai kuota dianggap sudah pernah
+        # diinisialisasi. Ini mencegah kuota lama ditambah ulang sekaligus.
         if user.kuota_cuti > 0:
-            user.last_cuti_accrual_date = today
-            db.session.commit()
+            user.last_cuti_accrual_date = date(today.year, today.month, 1)
             return 0
 
-        user.last_cuti_accrual_date = tambah_bulan(user.join_date, 5)
+        tanggal_jatah_berikutnya = tanggal_mulai_dapat_cuti
+    else:
+        bulan_accrual_terakhir = date(
+            user.last_cuti_accrual_date.year,
+            user.last_cuti_accrual_date.month,
+            1
+        )
+        tanggal_jatah_berikutnya = max(
+            tanggal_mulai_dapat_cuti,
+            tambah_bulan(bulan_accrual_terakhir, 1)
+        )
 
-    while True:
-        tanggal_jatah_berikutnya = tambah_bulan(user.last_cuti_accrual_date, 1)
+    if tanggal_jatah_berikutnya > today:
+        return 0
 
-        if tanggal_jatah_berikutnya > today:
-            break
-
-        user.kuota_cuti += 1
-        user.last_cuti_accrual_date = tanggal_jatah_berikutnya
-        total_ditambahkan += 1
-
-    if total_ditambahkan > 0:
-        db.session.commit()
-
+    total_ditambahkan = (
+        (today.year - tanggal_jatah_berikutnya.year) * 12
+        + today.month - tanggal_jatah_berikutnya.month
+        + 1
+    )
+    user.kuota_cuti += total_ditambahkan
+    user.last_cuti_accrual_date = tambah_bulan(
+        tanggal_jatah_berikutnya,
+        total_ditambahkan - 1
+    )
     return total_ditambahkan
+
+
+def proses_semua_jatah_cuti(today=None):
+    """Proses seluruh accrual dengan satu query dan satu commit."""
+    today = today or tanggal_hari_ini_jakarta()
+    users = User.query.filter(
+        User.role == 'karyawan',
+        User.join_date.isnot(None)
+    ).with_for_update().all()
+
+    total_ditambahkan = 0
+    for user in users:
+        total_ditambahkan += proses_jatah_cuti_otomatis(user, today=today)
+
+    db.session.commit()
+    return total_ditambahkan
+
+
+_tanggal_pengecekan_accrual = None
+
+
+def jalankan_accrual_harian_jika_perlu():
+    """Fallback aman bila cron bulanan belum dipasang di Render."""
+    global _tanggal_pengecekan_accrual
+    today = tanggal_hari_ini_jakarta()
+    if _tanggal_pengecekan_accrual == today:
+        return 0
+
+    try:
+        total = proses_semua_jatah_cuti(today=today)
+        _tanggal_pengecekan_accrual = today
+        return total
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Proses accrual cuti gagal")
+        return 0
 
 
 def get_sisa_cuti(user):
@@ -155,10 +234,22 @@ def get_sisa_cuti(user):
     if not user:
         return 0
 
-    proses_jatah_cuti_otomatis(user)
-
     total_dipakai = get_total_cuti_approved_this_year(user.id)
     return (user.kuota_cuti or 0) - total_dipakai
+
+
+def get_total_cuti_approved_semua_user(tahun=None):
+    """Total cuti approved per karyawan dalam satu query."""
+    tahun = tahun or tanggal_hari_ini_jakarta().year
+    rows = db.session.query(
+        LeaveRequest.user_id,
+        func.coalesce(func.sum(LeaveRequest.durasi), 0)
+    ).filter(
+        LeaveRequest.jenis_izin == 'cuti',
+        LeaveRequest.status == 'approved',
+        extract('year', LeaveRequest.tanggal_mulai) == tahun
+    ).group_by(LeaveRequest.user_id).all()
+    return {user_id: int(total or 0) for user_id, total in rows}
 
 # ================
 # FUNGSI KEHADIRAN
@@ -228,139 +319,161 @@ def _hitung_hari_kerja_dari_set(tanggal_set, divisi):
         hari_kerja += 1
     return hari_kerja
 
-def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
-    """Mengembalikan list data kehadiran untuk semua karyawan.
-    Setiap item: {user_id, username, divisi, target, hari_sakit, hari_izin, hari_cuti, hadir}
-    """
-    if tahun is None:
-        tahun = datetime.now().year
-    if bulan is None:
-        bulan = datetime.now().month
-    
-    query = User.query.filter(User.role == 'karyawan')
-    if divisi_filter:
-        query = query.filter(User.divisi == divisi_filter)
-    users = query.all()
-    data = []
-    
-    for u in users:
-        target = get_hari_kerja_dalam_bulan(tahun, bulan, u.divisi)
-        
-        mulai = date(tahun, bulan, 1)
-        selesai = date(tahun, bulan, monthrange(tahun, bulan)[1])
-        
-        # HITUNG SAKIT
-        izin_sakit = LeaveRequest.query.filter(
-            LeaveRequest.user_id == u.id,
-            LeaveRequest.jenis_izin == 'sakit',
+def _tanggal_dalam_rentang(tanggal_mulai, tanggal_selesai, mulai, selesai):
+    """Menghasilkan tanggal yang sudah dipotong ke periode laporan."""
+    awal = max(tanggal_mulai, mulai)
+    akhir = min(tanggal_selesai, selesai)
+    for offset in range((akhir - awal).days + 1):
+        yield awal + timedelta(days=offset)
+
+
+def get_rekap_kehadiran(tahun=None, bulan=None, divisi_filter=None):
+    """Ambil rekap tabel dan grafik dengan dua query database saja."""
+    today = tanggal_hari_ini_jakarta()
+    tahun = tahun or today.year
+    bulan = bulan or today.month
+    mulai = date(tahun, bulan, 1)
+    selesai = date(tahun, bulan, monthrange(tahun, bulan)[1])
+
+    users = db.session.query(
+        User.id, User.username, User.divisi
+    ).filter(User.role == 'karyawan').order_by(User.username.asc()).all()
+
+    user_ids = [u.id for u in users]
+    izin_rows = []
+    if user_ids:
+        izin_rows = db.session.query(
+            LeaveRequest.user_id,
+            LeaveRequest.jenis_izin,
+            LeaveRequest.tanggal_mulai,
+            LeaveRequest.tanggal_selesai
+        ).filter(
+            LeaveRequest.user_id.in_(user_ids),
             LeaveRequest.status == 'approved',
             LeaveRequest.tanggal_mulai <= selesai,
             LeaveRequest.tanggal_selesai >= mulai
         ).all()
-        
-        tanggal_sakit = set()
-        for i in izin_sakit:
-            tgl_mulai = max(i.tanggal_mulai, mulai)
-            tgl_selesai = min(i.tanggal_selesai, selesai)
-            delta = (tgl_selesai - tgl_mulai).days + 1
-            for d in range(delta):
-                tgl = tgl_mulai + timedelta(days=d)
-                tanggal_sakit.add(tgl)
-        
-        hari_sakit = _hitung_hari_kerja_dari_set(tanggal_sakit, u.divisi)
-        
-        # HITUNG IZIN LAIN
-        izin_lain = LeaveRequest.query.filter(
-            LeaveRequest.user_id == u.id,
-            LeaveRequest.jenis_izin == 'izin_lain',
-            LeaveRequest.status == 'approved',
-            LeaveRequest.tanggal_mulai <= selesai,
-            LeaveRequest.tanggal_selesai >= mulai
-        ).all()
-        
-        tanggal_izin = set()
-        for i in izin_lain:
-            tgl_mulai = max(i.tanggal_mulai, mulai)
-            tgl_selesai = min(i.tanggal_selesai, selesai)
-            delta = (tgl_selesai - tgl_mulai).days + 1
-            for d in range(delta):
-                tgl = tgl_mulai + timedelta(days=d)
-                tanggal_izin.add(tgl)
-        
-        hari_izin = _hitung_hari_kerja_dari_set(tanggal_izin, u.divisi)
-        
-        #HITUNG CUTI
-        izin_cuti = LeaveRequest.query.filter(
-            LeaveRequest.user_id == u.id,
-            LeaveRequest.jenis_izin == 'cuti',
-            LeaveRequest.status == 'approved',
-            LeaveRequest.tanggal_mulai <= selesai,
-            LeaveRequest.tanggal_selesai >= mulai
-        ).all()
-        
-        tanggal_cuti = set()
-        for i in izin_cuti:
-            tgl_mulai = max(i.tanggal_mulai, mulai)
-            tgl_selesai = min(i.tanggal_selesai, selesai)
-            delta = (tgl_selesai - tgl_mulai).days + 1
-            for d in range(delta):
-                tgl = tgl_mulai + timedelta(days=d)
-                tanggal_cuti.add(tgl)
-        
-        hari_cuti = _hitung_hari_kerja_dari_set(tanggal_cuti, u.divisi)
-        
-        #KEHADIRAN 
-        total_motong = hari_sakit + hari_izin
-        hadir = target - total_motong
-        
-        data.append({
-            'user_id': u.id,
-            'username': u.username,
-            'divisi': u.divisi,
+
+    tanggal_per_user = {
+        user_id: {'sakit': set(), 'izin_lain': set(), 'cuti': set(), 'semua': set()}
+        for user_id in user_ids
+    }
+    for izin in izin_rows:
+        if not izin.tanggal_mulai or not izin.tanggal_selesai:
+            continue
+        tanggal = set(_tanggal_dalam_rentang(
+            izin.tanggal_mulai, izin.tanggal_selesai, mulai, selesai
+        ))
+        tanggal_per_user[izin.user_id]['semua'].update(tanggal)
+        if izin.jenis_izin in ('sakit', 'izin_lain', 'cuti'):
+            tanggal_per_user[izin.user_id][izin.jenis_izin].update(tanggal)
+
+    target_cache = {}
+    data_semua = []
+    for user in users:
+        divisi = user.divisi or '-'
+        if divisi not in target_cache:
+            target_cache[divisi] = get_hari_kerja_dalam_bulan(tahun, bulan, divisi)
+        target = target_cache[divisi]
+        kumpulan = tanggal_per_user[user.id]
+        hari_sakit = _hitung_hari_kerja_dari_set(kumpulan['sakit'], divisi)
+        hari_izin = _hitung_hari_kerja_dari_set(kumpulan['izin_lain'], divisi)
+        hari_cuti = _hitung_hari_kerja_dari_set(kumpulan['cuti'], divisi)
+        semua_izin = _hitung_hari_kerja_dari_set(kumpulan['semua'], divisi)
+
+        data_semua.append({
+            'user_id': user.id,
+            'username': user.username,
+            'divisi': divisi,
             'target': target,
-            'hari_sakit': hari_sakit,      
-            'hari_izin': hari_izin,        
-            'hadir': hadir
+            'hari_sakit': hari_sakit,
+            'hari_izin': hari_izin,
+            'hari_cuti': hari_cuti,
+            # Tabel lama memang hanya mengurangi sakit + izin_lain.
+            'hadir': target - hari_sakit - hari_izin,
+            # Grafik lama mengurangi semua jenis izin, termasuk cuti.
+            '_hadir_statistik': target - semua_izin,
         })
-    return data
+
+    data_tabel = [
+        item for item in data_semua
+        if not divisi_filter or item['divisi'] == divisi_filter
+    ]
+
+    statistik = []
+    for divisi in DIVISI_LIST:
+        anggota = [item for item in data_semua if item['divisi'] == divisi]
+        if not anggota:
+            continue
+        total_target = sum(item['target'] for item in anggota)
+        total_hadir = sum(item['_hadir_statistik'] for item in anggota)
+        statistik.append({
+            'divisi': divisi,
+            'rata_target': round(total_target / len(anggota), 1),
+            'rata_hadir': round(total_hadir / len(anggota), 1),
+            'persen': round((total_hadir / total_target) * 100 if total_target else 0, 1),
+        })
+
+    return data_tabel, statistik
+
+
+def get_data_kehadiran_per_bulan(tahun=None, bulan=None, divisi_filter=None):
+    return get_rekap_kehadiran(tahun, bulan, divisi_filter)[0]
 
 
 def get_statistik_divisi(tahun=None, bulan=None):
-    """Menghitung rata-rata kehadiran per divisi (hanya untuk karyawan)."""
-    if tahun is None:
-        tahun = datetime.now().year
-    if bulan is None:
-        bulan = datetime.now().month
-    divisi_list = ['Marketing', 'Operational', 'Hostlive', 'Creative', 'Accounting', 'IT Support', 'HRD']
-    stat = []
-    for divisi in divisi_list:
-        users = User.query.filter(User.role == 'karyawan', User.divisi == divisi).all()
-        if not users:
-            continue
-        total_target = 0
-        total_hadir = 0
-        for u in users:
-            target = get_hari_kerja_dalam_bulan(tahun, bulan, divisi)
-            izin_hari = get_total_hari_izin_approved_per_bulan(u.id, tahun, bulan)
-            hadir = target - izin_hari
-            total_target += target
-            total_hadir += hadir
-        stat.append({
-            'divisi': divisi,
-            'rata_target': round(total_target / len(users), 1),
-            'rata_hadir': round(total_hadir / len(users), 1),
-            'persen': round((total_hadir / total_target) * 100 if total_target > 0 else 0, 1)
-        })
-    return stat
+    return get_rekap_kehadiran(tahun, bulan)[1]
 # ==========================
 # AUTO CREATE TABLE & SEEDER
 # ==========================
+def ensure_database_indexes():
+    """Tambahkan index yang dibutuhkan query dashboard pada database lama."""
+    statements = [
+        'CREATE INDEX IF NOT EXISTS ix_user_role_divisi ON "user" (role, divisi)',
+        ('CREATE INDEX IF NOT EXISTS ix_leave_user_kind_status_date '
+         'ON leave_request (user_id, jenis_izin, status, tanggal_mulai)'),
+        ('CREATE INDEX IF NOT EXISTS ix_leave_status_period '
+         'ON leave_request (status, tanggal_mulai, tanggal_selesai)'),
+        ('CREATE INDEX IF NOT EXISTS ix_leave_status_created '
+         'ON leave_request (status, created_at)'),
+        'CREATE INDEX IF NOT EXISTS ix_leave_created ON leave_request (created_at)',
+    ]
+    with db.engine.begin() as conn:
+        for statement in statements:
+            conn.execute(db.text(statement))
+
+
+def seed_users_from_environment():
+    """Buat akun awal hanya bila username dan password diberikan lewat env."""
+    seed_definitions = [
+        ('SEED_ADMIN_USERNAME', 'SEED_ADMIN_PASSWORD', 'admin', 'IT'),
+        ('SEED_HRD_USERNAME', 'SEED_HRD_PASSWORD', 'hrd', 'HRD'),
+        ('SEED_DIRECTOR_USERNAME', 'SEED_DIRECTOR_PASSWORD', 'direktur', 'Direksi'),
+        ('SEED_ACCOUNTING_USERNAME', 'SEED_ACCOUNTING_PASSWORD', 'accounting', 'Accounting'),
+    ]
+    changed = False
+    for username_key, password_key, role, divisi in seed_definitions:
+        username = (os.getenv(username_key) or '').strip()
+        password = os.getenv(password_key) or ''
+        if not username or not password:
+            continue
+        if not User.query.filter(func.lower(User.username) == username.lower()).first():
+            db.session.add(User(
+                username=username,
+                nama_lengkap=username,
+                password=generate_password_hash(password),
+                role=role,
+                divisi=divisi,
+            ))
+            changed = True
+    if changed:
+        db.session.commit()
+
+
 with app.app_context():
     db.create_all()
 
     inspector = db.inspect(db.engine)
-    table_names = inspector.get_table_names()
-
     user_columns = [c['name'] for c in inspector.get_columns('user')]
 
     if 'nama_lengkap' not in user_columns:
@@ -401,46 +514,8 @@ with app.app_context():
         ))
 
 
-    # ADMIN
-    if not User.query.filter_by(username='Jonathan').first():
-        db.session.add(User(
-            username='Jonathan',
-            password=generate_password_hash('Jonathan@itsupport'),
-            role='admin',
-            divisi='IT'
-        ))
-
-    # HRD
-    if not User.query.filter_by(username='Devina').first():
-        db.session.add(User(
-            username='Devina',
-            password=generate_password_hash('Devina@hrd'),
-            role='hrd',
-            divisi='HRD'
-        ))
-
-    # DIREKTUR
-    user = User.query.filter_by(username='Martin').first()
-    if user:
-        user.password = generate_password_hash('123456')
-    else:
-        db.session.add(User(
-            username='Martin',
-            password=generate_password_hash('123456'),
-            role='direktur',
-            divisi='Direksi'
-        ))
-
-    # ACCOUNTING
-    if not User.query.filter_by(username='aul').first():
-        db.session.add(User(
-            username='aul',
-            password=generate_password_hash('aul@accounting'),
-            role='accounting',
-            divisi='Accounting'
-        ))
-
-    db.session.commit()
+    ensure_database_indexes()
+    seed_users_from_environment()
 
 def normalize_full_name(name):
     return " ".join((name or "").strip().split())
@@ -470,7 +545,7 @@ def login_view():
             return redirect('/login')
         session['user_id'] = user.id
         session['role'] = user.role
-        return redirect('/main_dashboard')  
+        return redirect('/main_dashboard')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -505,7 +580,7 @@ def register_view():
 def main_dashboard():
     if 'user_id' not in session:
         return redirect('/login')
-    
+
     user = User.query.get(session['user_id'])
     if not user:
         session.clear()
@@ -533,7 +608,7 @@ def main_dashboard():
 
     elif session.get('active_system') == 'meeting_room':
         return redirect('/meeting-room/list')
-    
+
     return render_template('main_dashboard.html', user=user)
 
 @app.route('/change_system')
@@ -545,28 +620,66 @@ def change_system():
 def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
+
+    # Maksimal satu kali per hari per worker. Penambahan tetap idempotent karena
+    # setiap user dilindungi last_cuti_accrual_date dan row lock database.
+    jalankan_accrual_harian_jika_perlu()
+
     user = User.query.get(session['user_id'])
     if not user:
         session.clear()
         return redirect('/login')
 
     if user.role in ['karyawan', 'accounting']:
-        data = LeaveRequest.query.filter_by(user_id=user.id).all()
+        page = max(request.args.get('page', 1, type=int) or 1, 1)
+        pagination = LeaveRequest.query.filter_by(user_id=user.id).order_by(
+            LeaveRequest.created_at.desc()
+        ).paginate(page=page, per_page=25, error_out=False)
+        data = pagination.items
+        ringkasan = db.session.query(
+            func.count(LeaveRequest.id),
+            func.coalesce(func.sum(case((LeaveRequest.status == 'pending', 1), else_=0)), 0),
+            func.coalesce(func.sum(case((LeaveRequest.status == 'approved', 1), else_=0)), 0),
+        ).filter(LeaveRequest.user_id == user.id).one()
         sisa_cuti = get_sisa_cuti(user)
-        return render_template('dashboard_user.html', data=data, user=user, sisa_cuti=sisa_cuti)
+        return render_template(
+            'dashboard_user.html',
+            data=data,
+            user=user,
+            sisa_cuti=sisa_cuti,
+            pagination=pagination,
+            total_izin=int(ringkasan[0] or 0),
+            total_pending=int(ringkasan[1] or 0),
+            total_approved=int(ringkasan[2] or 0),
+        )
 
     # ADMIN / HRD / DIREKTUR
     divisi_filter = request.args.get('divisi', '')
-    tahun_filter = int(request.args.get('tahun', datetime.now().year))
-    bulan_filter = int(request.args.get('bulan', datetime.now().month))
-    
-    data_kehadiran = get_data_kehadiran_per_bulan(tahun_filter, bulan_filter, divisi_filter if divisi_filter else None)
-    stat_divisi = get_statistik_divisi(tahun_filter, bulan_filter)
-    
-    data_izin = LeaveRequest.query.order_by(
-    LeaveRequest.created_at.desc()
+    today = tanggal_hari_ini_jakarta()
+    tahun_filter = request.args.get('tahun', today.year, type=int) or today.year
+    bulan_filter = request.args.get('bulan', today.month, type=int) or today.month
+    if not 1 <= bulan_filter <= 12:
+        bulan_filter = today.month
+
+    data_kehadiran, stat_divisi = get_rekap_kehadiran(
+        tahun_filter,
+        bulan_filter,
+        divisi_filter or None,
+    )
+
+    data_izin = db.session.query(
+        LeaveRequest,
+        User.username.label('pengaju_username')
+    ).outerjoin(User, LeaveRequest.user_id == User.id).order_by(
+        LeaveRequest.created_at.desc()
     ).limit(10).all()
     sisa_cuti_pribadi = get_sisa_cuti(user)
+    ringkasan = db.session.query(
+        func.count(LeaveRequest.id),
+        func.coalesce(func.sum(case((LeaveRequest.status == 'pending', 1), else_=0)), 0),
+        func.coalesce(func.sum(case((LeaveRequest.status == 'approved', 1), else_=0)), 0),
+        func.coalesce(func.sum(case((LeaveRequest.status == 'rejected', 1), else_=0)), 0),
+    ).one()
     jenis_data = db.session.query(
         LeaveRequest.jenis_izin,
         func.count(LeaveRequest.id)
@@ -579,10 +692,10 @@ def dashboard():
         data=data_izin,
         user=user,
         sisa_cuti_pribadi=sisa_cuti_pribadi,
-        total=LeaveRequest.query.count(),
-        pending=LeaveRequest.query.filter_by(status='pending').count(),
-        approved=LeaveRequest.query.filter_by(status='approved').count(),
-        rejected=LeaveRequest.query.filter_by(status='rejected').count(),
+        total=int(ringkasan[0] or 0),
+        pending=int(ringkasan[1] or 0),
+        approved=int(ringkasan[2] or 0),
+        rejected=int(ringkasan[3] or 0),
         jenis_labels=jenis_labels,
         jenis_values=jenis_values,
         data_kehadiran=data_kehadiran,
@@ -601,7 +714,7 @@ def form_izin():
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 ALLOWED_DOCUMENT_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 
 def allowed_file(filename, allowed_extensions):
@@ -1221,9 +1334,13 @@ def approval():
     if 'user_id' not in session:
         return redirect('/login')
     user = User.query.get(session['user_id'])
-    if user.role not in ['admin', 'hrd', 'direktur']:        
+    if user.role not in ['admin', 'hrd', 'direktur']:
         return redirect('/dashboard')
-    data = LeaveRequest.query.filter_by(status='pending').all()
+    data = db.session.query(LeaveRequest, User).outerjoin(
+        User, LeaveRequest.user_id == User.id
+    ).filter(LeaveRequest.status == 'pending').order_by(
+        LeaveRequest.created_at.asc()
+    ).all()
     return render_template('approval.html', data=data, user=user)
 
 @app.route('/logout')
@@ -1236,6 +1353,7 @@ def approve(id):
     if 'user_id' not in session:
         return redirect('/login')
 
+    jalankan_accrual_harian_jika_perlu()
     current_user = User.query.get(session['user_id'])
     if not current_user or current_user.role not in ['admin', 'hrd', 'direktur']:
         flash('Kamu tidak memiliki akses untuk approve izin.', 'danger')
@@ -1280,11 +1398,25 @@ def approve(id):
 
 @app.route('/reject/<int:id>', methods=['POST'])
 def reject(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    current_user = User.query.get(session['user_id'])
+    if not current_user or current_user.role not in ['admin', 'hrd', 'direktur']:
+        flash('Kamu tidak memiliki akses untuk menolak izin.', 'danger')
+        return redirect('/dashboard')
+
     izin = LeaveRequest.query.get(id)
-    if izin:
-        izin.status = 'rejected'
-        db.session.commit()
-        flash('Izin ditolak.', 'warning')
+    if not izin:
+        flash('Izin tidak ditemukan.', 'danger')
+        return redirect(request.referrer or '/dashboard')
+    if izin.status != 'pending':
+        flash('Izin ini sudah diproses sebelumnya.', 'warning')
+        return redirect(request.referrer or '/dashboard')
+
+    izin.status = 'rejected'
+    db.session.commit()
+    flash('Izin ditolak.', 'warning')
     return redirect(request.referrer or '/dashboard')
 
 # =========================
@@ -1295,23 +1427,24 @@ def manage_quota():
     if 'user_id' not in session:
         return redirect('/login')
 
+    jalankan_accrual_harian_jika_perlu()
     user = User.query.get(session['user_id'])
     if not user or user.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
 
-    users = User.query.filter(User.role != 'direktur').all()
+    users = User.query.filter(User.role != 'direktur').order_by(User.username.asc()).all()
+    cuti_dipakai = get_total_cuti_approved_semua_user()
 
     user_data = []
     for u in users:
-        proses_jatah_cuti_otomatis(u)
-
+        kuota = u.kuota_cuti or 0
         user_data.append({
             'id': u.id,
             'username': u.username,
             'divisi': u.divisi,
             'join_date': u.join_date,
-            'kuota': u.kuota_cuti or 0,
-            'sisa': get_sisa_cuti(u),
+            'kuota': kuota,
+            'sisa': kuota - cuti_dipakai.get(u.id, 0),
             'last_cuti_accrual_date': u.last_cuti_accrual_date
         })
 
@@ -1322,15 +1455,28 @@ def update_quota(user_id):
     if 'user_id' not in session:
         return redirect('/login')
     current = User.query.get(session['user_id'])
-    if current.role not in ['admin', 'hrd']:
+    if not current or current.role not in ['admin', 'hrd']:
         return redirect('/dashboard')
-    new_kuota = int(request.form['kuota'])
+
+    try:
+        new_kuota = int(request.form['kuota'])
+    except (KeyError, TypeError, ValueError):
+        flash('Kuota cuti harus berupa angka.', 'danger')
+        return redirect('/manage_quota')
+
     user = User.query.get(user_id)
     if user:
         user.kuota_cuti = new_kuota
         db.session.commit()
         flash(f'Kuota cuti {user.username} diperbarui menjadi {new_kuota} hari.', 'success')
     return redirect('/manage_quota')
+
+
+@app.cli.command('accrue-cuti')
+def accrue_cuti_command():
+    """Perintah opsional untuk Render Cron Job bulanan."""
+    total = proses_semua_jatah_cuti()
+    print(f'Accrual selesai. Total tambahan: {total} hari.')
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):

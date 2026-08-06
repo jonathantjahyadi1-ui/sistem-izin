@@ -3,6 +3,10 @@ from datetime import datetime
 
 
 class User(db.Model):
+    __table_args__ = (
+        db.Index('ix_user_role_divisi', 'role', 'divisi'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
 
     username = db.Column(db.String(100), unique=True, nullable=False)
@@ -26,6 +30,19 @@ class User(db.Model):
 
 
 class LeaveRequest(db.Model):
+    __table_args__ = (
+        db.Index(
+            'ix_leave_user_kind_status_date',
+            'user_id', 'jenis_izin', 'status', 'tanggal_mulai'
+        ),
+        db.Index(
+            'ix_leave_status_period',
+            'status', 'tanggal_mulai', 'tanggal_selesai'
+        ),
+        db.Index('ix_leave_status_created', 'status', 'created_at'),
+        db.Index('ix_leave_created', 'created_at'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
 
     user_id = db.Column(db.Integer)

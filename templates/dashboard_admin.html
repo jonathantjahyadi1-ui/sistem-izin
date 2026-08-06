@@ -512,10 +512,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for i in data[:10] %}
+                    {% for i, pengaju_username in data %}
                     <tr>
                         <td>#{{ i.id }}</td>
-                        <td><strong>{{ get_user(i.user_id).username if get_user(i.user_id) else '-' }}</strong></td>
+                        <td><strong>{{ pengaju_username or '-' }}</strong></td>
                         <td>{{ i.jenis_izin }}</td>
                         <td>{{ i.tanggal_mulai }} - {{ i.tanggal_selesai }}</td>
                         <td>{{ i.durasi }} hari</td>
