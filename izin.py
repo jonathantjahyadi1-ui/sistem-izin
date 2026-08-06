@@ -10,6 +10,7 @@ import mimetypes
 from extensions import db
 from models import User, LeaveRequest
 from overtime.models import OvertimeRequest
+from meeting_room.models import MeetingRoom, RoomBooking
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
@@ -520,11 +521,18 @@ def main_dashboard():
         session['active_system'] = 'overtime'
         return redirect('/overtime/list')
 
+    elif selected_system == 'meeting_room':
+        session['active_system'] = 'meeting_room'
+        return redirect('/meeting-room/list')
+
     if session.get('active_system') == 'izin':
         return redirect('/dashboard')
 
     elif session.get('active_system') == 'overtime':
         return redirect('/overtime/list')
+
+    elif session.get('active_system') == 'meeting_room':
+        return redirect('/meeting-room/list')
     
     return render_template('main_dashboard.html', user=user)
 
@@ -1332,6 +1340,9 @@ def uploaded_file(filename):
 
 from overtime.routes import overtime_bp
 app.register_blueprint(overtime_bp, url_prefix='/overtime')
+
+from meeting_room.routes import meeting_room_bp
+app.register_blueprint(meeting_room_bp, url_prefix='/meeting-room')
 
 
 if __name__ == "__main__":

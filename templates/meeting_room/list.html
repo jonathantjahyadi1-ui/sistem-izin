@@ -1,0 +1,36 @@
+{% extends "meeting_room/layout.html" %}
+{% block title %}Booking Ruang Meeting{% endblock %}
+{% block page_title %}
+<div class="page-header">
+    <h4><i class="bi bi-calendar-check"></i> Booking Ruang Meeting</h4>
+    <a href="/meeting-room/form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Ajukan Booking</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card mb-3"><div class="card-body">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small">Status</label><select name="status" class="form-select form-select-sm"><option value="">Semua</option>{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if status_filter == s }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small">Tanggal</label><input type="date" name="tanggal" class="form-control form-control-sm" value="{{ tanggal_filter }}"></div>
+        <div class="col-md-3"><label class="form-label small">Ruangan</label><select name="room_id" class="form-select form-select-sm"><option value="">Semua</option>{% for r in rooms %}<option value="{{ r.id }}" {{ 'selected' if room_id_filter == r.id }}>{{ r.room_name }}</option>{% endfor %}</select></div>
+        <div class="col-md-3 d-flex gap-2"><button class="btn btn-sm btn-primary flex-fill"><i class="bi bi-funnel"></i> Filter</button><a href="/meeting-room/list" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+    </form>
+</div></div>
+<div class="card"><div class="card-body">
+{% if bookings %}
+<div class="table-responsive"><table class="table table-hover align-middle">
+    <thead><tr><th>Pemohon</th><th>Judul</th><th>Divisi</th><th>Ruangan</th><th>Tanggal</th><th>Jam</th><th>Peserta</th><th>Status</th><th>Aksi</th></tr></thead>
+    <tbody>{% for b in bookings %}<tr>
+        {% set pemohon = meeting_get_user(b.user_id) %}
+        <td>{{ meeting_display_name(pemohon) }}</td>
+        <td><a href="/meeting-room/detail/{{ b.id }}" class="text-decoration-none fw-semibold">{{ b.title }}</a></td>
+        <td>{{ b.division }}</td><td>{{ b.room.room_name if b.room else '-' }}</td><td>{{ b.meeting_date }}</td>
+        <td>{{ b.start_time.strftime('%H:%M') }} - {{ b.end_time.strftime('%H:%M') }}</td><td>{{ b.participant_count }} org</td>
+        <td><span class="badge {{ b.get_status_badge_class() }}">{{ b.status }}</span></td>
+        <td><div class="btn-group btn-group-sm"><a href="/meeting-room/detail/{{ b.id }}" class="btn btn-outline-primary"><i class="bi bi-eye"></i></a>{% if b.status == 'Pending' and b.user_id == user.id %}<form method="POST" action="/meeting-room/cancel/{{ b.id }}" onsubmit="return confirm('Batalkan booking ini?')"><button class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></button></form>{% endif %}</div></td>
+    </tr>{% endfor %}</tbody>
+</table></div>
+{% else %}
+<div class="text-center py-5 text-muted"><i class="bi bi-calendar-x" style="font-size:4rem"></i><h5 class="mt-3">Belum ada booking</h5><p>Silakan ajukan booking ruang meeting.</p><a href="/meeting-room/form" class="btn btn-primary">Ajukan Booking</a></div>
+{% endif %}
+</div></div>
+{% endblock %}

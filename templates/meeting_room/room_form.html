@@ -1,0 +1,8 @@
+{% extends "meeting_room/layout.html" %}
+{% block title %}{{ 'Edit' if room else 'Tambah' }} Ruangan{% endblock %}
+{% block page_title %}
+<div class="page-header"><h4><i class="bi bi-door-open"></i> {{ 'Edit Ruangan' if room else 'Tambah Ruang Meeting' }}</h4><a href="/meeting-room/rooms" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a></div>
+{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body"><form method="POST"><div class="row g-3"><div class="col-md-6"><label class="form-label">Nama Ruangan <span class="text-danger">*</span></label><input type="text" class="form-control" name="room_name" value="{{ room.room_name if room else '' }}" required></div><div class="col-md-6"><label class="form-label">Kapasitas <span class="text-danger">*</span></label><input type="number" class="form-control" name="capacity" min="1" value="{{ room.capacity if room else '' }}" required></div><div class="col-md-6"><label class="form-label">Lokasi <span class="text-danger">*</span></label><input type="text" class="form-control" name="location" value="{{ room.location if room else '' }}" required></div><div class="col-md-6"><label class="form-label">Fasilitas</label><input type="text" class="form-control" name="facilities" value="{{ room.facilities if room else '' }}" placeholder="TV, Whiteboard, AC"><div class="form-text">Pisahkan dengan koma</div></div></div><div class="mt-4 d-flex gap-2"><button class="btn btn-primary"><i class="bi bi-check-lg"></i> Simpan</button><a href="/meeting-room/rooms" class="btn btn-outline-secondary">Batal</a></div></form></div></div>
+{% endblock %}

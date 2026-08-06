@@ -1,0 +1,34 @@
+{% extends "meeting_room/layout.html" %}
+{% block title %}Detail Booking{% endblock %}
+{% block page_title %}
+<div class="page-header">
+    <h4><i class="bi bi-info-circle"></i> Detail Booking</h4>
+    <a href="/meeting-room/list" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+</div>
+{% endblock %}
+{% block content %}
+{% set pemohon = meeting_get_user(booking.user_id) %}
+{% set approver = meeting_get_user(booking.approved_by) %}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0">{{ booking.title }}</h5><span class="badge {{ booking.get_status_badge_class() }} fs-6">{{ booking.status }}</span></div><div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6"><label class="text-muted small">Pemohon</label><p class="fw-semibold">{{ meeting_display_name(pemohon) }}</p></div>
+            <div class="col-sm-6"><label class="text-muted small">Divisi</label><p class="fw-semibold">{{ booking.division }}</p></div>
+            <div class="col-sm-6"><label class="text-muted small">Ruangan</label><p class="fw-semibold">{{ booking.room.room_name if booking.room else '-' }}</p></div>
+            <div class="col-sm-6"><label class="text-muted small">Lokasi</label><p class="fw-semibold">{{ booking.room.location if booking.room else '-' }}</p></div>
+            <div class="col-sm-4"><label class="text-muted small">Tanggal</label><p class="fw-semibold">{{ booking.meeting_date }}</p></div>
+            <div class="col-sm-4"><label class="text-muted small">Jam</label><p class="fw-semibold">{{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}</p></div>
+            <div class="col-sm-4"><label class="text-muted small">Peserta/Kapasitas</label><p class="fw-semibold">{{ booking.participant_count }} / {{ booking.room.capacity if booking.room else '-' }} org</p></div>
+            <div class="col-12"><label class="text-muted small">Keperluan</label><p>{{ booking.purpose }}</p></div>
+            {% if booking.notes %}<div class="col-12"><label class="text-muted small">Catatan</label><p>{{ booking.notes }}</p></div>{% endif %}
+        </div>
+    </div></div></div>
+    <div class="col-lg-4"><div class="card mb-3"><div class="card-header"><h6 class="mb-0">Status & Approval</h6></div><div class="card-body">
+        <div class="mb-2"><label class="text-muted small">Diajukan</label><p class="mb-0">{{ booking.created_at.strftime('%d %b %Y, %H:%M') if booking.created_at else '-' }}</p></div>
+        {% if booking.approved_by %}<div class="mb-2"><label class="text-muted small">Diproses oleh</label><p class="mb-0">{{ meeting_display_name(approver) }}</p></div><div class="mb-2"><label class="text-muted small">Tanggal Proses</label><p class="mb-0">{{ booking.approved_at.strftime('%d %b %Y, %H:%M') if booking.approved_at else '-' }}</p></div>{% endif %}
+        {% if booking.reject_reason %}<label class="text-muted small">Alasan Penolakan</label><div class="alert alert-danger py-2 mb-0 mt-1">{{ booking.reject_reason }}</div>{% endif %}
+    </div></div>
+    {% if booking.status == 'Pending' and booking.user_id == user.id %}<div class="card"><div class="card-body"><form method="POST" action="/meeting-room/cancel/{{ booking.id }}" onsubmit="return confirm('Batalkan booking ini?')"><button class="btn btn-outline-danger w-100"><i class="bi bi-x-lg"></i> Batalkan Booking</button></form></div></div>{% endif %}
+    </div>
+</div>
+{% endblock %}

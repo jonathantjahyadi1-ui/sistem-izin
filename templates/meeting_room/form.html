@@ -1,0 +1,94 @@
+{% extends "meeting_room/layout.html" %}
+{% block title %}Ajukan Booking{% endblock %}
+{% block page_title %}
+<div class="page-header">
+    <h4><i class="bi bi-plus-circle"></i> Ajukan Booking Ruang Meeting</h4>
+    <span class="text-muted">Booking minimal H-{{ min_days }} sebelum tanggal meeting</span>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body">
+    <form method="POST" id="bookingForm">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label">Judul Meeting <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="title" placeholder="Contoh: Weekly Meeting Marketing" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Divisi</label>
+                <input type="text" class="form-control" value="{{ user.divisi or '-' }}" readonly>
+                <input type="hidden" name="division" value="{{ user.divisi or '-' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ruangan <span class="text-danger">*</span></label>
+                <select class="form-select" id="room_id" name="room_id" required onchange="updateRoomInfo()">
+                    <option value="">-- Pilih Ruangan --</option>
+                    {% for room in rooms %}
+                    <option value="{{ room.id }}" data-capacity="{{ room.capacity }}" data-location="{{ room.location }}" data-facilities="{{ room.facilities }}">
+                        {{ room.room_name }} - {{ room.capacity }} orang
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="roomInfo" class="form-text mt-1" style="display:none"></div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Tanggal Meeting <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" name="meeting_date" required>
+                <div class="form-text">Minimal H-{{ min_days }} dari hari ini</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Jam Mulai <span class="text-danger">*</span></label>
+                <input type="time" class="form-control" name="start_time" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Jam Selesai <span class="text-danger">*</span></label>
+                <input type="time" class="form-control" name="end_time" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Jumlah Peserta <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="participant_count" name="participant_count" min="1" required>
+                <div id="capacityWarning" class="form-text text-danger" style="display:none"></div>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Keperluan <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="purpose" placeholder="Contoh: Diskusi campaign bulan depan" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Catatan Tambahan</label>
+                <textarea class="form-control" name="notes" rows="3" placeholder="Opsional"></textarea>
+            </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Ajukan Booking</button>
+            <a href="/meeting-room/list" class="btn btn-outline-secondary">Batal</a>
+        </div>
+    </form>
+</div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function updateRoomInfo(){
+    const select=document.getElementById('room_id');
+    const selected=select.options[select.selectedIndex];
+    const info=document.getElementById('roomInfo');
+    const participant=document.getElementById('participant_count');
+    if(selected.value){
+        info.style.display='block';
+        info.innerHTML='<strong>Lokasi:</strong> '+selected.dataset.location+' | <strong>Fasilitas:</strong> '+(selected.dataset.facilities || '-');
+        participant.max=selected.dataset.capacity;
+    } else {
+        info.style.display='none';
+        participant.removeAttribute('max');
+    }
+}
+document.getElementById('participant_count').addEventListener('input',function(){
+    const select=document.getElementById('room_id');
+    const selected=select.options[select.selectedIndex];
+    const warning=document.getElementById('capacityWarning');
+    if(selected.value && parseInt(this.value)>parseInt(selected.dataset.capacity)){
+        warning.style.display='block';
+        warning.textContent='Melebihi kapasitas ('+selected.dataset.capacity+' orang)';
+    } else { warning.style.display='none'; }
+});
+</script>
+{% endblock %}
