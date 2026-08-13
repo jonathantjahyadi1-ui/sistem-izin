@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 import pandas as pd
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, request, session, render_template, redirect, url_for, flash, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from supabase import create_client
@@ -92,6 +92,35 @@ DIVISI_LIST = [
 def tanggal_hari_ini_jakarta():
     """Tanggal bisnis aplikasi. Render memakai UTC, kantor memakai WIB."""
     return datetime.now(JAKARTA_TZ).date()
+
+
+NAMA_BULAN_INDONESIA = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+)
+
+
+def ubah_ke_waktu_jakarta(value):
+    """Ubah datetime UTC dari database menjadi waktu Asia/Jakarta."""
+    if not isinstance(value, datetime):
+        return value
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(JAKARTA_TZ)
+
+
+def format_tanggal_indonesia(value):
+    """Format tanggal untuk tampilan, tanpa menyertakan jam."""
+    if not value:
+        return '-'
+
+    value = ubah_ke_waktu_jakarta(value)
+    return f'{value.day:02d} {NAMA_BULAN_INDONESIA[value.month - 1]} {value.year}'
+
+
+app.jinja_env.filters['tanggal_id'] = format_tanggal_indonesia
 
 
 def tambah_bulan(tanggal_awal, jumlah_bulan):
@@ -1046,7 +1075,13 @@ def semua_izin():
     if nama_filter:
         query = query.filter(User.username.ilike(f'%{nama_filter}%'))
 
-    data = query.order_by(LeaveRequest.created_at.desc()).limit(100).all()
+    page = max(request.args.get('page', 1, type=int) or 1, 1)
+    pagination = query.order_by(LeaveRequest.created_at.desc()).paginate(
+        page=page,
+        per_page=20,
+        error_out=False
+    )
+    data = pagination.items
 
     divisi_list = db.session.query(User.divisi).distinct().all()
     divisi_list = [d[0] for d in divisi_list if d[0]]
@@ -1060,7 +1095,8 @@ def semua_izin():
         search=search,
         divisi_filter=divisi_filter,
         nama_filter=nama_filter,
-        divisi_list=divisi_list
+        divisi_list=divisi_list,
+        pagination=pagination
     )
 
 @app.route('/manage_users')
@@ -1210,6 +1246,7 @@ def format_tanggal_excel(value, pakai_jam=False):
         return '-'
 
     try:
+        value = ubah_ke_waktu_jakarta(value)
         if pakai_jam:
             return value.strftime('%d/%m/%Y %H:%M')
         return value.strftime('%d/%m/%Y')
@@ -1312,7 +1349,7 @@ def export_excel():
             'Durasi': izin.durasi,
             'Alasan': izin.alasan,
             'Status': izin.status.upper() if izin.status else '-',
-            'Tanggal Pengajuan': format_tanggal_excel(izin.created_at, pakai_jam=True),
+            'Tanggal Pengajuan': format_tanggal_excel(izin.created_at),
             'File Surat Dokter': izin.file_surat if izin.file_surat else '-',
             'File Bukti Chat': izin.file_chat if izin.file_chat else '-'
         })
