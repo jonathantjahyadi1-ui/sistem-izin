@@ -136,12 +136,83 @@ def tambah_bulan(tanggal_awal, jumlah_bulan):
     return date(tahun, bulan, hari)
 
 
+def awal_bulan(tanggal):
+    """Mengubah tanggal apa pun menjadi tanggal 1 pada bulan yang sama."""
+    if not tanggal:
+        return None
+    return date(tanggal.year, tanggal.month, 1)
+
+
 def tanggal_accrual_pertama(join_date):
     """Tanggal 1 pertama saat masa kerja sudah genap enam bulan."""
     eligible_date = tambah_bulan(join_date, 6)
     if eligible_date.day == 1:
         return eligible_date
-    return tambah_bulan(date(eligible_date.year, eligible_date.month, 1), 1)
+    return tambah_bulan(awal_bulan(eligible_date), 1)
+
+
+def tanggal_accrual_berikutnya(user):
+    """Jadwal +1 berikutnya berdasarkan join date dan marker terakhir."""
+    if not user or user.role != 'karyawan' or not user.join_date:
+        return None
+
+    tanggal_pertama = tanggal_accrual_pertama(user.join_date)
+    if not user.last_cuti_accrual_date:
+        return tanggal_pertama
+
+    bulan_terakhir = awal_bulan(user.last_cuti_accrual_date)
+    return max(tanggal_pertama, tambah_bulan(bulan_terakhir, 1))
+
+
+def jumlah_siklus_accrual(join_date, today=None):
+    """Jumlah jadwal +1 sejak karyawan eligible sampai bulan berjalan."""
+    if not join_date:
+        return 0
+
+    today = today or tanggal_hari_ini_jakarta()
+    tanggal_pertama = tanggal_accrual_pertama(join_date)
+    if today < tanggal_pertama:
+        return 0
+
+    return (
+        (today.year - tanggal_pertama.year) * 12
+        + today.month - tanggal_pertama.month
+        + 1
+    )
+
+
+def informasi_accrual_cuti(user, today=None):
+    """Informasi jadwal accrual untuk ditampilkan kepada HRD/admin."""
+    today = today or tanggal_hari_ini_jakarta()
+    info = {
+        'status': 'non_karyawan',
+        'tanggal_pertama': None,
+        'tanggal_berikutnya': None,
+        'tanggal_diproses_sampai': None,
+        'jumlah_siklus': 0,
+    }
+
+    if not user:
+        return info
+
+    if user.last_cuti_accrual_date:
+        info['tanggal_diproses_sampai'] = awal_bulan(
+            user.last_cuti_accrual_date
+        )
+
+    if user.role != 'karyawan':
+        return info
+
+    if not user.join_date:
+        info['status'] = 'join_date_kosong'
+        return info
+
+    tanggal_pertama = tanggal_accrual_pertama(user.join_date)
+    info['tanggal_pertama'] = tanggal_pertama
+    info['tanggal_berikutnya'] = tanggal_accrual_berikutnya(user)
+    info['jumlah_siklus'] = jumlah_siklus_accrual(user.join_date, today=today)
+    info['status'] = 'menunggu_6_bulan' if today < tanggal_pertama else 'aktif'
+    return info
 
 
 def get_total_cuti_approved_this_year(user_id, tahun=None):
@@ -179,6 +250,15 @@ def proses_jatah_cuti_otomatis(user, today=None):
     today = today or tanggal_hari_ini_jakarta()
     tanggal_mulai_dapat_cuti = tanggal_accrual_pertama(user.join_date)
 
+    # Marker dari versi lama mungkin tersimpan pada tanggal 8, 15, dan
+    # tanggal lainnya. Karena kebijakan baru selalu tanggal 1, marker tersebut
+    # dinormalisasi tanpa mengubah kuota. Perhitungan lama juga sebenarnya
+    # sudah membaca marker per bulan, jadi langkah ini tidak membuat dobel.
+    if user.last_cuti_accrual_date:
+        user.last_cuti_accrual_date = awal_bulan(
+            user.last_cuti_accrual_date
+        )
+
     if today < tanggal_mulai_dapat_cuti:
         return 0
 
@@ -189,15 +269,13 @@ def proses_jatah_cuti_otomatis(user, today=None):
         # Data lama yang sudah mempunyai kuota dianggap sudah pernah
         # diinisialisasi. Ini mencegah kuota lama ditambah ulang sekaligus.
         if user.kuota_cuti > 0:
-            user.last_cuti_accrual_date = date(today.year, today.month, 1)
+            user.last_cuti_accrual_date = awal_bulan(today)
             return 0
 
         tanggal_jatah_berikutnya = tanggal_mulai_dapat_cuti
     else:
-        bulan_accrual_terakhir = date(
-            user.last_cuti_accrual_date.year,
-            user.last_cuti_accrual_date.month,
-            1
+        bulan_accrual_terakhir = awal_bulan(
+            user.last_cuti_accrual_date
         )
         tanggal_jatah_berikutnya = max(
             tanggal_mulai_dapat_cuti,
@@ -533,7 +611,7 @@ with app.app_context():
     if 'kuota_cuti' not in user_columns:
         with db.engine.begin() as conn:
             conn.execute(db.text(
-            'ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 12'
+            'ALTER TABLE "user" ADD COLUMN kuota_cuti INTEGER DEFAULT 0'
         ))
 
     if 'last_cuti_accrual_date' not in user_columns:
@@ -1168,6 +1246,9 @@ def update_user(id):
         flash('User tidak ditemukan.', 'danger')
         return redirect('/manage_users')
 
+    join_date_lama = user.join_date
+    role_lama = user.role
+
     username_input = request.form.get('username') or request.form.get('nama_lengkap')
     username = normalize_full_name(username_input)
 
@@ -1195,6 +1276,29 @@ def update_user(id):
         role = request.form.get('role')
         if role:
             user.role = role
+
+    # Saat join date/role diubah, rapikan marker lama dan langsung sinkronkan
+    # jadwal. Kuota manual tidak direset supaya koreksi HRD tetap aman.
+    if join_date_lama != user.join_date or role_lama != user.role:
+        if not user.join_date:
+            user.last_cuti_accrual_date = None
+        elif user.last_cuti_accrual_date:
+            user.last_cuti_accrual_date = awal_bulan(
+                user.last_cuti_accrual_date
+            )
+
+            # Marker sebelum tanggal pertama bukan marker accrual yang valid.
+            if (
+                user.role == 'karyawan'
+                and user.last_cuti_accrual_date
+                < tanggal_accrual_pertama(user.join_date)
+            ):
+                user.last_cuti_accrual_date = None
+
+        proses_jatah_cuti_otomatis(
+            user,
+            today=tanggal_hari_ini_jakarta()
+        )
 
     db.session.commit()
 
@@ -1473,16 +1577,23 @@ def manage_quota():
     cuti_dipakai = get_total_cuti_approved_semua_user()
 
     user_data = []
+    today = tanggal_hari_ini_jakarta()
     for u in users:
         kuota = u.kuota_cuti or 0
+        info_accrual = informasi_accrual_cuti(u, today=today)
         user_data.append({
             'id': u.id,
             'username': u.username,
             'divisi': u.divisi,
+            'role': u.role,
             'join_date': u.join_date,
             'kuota': kuota,
             'sisa': kuota - cuti_dipakai.get(u.id, 0),
-            'last_cuti_accrual_date': u.last_cuti_accrual_date
+            'status_accrual': info_accrual['status'],
+            'tanggal_accrual_pertama': info_accrual['tanggal_pertama'],
+            'tanggal_accrual_berikutnya': info_accrual['tanggal_berikutnya'],
+            'jumlah_siklus_accrual': info_accrual['jumlah_siklus'],
+            'last_cuti_accrual_date': info_accrual['tanggal_diproses_sampai']
         })
 
     return render_template('manage_quota.html', users=user_data, current_user=user)
@@ -1514,6 +1625,52 @@ def accrue_cuti_command():
     """Perintah opsional untuk Render Cron Job bulanan."""
     total = proses_semua_jatah_cuti()
     print(f'Accrual selesai. Total tambahan: {total} hari.')
+
+
+@app.cli.command('normalize-cuti-dates')
+def normalize_cuti_dates_command():
+    """Rapikan marker tanggal lama menjadi tanggal 1 tanpa mengubah kuota."""
+    users = User.query.filter(
+        User.last_cuti_accrual_date.isnot(None)
+    ).with_for_update().all()
+
+    total_diperbaiki = 0
+    for user in users:
+        tanggal_normal = awal_bulan(user.last_cuti_accrual_date)
+        if tanggal_normal != user.last_cuti_accrual_date:
+            user.last_cuti_accrual_date = tanggal_normal
+            total_diperbaiki += 1
+
+    db.session.commit()
+    print(
+        f'Normalisasi selesai. {total_diperbaiki} tanggal diperbaiki; '
+        'kuota tidak diubah.'
+    )
+
+
+@app.cli.command('audit-cuti')
+def audit_cuti_command():
+    """Laporan baca-saja untuk memeriksa jadwal accrual seluruh user."""
+    today = tanggal_hari_ini_jakarta()
+    users = User.query.order_by(User.username.asc()).all()
+
+    print(
+        'ID | Nama | Role | Join date | Mulai auto | Diproses s.d. | '
+        'Auto berikutnya | Siklus sejak join | Kuota'
+    )
+    for user in users:
+        info = informasi_accrual_cuti(user, today=today)
+
+        def fmt(value):
+            return value.strftime('%d/%m/%Y') if value else '-'
+
+        print(
+            f'{user.id} | {user.username} | {user.role} | '
+            f'{fmt(user.join_date)} | {fmt(info["tanggal_pertama"])} | '
+            f'{fmt(info["tanggal_diproses_sampai"])} | '
+            f'{fmt(info["tanggal_berikutnya"])} | {info["jumlah_siklus"]} | '
+            f'{user.kuota_cuti or 0}'
+        )
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):

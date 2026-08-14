@@ -32,6 +32,21 @@
         #mainContent.shift { margin-left: 250px; }
         .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .table thead { background: var(--light); }
+        .table th { white-space: nowrap; color: #334155; font-size: 0.82rem; }
+        .table td { vertical-align: middle; }
+        .user-name { font-weight: 600; color: #0f172a; }
+        .user-meta { color: #64748b; font-size: 0.75rem; text-transform: capitalize; }
+        .schedule-date { white-space: nowrap; font-size: 0.9rem; font-weight: 600; color: #334155; }
+        .rule-note { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; }
+        .status-badge { font-size: 0.72rem; font-weight: 600; }
+        @media (max-width: 767.98px) {
+            #mainContent { padding: 12px; }
+            #mainContent.shift { margin-left: 0; }
+            .navbar { padding-left: 12px !important; padding-right: 12px !important; }
+            .navbar .ms-auto { font-size: 0; }
+            .navbar .btn { font-size: 0.8rem; }
+            .card { padding: 12px !important; }
+        }
     </style>
 </head>
 <body>
@@ -54,19 +69,27 @@
 </div>
 
 <div id="mainContent" class="container-fluid mt-4 px-4">
-    <h4 class="fw-bold mb-4"><i class="bi bi-calendar-check"></i> Manajemen Kuota Cuti Tahunan</h4>
+    <h4 class="fw-bold mb-3"><i class="bi bi-calendar-check"></i> Manajemen Kuota Cuti</h4>
+
+    <div class="alert rule-note d-flex gap-2 align-items-start mb-3" role="alert">
+        <i class="bi bi-info-circle-fill mt-1"></i>
+        <div>
+            Kuota karyawan bertambah <strong>+1 setiap tanggal 1</strong> setelah genap bekerja 6 bulan.
+        </div>
+    </div>
+
     <div class="card p-4">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle mb-0">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Username</th>
+            <th>Karyawan</th>
             <th>Divisi</th>
             <th>Join Date</th>
-            <th>Kuota Saat Ini</th>
+            <th>Kuota</th>
             <th>Sisa Cuti</th>
-            <th>Terakhir Auto +1</th>
+            <th>Auto +1 Berikutnya</th>
             <th>Aksi</th>
         </tr>
     </thead>
@@ -75,26 +98,33 @@
         {% for u in users %}
         <tr>
             <td><strong>#{{ u.id }}</strong></td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.divisi }}</td>
             <td>
-                {{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}
+                <div class="user-name">{{ u.username }}</div>
+                <div class="user-meta">{{ u.role }}</div>
             </td>
-
-            <td>
-                <span class="badge bg-primary">
-                    {{ u.kuota }} hari
-                </span>
-            </td>
-
+            <td>{{ u.divisi or '-' }}</td>
+            <td>{{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}</td>
+            <td><span class="badge bg-primary">{{ u.kuota }} hari</span></td>
             <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning fw-bold{% else %}text-success fw-bold{% endif %}">
                 {{ u.sisa }} hari
             </td>
-
             <td>
-                {{ u.last_cuti_accrual_date.strftime('%d/%m/%Y') if u.last_cuti_accrual_date else '-' }}
-            </td>
+                {% if u.status_accrual == 'aktif' %}
+                    <span class="badge bg-success-subtle text-success-emphasis status-badge mb-1">Aktif</span>
+                {% elif u.status_accrual == 'menunggu_6_bulan' %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis status-badge mb-1">Belum 6 bulan</span>
+                {% elif u.status_accrual == 'join_date_kosong' %}
+                    <span class="badge bg-danger-subtle text-danger-emphasis status-badge mb-1">Join date kosong</span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis status-badge mb-1">Tidak otomatis</span>
+                {% endif %}
 
+                {% if u.status_accrual != 'non_karyawan' %}
+                <div class="schedule-date">
+                    {{ u.tanggal_accrual_berikutnya.strftime('%d/%m/%Y') if u.tanggal_accrual_berikutnya else '-' }}
+                </div>
+                {% endif %}
+            </td>
             <td>
                 <button class="btn btn-sm btn-warning"
                         data-bs-toggle="modal"
@@ -103,58 +133,44 @@
                 </button>
             </td>
         </tr>
-
-        <!-- Modal Edit Kuota -->
-        <div class="modal fade" id="editModal{{ u.id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-
-                    <form action="/update_quota/{{ u.id }}" method="POST">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                Edit Kuota Cuti - {{ u.username }}
-                            </h5>
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="modal">
-                            </button>
-                        </div>
-
-                        <div class="modal-body">
-                            <label class="form-label">
-                                Kuota Cuti Saat Ini
-                            </label>
-
-                            <input type="number"
-                                   name="kuota"
-                                   class="form-control"
-                                   value="{{ u.kuota }}"
-                                   required>
-
-                            <small class="text-muted d-block mt-2">
-                                Kuota ini bisa diedit manual oleh HRD/Admin.
-                                Sistem tetap akan menambah +1 otomatis setiap bulan
-                                jika karyawan sudah melewati masa kerja 6 bulan.
-                            </small>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button"
-                                    class="btn btn-secondary"
-                                    data-bs-dismiss="modal">
-                                Batal
-                            </button>
-
-                            <button type="submit" class="btn btn-primary">
-                                Simpan
-                            </button>
-                        </div>
-                    </form>
-
-                </div>
-            </div>
-        </div>
         {% endfor %}
+    </tbody>
+</table>
+        </div>
+    </div>
+</div>
+
+{% for u in users %}
+<div class="modal fade" id="editModal{{ u.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/update_quota/{{ u.id }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Kuota Cuti - {{ u.username }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Kuota Cuti Saat Ini</label>
+                    <input type="number"
+                           name="kuota"
+                           class="form-control"
+                           value="{{ u.kuota }}"
+                           required>
+                    <small class="text-muted d-block mt-2">
+                        Kuota ini bisa diedit manual oleh HRD/Admin. Sistem tetap
+                        menambah +1 otomatis setiap bulan setelah karyawan melewati
+                        masa kerja 6 bulan. Edit manual tidak mengubah jadwal otomatis.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
