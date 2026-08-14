@@ -88,6 +88,22 @@ DIVISI_LIST = [
     'Accounting', 'IT Support', 'HRD'
 ]
 
+# Semua role yang memperoleh tambahan kuota cuti otomatis. Akun IT pada
+# sistem saat ini menggunakan role "admin"; "it" tetap dicantumkan agar aman
+# jika nantinya dibuat sebagai role tersendiri.
+ROLE_CUTI_OTOMATIS = (
+    'karyawan',
+    'admin',
+    'it',
+    'hrd',
+    'accounting',
+)
+
+
+def role_mendapat_cuti_otomatis(role):
+    """True bila role termasuk penerima accrual cuti bulanan."""
+    return (role or '').strip().lower() in ROLE_CUTI_OTOMATIS
+
 
 def tanggal_hari_ini_jakarta():
     """Tanggal bisnis aplikasi. Render memakai UTC, kantor memakai WIB."""
@@ -153,7 +169,11 @@ def tanggal_accrual_pertama(join_date):
 
 def tanggal_accrual_berikutnya(user):
     """Jadwal +1 berikutnya berdasarkan join date dan marker terakhir."""
-    if not user or user.role != 'karyawan' or not user.join_date:
+    if (
+        not user
+        or not role_mendapat_cuti_otomatis(user.role)
+        or not user.join_date
+    ):
         return None
 
     tanggal_pertama = tanggal_accrual_pertama(user.join_date)
@@ -185,7 +205,7 @@ def informasi_accrual_cuti(user, today=None):
     """Informasi jadwal accrual untuk ditampilkan kepada HRD/admin."""
     today = today or tanggal_hari_ini_jakarta()
     info = {
-        'status': 'non_karyawan',
+        'status': 'tidak_otomatis',
         'tanggal_pertama': None,
         'tanggal_berikutnya': None,
         'tanggal_diproses_sampai': None,
@@ -200,7 +220,7 @@ def informasi_accrual_cuti(user, today=None):
             user.last_cuti_accrual_date
         )
 
-    if user.role != 'karyawan':
+    if not role_mendapat_cuti_otomatis(user.role):
         return info
 
     if not user.join_date:
@@ -232,7 +252,7 @@ def get_total_cuti_approved_this_year(user_id, tahun=None):
 
 def proses_jatah_cuti_otomatis(user, today=None):
     """
-    Menambahkan +1 ke kuota_cuti jika karyawan sudah eligible.
+    Menambahkan +1 ke kuota_cuti jika pegawai sudah eligible.
 
     Aturan:
     - join_date kosong: tidak tambah
@@ -242,9 +262,13 @@ def proses_jatah_cuti_otomatis(user, today=None):
     - kuota_cuti tetap bisa diedit manual oleh HRD/admin
 
     Fungsi ini hanya mengubah object SQLAlchemy. Commit dilakukan satu kali oleh
-    proses_semua_jatah_cuti(), bukan berulang kali untuk setiap karyawan.
+    proses_semua_jatah_cuti(), bukan berulang kali untuk setiap pegawai.
     """
-    if not user or user.role != 'karyawan' or not user.join_date:
+    if (
+        not user
+        or not role_mendapat_cuti_otomatis(user.role)
+        or not user.join_date
+    ):
         return 0
 
     today = today or tanggal_hari_ini_jakarta()
@@ -302,7 +326,7 @@ def proses_semua_jatah_cuti(today=None):
     """Proses seluruh accrual dengan satu query dan satu commit."""
     today = today or tanggal_hari_ini_jakarta()
     users = User.query.filter(
-        User.role == 'karyawan',
+        func.lower(User.role).in_(ROLE_CUTI_OTOMATIS),
         User.join_date.isnot(None)
     ).with_for_update().all()
 
@@ -1289,7 +1313,7 @@ def update_user(id):
 
             # Marker sebelum tanggal pertama bukan marker accrual yang valid.
             if (
-                user.role == 'karyawan'
+                role_mendapat_cuti_otomatis(user.role)
                 and user.last_cuti_accrual_date
                 < tanggal_accrual_pertama(user.join_date)
             ):

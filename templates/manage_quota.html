@@ -74,7 +74,8 @@
     <div class="alert rule-note d-flex gap-2 align-items-start mb-3" role="alert">
         <i class="bi bi-info-circle-fill mt-1"></i>
         <div>
-            Kuota karyawan bertambah <strong>+1 setiap tanggal 1</strong> setelah genap bekerja 6 bulan.
+            Kuota pegawai bertambah <strong>+1 setiap tanggal 1</strong> setelah genap bekerja 6 bulan.
+            Berlaku untuk Karyawan, IT/Admin, HRD, dan Accounting.
         </div>
     </div>
 
@@ -119,7 +120,7 @@
                     <span class="badge bg-secondary-subtle text-secondary-emphasis status-badge mb-1">Tidak otomatis</span>
                 {% endif %}
 
-                {% if u.status_accrual != 'non_karyawan' %}
+                {% if u.status_accrual != 'tidak_otomatis' %}
                 <div class="schedule-date">
                     {{ u.tanggal_accrual_berikutnya.strftime('%d/%m/%Y') if u.tanggal_accrual_berikutnya else '-' }}
                 </div>
@@ -158,7 +159,7 @@
                            required>
                     <small class="text-muted d-block mt-2">
                         Kuota ini bisa diedit manual oleh HRD/Admin. Sistem tetap
-                        menambah +1 otomatis setiap bulan setelah karyawan melewati
+                        menambah +1 otomatis setiap bulan setelah pegawai melewati
                         masa kerja 6 bulan. Edit manual tidak mengubah jadwal otomatis.
                     </small>
                 </div>
