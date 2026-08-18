@@ -752,8 +752,6 @@ def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
 
-    # Maksimal satu kali per hari per worker. Penambahan tetap idempotent karena
-    # setiap user dilindungi last_cuti_accrual_date dan row lock database.
     jalankan_accrual_harian_jika_perlu()
 
     user = User.query.get(session['user_id'])
