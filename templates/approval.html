@@ -1,442 +1,404 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Pending Approval</title>
+{% extends "base_izin.html" %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% block title %}Persetujuan Izin{% endblock %}
 
-    <style>
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
+{% block header_title %}
+    Persetujuan Izin
+{% endblock %}
 
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-        }
+{% block content %}
 
-        body {
-            background: #f8fafc;
-            padding-top: 56px;
-            margin: 0;
-        }
+<!-- HEADING -->
+<section class="dashboard-page-heading">
 
-        .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
+    <div>
+        <p class="dashboard-eyebrow">
+            PERSETUJUAN
+        </p>
 
-        #sidebar {
-            position: fixed;
-            top: 56px;
-            left: -250px;
-            width: 250px;
-            height: calc(100vh - 56px);
-            background: white;
-            transition: 0.3s;
-            z-index: 999;
-            padding-top: 20px;
-            box-shadow: 4px 0 12px rgba(0,0,0,0.08);
-        }
+        <h1>Pengajuan menunggu</h1>
 
-        #sidebar.active {
-            left: 0;
-        }
-
-        #sidebar a {
-            display: block;
-            color: var(--dark);
-            padding: 12px 20px;
-            text-decoration: none;
-            border-left: 4px solid transparent;
-            margin: 5px 0;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        #sidebar a:hover,
-        #sidebar a.active {
-            background: var(--light);
-            border-left-color: var(--primary);
-            color: var(--primary);
-        }
-
-        #mainContent {
-            margin-left: 0;
-            transition: 0.3s;
-            padding: 24px;
-        }
-
-        #mainContent.shift {
-            margin-left: 250px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        .page-header h4 {
-            margin: 0;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .card {
-            border: none;
-            border-radius: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            background: var(--light);
-            color: var(--dark);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            border: none;
-            padding: 14px;
-            white-space: nowrap;
-        }
-
-        .table tbody td {
-            padding: 14px;
-            vertical-align: middle;
-            color: var(--dark);
-            border-color: #eef2f7;
-        }
-
-        .badge-pending {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .btn-approve {
-            background: var(--success);
-            border: none;
-            color: white;
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 8px 12px;
-        }
-
-        .btn-reject {
-            background: var(--danger);
-            border: none;
-            color: white;
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 8px 12px;
-        }
-
-        .action-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: var(--gray);
-        }
-
-        .reason-text {
-            max-width: 260px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        .reason-modal {
-            display: none;
-            position: fixed;
-            z-index: 10000;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .reason-modal-content {
-            background: white;
-            width: 520px;
-            max-width: 95%;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-        }
-
-        .reason-modal-header {
-            background: #1f2937;
-            color: white;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-weight: 600;
-        }
-
-        .reason-modal-body {
-            padding: 20px;
-            color: #1f2937;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .reason-modal-close {
-            background: #ef4444;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        @media (max-width: 768px) {
-            #mainContent {
-                padding: 18px;
-            }
-
-            #mainContent.shift {
-                margin-left: 0;
-            }
-
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-
-            .action-group {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<nav class="navbar navbar-dark px-4">
-    <button class="btn btn-light btn-sm" onclick="toggleSidebar()">
-        <i class="bi bi-list"></i> Menu
-    </button>
-
-    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
-
-    <div class="ms-auto text-white">
-        {{ user.username }} ({{ user.role }})
-        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
-    </div>
-</nav>
-
-<div id="sidebar">
-    <a href="/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
-    <a href="/semua_izin"><i class="bi bi-list-check"></i> Semua Izin</a>
-    <a href="/approval" class="active"><i class="bi bi-hourglass-split"></i> Pending Approval</a>
-    <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
-    <a href="/change_system"><i class="bi bi-arrow-left-right"></i> Ganti Sistem</a>
-
-    {% if user.role in ['admin', 'hrd', 'direktur'] %}
-    <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
-    <a href="/manage_quota"><i class="bi bi-calendar-check"></i> Kuota Cuti</a>
-    {% endif %}
-</div>
-
-<div id="mainContent" class="container-fluid mt-4 px-4">
-
-    <div class="page-header">
-        <h4>
-            <i class="bi bi-hourglass-split"></i> Pending Approval Izin
-        </h4>
-
-        <a href="/semua_izin?status=pending" class="btn btn-primary btn-sm">
-            <i class="bi bi-list-ul"></i> Lihat Semua Pending
-        </a>
+        <p>
+            Periksa detail dan lampiran sebelum memproses pengajuan.
+        </p>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endwith %}
+    <a
+        href="/semua_izin?status=pending"
+        class="dashboard-outline-button"
+    >
+        <i class="bi bi-list-ul"></i>
+        Semua data pending
+    </a>
 
-    <div class="card p-4">
-        {% if data %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+</section>
+
+<!-- RINGKASAN -->
+<section class="approval-summary">
+
+    <div class="approval-summary-icon">
+        <i class="bi bi-hourglass-split"></i>
+    </div>
+
+    <div>
+        <p>PENGAJUAN BELUM DIPROSES</p>
+
+        <h2>
+            {{ data|length }} pengajuan menunggu keputusan
+        </h2>
+
+        <span>
+            Pastikan periode, alasan, dan bukti pendukung sudah sesuai.
+        </span>
+    </div>
+
+</section>
+
+<!-- TABEL APPROVAL -->
+<section class="approval-panel">
+
+    <div class="approval-panel-header">
+
+        <div>
+            <h2>Daftar persetujuan</h2>
+            <p>Pengajuan diurutkan dari yang paling lama.</p>
+        </div>
+
+        <div class="approval-header-icon">
+            <i class="bi bi-check2-square"></i>
+        </div>
+
+    </div>
+
+    {% if data %}
+
+        <div class="dashboard-table-wrapper">
+
+            <table class="dashboard-table approval-table">
+
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nama Pengaju</th>
+                        <th>Pengaju</th>
                         <th>Jenis</th>
-                        <th>Tanggal</th>
+                        <th>Periode</th>
                         <th>Durasi</th>
                         <th>Alasan</th>
-                        <th>Status</th>
-                        <th style="width: 180px;">Aksi</th>
+                        <th>Lampiran</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for i in data %}
-                    {% set pengaju = get_user(i.user_id) %}
-                    <tr>
-                        <td><strong>#{{ i.id }}</strong></td>
 
-                        <td>
-                            <strong>
-                                {% if pengaju %}
-                                    {{ pengaju.nama_lengkap if pengaju.nama_lengkap else pengaju.username }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </strong>
-                        </td>
+                    {% for i, pengaju in data %}
 
-                        <td>
-                            {% if i.jenis_izin == 'cuti' %}
-                                <span class="badge bg-primary">Cuti</span>
-                            {% elif i.jenis_izin == 'sakit' %}
-                                <span class="badge bg-danger">Sakit</span>
-                            {% else %}
-                                <span class="badge bg-info">Izin</span>
-                            {% endif %}
-                        </td>
+                        {% set nama_pengaju =
+                            (pengaju.nama_lengkap or pengaju.username)
+                            if pengaju else '-'
+                        %}
 
-                        <td>
-                            {{ i.tanggal_mulai }}
-                            {% if i.tanggal_selesai and i.tanggal_selesai != i.tanggal_mulai %}
-                                - {{ i.tanggal_selesai }}
-                            {% endif %}
-                        </td>
+                        <tr>
 
-                        <td>{{ i.durasi }} hari</td>
+                            <!-- PENGAJU -->
+                            <td>
+                                <div class="approval-user">
 
-                        <td>
-                            <span class="reason-text">
-                                {{ i.alasan }}
-                            </span>
+                                    <div class="approval-user-avatar">
+                                        {{ nama_pengaju[:2]|upper }}
+                                    </div>
 
-                            {% if i.alasan and i.alasan|length > 35 %}
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary ms-1"
-                                    data-alasan="{{ i.alasan|e }}"
-                                    onclick="openReasonModal(this)">
-                                Lihat
-                            </button>
-                            {% endif %}
-                        </td>
+                                    <div>
+                                        <strong>{{ nama_pengaju }}</strong>
 
-                        <td>
-                            <span class="badge-pending">PENDING</span>
-                        </td>
+                                        <span>
+                                            {% if pengaju %}
+                                                {{ pengaju.divisi or 'Divisi belum diatur' }}
+                                            {% else %}
+                                                Data pengguna tidak ditemukan
+                                            {% endif %}
+                                        </span>
 
-                        <td>
-                            <div class="action-group">
-                                <form action="/approve/{{ i.id }}" method="POST" style="display:inline;">
-                                    <button type="submit"
-                                            class="btn btn-approve btn-sm"
-                                            onclick="return confirm('Yakin approve izin ini?')">
-                                        <i class="bi bi-check-circle"></i> Approve
-                                    </button>
-                                </form>
+                                        <small>
+                                            Pengajuan #{{ i.id }}
+                                        </small>
+                                    </div>
 
-                                <form action="/reject/{{ i.id }}" method="POST" style="display:inline;">
-                                    <button type="submit"
-                                            class="btn btn-reject btn-sm"
-                                            onclick="return confirm('Yakin reject izin ini?')">
-                                        <i class="bi bi-x-circle"></i> Reject
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                                </div>
+                            </td>
+
+                            <!-- JENIS -->
+                            <td>
+                                <span class="request-type request-type-{{ i.jenis_izin|lower }}">
+                                    {{ i.jenis_izin|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+
+                            <!-- PERIODE -->
+                            <td>
+                                <div class="dashboard-date-range">
+
+                                    <strong>
+                                        {{ i.tanggal_mulai.strftime('%d/%m/%Y') if i.tanggal_mulai else '-' }}
+                                    </strong>
+
+                                    <span>
+                                        sampai
+                                        {{ i.tanggal_selesai.strftime('%d/%m/%Y') if i.tanggal_selesai else '-' }}
+                                    </span>
+
+                                </div>
+                            </td>
+
+                            <!-- DURASI -->
+                            <td>
+                                <strong>{{ i.durasi }} hari</strong>
+                            </td>
+
+                            <!-- ALASAN -->
+                            <td>
+                                <div class="approval-reason-cell">
+
+                                    <p title="{{ i.alasan or '-' }}">
+                                        {{ i.alasan or '-' }}
+                                    </p>
+
+                                    {% if i.alasan and i.alasan|length > 40 %}
+                                        <button
+                                            type="button"
+                                            class="approval-reason-button"
+                                            data-reason="{{ i.alasan|e }}"
+                                            data-requester="{{ nama_pengaju|e }}"
+                                            onclick="openApprovalReason(this)"
+                                        >
+                                            Lihat lengkap
+                                        </button>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+
+                            <!-- LAMPIRAN -->
+                            <td>
+                                <div class="dashboard-file-actions">
+
+                                    {% if i.file_chat %}
+                                        <a
+                                            href="{{ url_for('download_file', filename=i.file_chat) }}"
+                                            target="_blank"
+                                            class="dashboard-file-link"
+                                        >
+                                            <i class="bi bi-chat-left-text"></i>
+                                            Chat
+                                        </a>
+                                    {% endif %}
+
+                                    {% if i.file_surat %}
+                                        <a
+                                            href="{{ url_for('download_file', filename=i.file_surat) }}"
+                                            target="_blank"
+                                            class="dashboard-file-link"
+                                        >
+                                            <i class="bi bi-file-earmark-medical"></i>
+                                            Surat
+                                        </a>
+                                    {% endif %}
+
+                                    {% if not i.file_chat and not i.file_surat %}
+                                        <span class="dashboard-empty-file">
+                                            Tidak ada
+                                        </span>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+
+                            <!-- AKSI -->
+                            <td>
+                                <div class="approval-actions">
+
+                                    <form
+                                        action="/approve/{{ i.id }}"
+                                        method="POST"
+                                    >
+                                        <button
+                                            type="submit"
+                                            class="approval-button approve"
+                                            onclick="return confirm('Setujui pengajuan {{ nama_pengaju|e }}?')"
+                                        >
+                                            <i class="bi bi-check-lg"></i>
+                                            Setujui
+                                        </button>
+                                    </form>
+
+                                    <form
+                                        action="/reject/{{ i.id }}"
+                                        method="POST"
+                                    >
+                                        <button
+                                            type="submit"
+                                            class="approval-button reject"
+                                            onclick="return confirm('Tolak pengajuan {{ nama_pengaju|e }}?')"
+                                        >
+                                            <i class="bi bi-x-lg"></i>
+                                            Tolak
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+
+                        </tr>
+
                     {% endfor %}
+
                 </tbody>
+
             </table>
+
         </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--success);"></i>
-                <h5 class="mt-3 fw-bold">Tidak ada izin pending</h5>
-                <p class="mb-0">Semua pengajuan izin sudah diproses.</p>
+
+    {% else %}
+
+        <div class="approval-empty-state">
+
+            <div>
+                <i class="bi bi-check2-circle"></i>
             </div>
-        {% endif %}
-    </div>
+
+            <h2>Semua pengajuan sudah diproses</h2>
+
+            <p>
+                Saat ada pengajuan baru, datanya akan muncul di sini.
+            </p>
+
+            <a
+                href="/semua_izin"
+                class="dashboard-outline-button"
+            >
+                Lihat semua pengajuan
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+<!-- MODAL ALASAN -->
+<div
+    class="approval-modal-backdrop"
+    id="approvalReasonModal"
+    aria-hidden="true"
+    onclick="closeApprovalReasonFromBackground(event)"
+>
+
+    <section
+        class="approval-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approvalModalTitle"
+    >
+
+        <button
+            type="button"
+            class="approval-modal-close"
+            onclick="closeApprovalReason()"
+            aria-label="Tutup"
+        >
+            <i class="bi bi-x-lg"></i>
+        </button>
+
+        <div class="approval-modal-icon">
+            <i class="bi bi-chat-quote"></i>
+        </div>
+
+        <p class="dashboard-eyebrow">
+            ALASAN PENGAJUAN
+        </p>
+
+        <h2 id="approvalModalTitle">
+            Alasan lengkap
+        </h2>
+
+        <span id="approvalModalRequester"></span>
+
+        <div
+            class="approval-modal-reason"
+            id="approvalModalReason"
+        ></div>
+
+        <button
+            type="button"
+            class="dashboard-primary-button"
+            onclick="closeApprovalReason()"
+        >
+            Tutup
+        </button>
+
+    </section>
+
 </div>
 
-<div id="reasonModal" class="reason-modal" onclick="closeReasonModalOnBackground(event)">
-    <div class="reason-modal-content">
-        <div class="reason-modal-header">
-            <span>Alasan Lengkap</span>
-            <button type="button" class="reason-modal-close" onclick="closeReasonModal()">Tutup</button>
-        </div>
-        <div class="reason-modal-body" id="reasonModalText"></div>
-    </div>
-</div>
+{% endblock %}
+
+{% block scripts %}
 
 <script>
-    function toggleSidebar() {
-        document.getElementById("sidebar").classList.toggle("active");
-        document.getElementById("mainContent").classList.toggle("shift");
+    const approvalReasonModal =
+        document.getElementById("approvalReasonModal");
+
+    const approvalModalReason =
+        document.getElementById("approvalModalReason");
+
+    const approvalModalRequester =
+        document.getElementById("approvalModalRequester");
+
+    function openApprovalReason(button) {
+        approvalModalReason.textContent =
+            button.dataset.reason || "-";
+
+        approvalModalRequester.textContent =
+            "Diajukan oleh " +
+            (button.dataset.requester || "-");
+
+        approvalReasonModal.classList.add("visible");
+
+        approvalReasonModal.setAttribute(
+            "aria-hidden",
+            "false"
+        );
+
+        document.body.classList.add("sidebar-lock");
     }
 
-    function openReasonModal(button) {
-        const alasan = button.getAttribute("data-alasan");
-        document.getElementById("reasonModalText").innerText = alasan;
-        document.getElementById("reasonModal").style.display = "flex";
+    function closeApprovalReason() {
+        approvalReasonModal.classList.remove("visible");
+
+        approvalReasonModal.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        approvalModalReason.textContent = "";
+        approvalModalRequester.textContent = "";
+
+        document.body.classList.remove("sidebar-lock");
     }
 
-    function closeReasonModal() {
-        document.getElementById("reasonModalText").innerText = "";
-        document.getElementById("reasonModal").style.display = "none";
-    }
-
-    function closeReasonModalOnBackground(event) {
-        if (event.target.id === "reasonModal") {
-            closeReasonModal();
+    function closeApprovalReasonFromBackground(event) {
+        if (event.target === approvalReasonModal) {
+            closeApprovalReason();
         }
     }
 
-    document.addEventListener("keydown", function(event) {
-        if (event.key === "Escape") {
-            closeReasonModal();
+    document.addEventListener("keydown", function (event) {
+        if (
+            event.key === "Escape" &&
+            approvalReasonModal.classList.contains("visible")
+        ) {
+            closeApprovalReason();
         }
     });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

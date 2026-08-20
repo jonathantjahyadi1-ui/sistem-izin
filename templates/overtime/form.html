@@ -1,302 +1,693 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ajukan Lembur</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base_overtime.html" %}
 
-    <style>
-        * { font-family: 'Poppins', sans-serif; }
+{% block title %}Ajukan Lembur{% endblock %}
 
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-            --danger: #ef4444;
-        }
+{% block header_title %}
+    Ajukan Lembur
+{% endblock %}
 
-        body {
-            background: #f8fafc;
-            padding-top: 56px;
-        }
+{% block content %}
 
-        .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
-        }
+<section class="leave-page-heading">
 
-        .card {
-            border: none;
-            border-radius: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .required:after {
-            content: " *";
-            color: var(--danger);
-        }
-
-        .form-control,
-        .form-select {
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 11px 14px;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(91, 134, 229, 0.1);
-        }
-
-        .duration-box {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 18px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 1.4rem;
-        }
-
-        .help-text {
-            color: var(--gray);
-            font-size: 0.85rem;
-        }
-    </style>
-</head>
-<body>
-
-<nav class="navbar navbar-dark px-4">
-    <a href="/overtime/list" class="btn btn-light btn-sm">
-        <i class="bi bi-arrow-left"></i> Kembali
-    </a>
-
-    <span class="navbar-brand ms-2 fw-bold">⏱️ Ajukan Lembur</span>
-
-    <div class="ms-auto text-white">
-        {{ user.username }} ({{ user.role }})
-        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
-    </div>
-</nav>
-
-<div class="container mt-5 pt-4" style="max-width: 900px;">
-    <div class="card p-4">
-        <h4 class="fw-bold mb-2">Form Pengajuan Lembur</h4>
-
-        <p class="text-muted mb-4">
-            Upload bukti chat SPV/Manager, foto saat lembur, dan foto tap absen.
-            Durasi lembur dihitung otomatis dari jam mulai sampai jam selesai.
+    <div>
+        <p class="dashboard-eyebrow">
+            FORMULIR OVERTIME
         </p>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endwith %}
+        <h1>Ajukan lembur baru</h1>
 
-        <form method="POST" enctype="multipart/form-data" id="overtimeForm">
+        <p>
+            Lengkapi jadwal, pekerjaan, dan tiga bukti pendukung.
+        </p>
+    </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Nama</label>
-                    <input type="text"
-                           class="form-control"
-                           value="{{ user.nama_lengkap or user.username }}"
-                           readonly>
-                </div>
+    <a
+        href="{{ url_for('overtime.list_overtime') }}"
+        class="dashboard-outline-button"
+    >
+        <i class="bi bi-arrow-left"></i>
+        Kembali
+    </a>
 
-                <div class="col-md-6">
-                    <label class="form-label">Divisi</label>
-                    <input type="text"
-                           class="form-control"
-                           value="{{ user.divisi or '-' }}"
-                           readonly>
-                </div>
+</section>
+
+<div class="leave-form-layout">
+
+    <!-- FORM -->
+    <section class="leave-form-panel">
+
+        <div class="leave-panel-header">
+
+            <div class="leave-panel-icon">
+                <i class="bi bi-clock-history"></i>
             </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <label class="form-label required">Tanggal Lembur</label>
-                    <input type="date"
-                           name="overtime_date"
-                           id="overtime_date"
-                           class="form-control"
-                           required>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label required">Jam Mulai</label>
-                    <input type="time"
-                           name="start_time"
-                           id="start_time"
-                           class="form-control"
-                           required>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label required">Jam Selesai</label>
-                    <input type="time"
-                           name="end_time"
-                           id="end_time"
-                           class="form-control"
-                           required>
-
-                </div>
+            <div>
+                <h2>Informasi lembur</h2>
+                <p>Kolom dengan tanda bintang wajib diisi.</p>
             </div>
 
-            <div class="duration-box mb-4" id="durationBox">
-                Total lembur: -
-            </div>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Nama SPV/Manager</label>
-                <input type="text"
-                       name="supervisor_name"
-                       class="form-control"
-                       placeholder="Contoh: Pak Budi / Ibu Sari">
-            </div>
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+            id="overtimeForm"
+            class="leave-form overtime-form"
+        >
 
-            <div class="mb-3">
-                <label class="form-label required">Keterangan Pekerjaan Selama Lembur</label>
-                <textarea name="work_description"
-                          class="form-control"
-                          rows="4"
-                          required
-                          placeholder="Jelaskan pekerjaan apa yang dilakukan selama lembur"></textarea>
-            </div>
+            <!-- IDENTITAS -->
+            <div class="overtime-profile-summary overtime-full-column">
 
-            <div class="row g-3 mb-4">
-
-                <div class="col-md-4">
-                    <label class="form-label required">Bukti Chat SPV/Manager</label>
-                    <input type="file"
-                           name="chat_proof"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
-
-                    <small class="help-text">
-                        Screenshot chat approval lembur.
-                    </small>
+                <div class="overtime-profile-avatar">
+                    {{ (user.nama_lengkap or user.username)[:2]|upper }}
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label required">Foto Saat Lembur</label>
-                    <input type="file"
-                           name="overtime_photo"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
+                <div>
+                    <span>PENGAJU LEMBUR</span>
 
-                    <small class="help-text">
-                        Bukti sedang bekerja lembur.
-                    </small>
-                </div>
+                    <strong>
+                        {{ user.nama_lengkap or user.username }}
+                    </strong>
 
-                <div class="col-md-4">
-                    <label class="form-label required">Foto Tap Absen</label>
-                    <input type="file"
-                           name="attendance_photo"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
-
-                    <small class="help-text">
-                        Bukti jam tap absen.
+                    <small>
+                        {{ user.divisi or 'Divisi belum diatur' }}
                     </small>
                 </div>
 
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 fw-bold" id="submitBtn">
-                <i class="bi bi-send"></i> Ajukan Lembur
-            </button>
+            <!-- TANGGAL -->
+            <label class="leave-field">
+                <span>Tanggal lembur <b>*</b></span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-calendar-event"></i>
+
+                    <input
+                        type="date"
+                        name="overtime_date"
+                        id="overtimeDate"
+                        required
+                    >
+                </div>
+            </label>
+
+            <!-- JAM MULAI -->
+            <label class="leave-field">
+                <span>Jam mulai <b>*</b></span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-clock"></i>
+
+                    <input
+                        type="time"
+                        name="start_time"
+                        id="startTime"
+                        required
+                    >
+                </div>
+            </label>
+
+            <!-- JAM SELESAI -->
+            <label class="leave-field">
+                <span>Jam selesai <b>*</b></span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-clock-fill"></i>
+
+                    <input
+                        type="time"
+                        name="end_time"
+                        id="endTime"
+                        required
+                    >
+                </div>
+            </label>
+
+            <!-- DURASI -->
+            <div class="leave-duration-card overtime-full-column">
+
+                <div>
+                    <i class="bi bi-stopwatch"></i>
+                </div>
+
+                <div>
+                    <span>TOTAL DURASI LEMBUR</span>
+
+                    <strong id="overtimeDurationText">
+                        Isi tanggal dan jam terlebih dahulu
+                    </strong>
+
+                    <small id="overnightMessage"></small>
+                </div>
+
+            </div>
+
+            <!-- SPV -->
+            <label class="leave-field overtime-full-column">
+                <span>Nama SPV/Manager</span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-person-badge"></i>
+
+                    <input
+                        type="text"
+                        name="supervisor_name"
+                        placeholder="Contoh: Budi Santoso"
+                    >
+                </div>
+            </label>
+
+            <!-- PEKERJAAN -->
+            <label class="leave-field overtime-full-column">
+                <span>Keterangan pekerjaan <b>*</b></span>
+
+                <textarea
+                    name="work_description"
+                    rows="5"
+                    maxlength="1500"
+                    placeholder="Jelaskan pekerjaan yang dilakukan selama lembur..."
+                    required
+                ></textarea>
+
+                <small>
+                    Jelaskan pekerjaan secara singkat dan jelas.
+                </small>
+            </label>
+
+            <!-- INFORMASI BUKTI -->
+            <div class="leave-info-banner overtime-full-column">
+                <i class="bi bi-info-circle"></i>
+
+                <p>
+                    Ketiga bukti wajib dilampirkan. Gabungan seluruh
+                    file maksimal 5 MB dengan format JPG, PNG, atau PDF.
+                </p>
+            </div>
+
+            <!-- UPLOAD -->
+            <section class="overtime-evidence-section overtime-full-column">
+
+                <div class="leave-upload-heading">
+
+                    <div>
+                        <span>Bukti pendukung <b>*</b></span>
+
+                        <small>
+                            Pastikan tulisan dan jam pada bukti dapat terbaca.
+                        </small>
+                    </div>
+
+                    <span class="leave-file-format">
+                        TOTAL MAKS. 5 MB
+                    </span>
+
+                </div>
+
+                <div class="overtime-upload-grid">
+
+                    <!-- CHAT -->
+                    <label
+                        for="chatProof"
+                        class="leave-upload-box overtime-upload-box"
+                        id="chatProofBox"
+                    >
+                        <input
+                            type="file"
+                            name="chat_proof"
+                            id="chatProof"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            required
+                        >
+
+                        <div class="leave-upload-icon">
+                            <i class="bi bi-chat-left-text"></i>
+                        </div>
+
+                        <strong id="chatProofTitle">
+                            Bukti chat SPV/Manager
+                        </strong>
+
+                        <span id="chatProofDescription">
+                            Klik untuk memilih file
+                        </span>
+                    </label>
+
+                    <!-- FOTO LEMBUR -->
+                    <label
+                        for="overtimePhoto"
+                        class="leave-upload-box overtime-upload-box"
+                        id="overtimePhotoBox"
+                    >
+                        <input
+                            type="file"
+                            name="overtime_photo"
+                            id="overtimePhoto"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            required
+                        >
+
+                        <div class="leave-upload-icon">
+                            <i class="bi bi-camera"></i>
+                        </div>
+
+                        <strong id="overtimePhotoTitle">
+                            Foto saat lembur
+                        </strong>
+
+                        <span id="overtimePhotoDescription">
+                            Klik untuk memilih file
+                        </span>
+                    </label>
+
+                    <!-- TAP ABSEN -->
+                    <label
+                        for="attendancePhoto"
+                        class="leave-upload-box overtime-upload-box"
+                        id="attendancePhotoBox"
+                    >
+                        <input
+                            type="file"
+                            name="attendance_photo"
+                            id="attendancePhoto"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            required
+                        >
+
+                        <div class="leave-upload-icon">
+                            <i class="bi bi-fingerprint"></i>
+                        </div>
+
+                        <strong id="attendancePhotoTitle">
+                            Foto tap absen
+                        </strong>
+
+                        <span id="attendancePhotoDescription">
+                            Klik untuk memilih file
+                        </span>
+                    </label>
+
+                </div>
+
+                <div class="overtime-file-total" id="overtimeFileTotal">
+                    Total file: 0 MB dari maksimal 5 MB
+                </div>
+
+            </section>
+
+            <!-- ACTION -->
+            <div class="leave-form-actions overtime-full-column">
+
+                <a
+                    href="{{ url_for('overtime.list_overtime') }}"
+                    class="dashboard-outline-button"
+                >
+                    Batal
+                </a>
+
+                <button
+                    type="submit"
+                    class="dashboard-primary-button"
+                    id="overtimeSubmitButton"
+                >
+                    <i class="bi bi-send"></i>
+                    Kirim pengajuan
+                </button>
+
+            </div>
 
         </form>
-    </div>
+
+    </section>
+
+    <!-- PANDUAN -->
+    <aside class="leave-form-aside">
+
+        <section class="leave-guide-card">
+
+            <div class="leave-guide-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+
+            <h2>Bukti yang dibutuhkan</h2>
+
+            <div class="leave-guide-list">
+
+                <div>
+                    <span>1</span>
+                    <p>Screenshot persetujuan lembur dari SPV/Manager.</p>
+                </div>
+
+                <div>
+                    <span>2</span>
+                    <p>Foto aktivitas ketika sedang bekerja lembur.</p>
+                </div>
+
+                <div>
+                    <span>3</span>
+                    <p>Foto tap absen yang menunjukkan waktu pulang.</p>
+                </div>
+
+                <div>
+                    <span>4</span>
+                    <p>Jam selesai boleh melewati tengah malam.</p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="overtime-midnight-card">
+
+            <i class="bi bi-moon-stars"></i>
+
+            <div>
+                <strong>Lembur lewat tengah malam</strong>
+
+                <p>
+                    Contoh 22:00 sampai 02:00 otomatis dihitung
+                    sebagai empat jam.
+                </p>
+            </div>
+
+        </section>
+
+        <section class="leave-security-card">
+
+            <i class="bi bi-shield-check"></i>
+
+            <div>
+                <strong>Approval Admin/HRD</strong>
+
+                <p>
+                    Pengajuan aktif setelah bukti diperiksa
+                    dan disetujui.
+                </p>
+            </div>
+
+        </section>
+
+    </aside>
+
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+
 <script>
-const dateInput = document.getElementById('overtime_date');
-const startInput = document.getElementById('start_time');
-const endInput = document.getElementById('end_time');
-const durationBox = document.getElementById('durationBox');
-const form = document.getElementById('overtimeForm');
-const submitBtn = document.getElementById('submitBtn');
+    const overtimeForm =
+        document.getElementById("overtimeForm");
 
-function formatDuration(totalMinutes) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+    const overtimeDate =
+        document.getElementById("overtimeDate");
 
-    if (hours > 0 && minutes > 0) return `${hours} jam ${minutes} menit`;
-    if (hours > 0) return `${hours} jam`;
-    return `${minutes} menit`;
-}
+    const startTime =
+        document.getElementById("startTime");
 
-function calculateDuration() {
-    if (!dateInput.value || !startInput.value || !endInput.value) {
-        durationBox.innerText = 'Total lembur: -';
-        return null;
+    const endTime =
+        document.getElementById("endTime");
+
+    const durationText =
+        document.getElementById("overtimeDurationText");
+
+    const overnightMessage =
+        document.getElementById("overnightMessage");
+
+    const submitButton =
+        document.getElementById("overtimeSubmitButton");
+
+    const evidenceInputs = [
+        document.getElementById("chatProof"),
+        document.getElementById("overtimePhoto"),
+        document.getElementById("attendancePhoto")
+    ];
+
+    const maximumCombinedSize =
+        5 * 1024 * 1024;
+
+    function formatDuration(totalMinutes) {
+        const hours =
+            Math.floor(totalMinutes / 60);
+
+        const minutes =
+            totalMinutes % 60;
+
+        if (hours > 0 && minutes > 0) {
+            return hours + " jam " +
+                minutes + " menit";
+        }
+
+        if (hours > 0) {
+            return hours + " jam";
+        }
+
+        return minutes + " menit";
     }
 
-    const start = new Date(`${dateInput.value}T${startInput.value}:00`);
-    let end = new Date(`${dateInput.value}T${endInput.value}:00`);
+    function calculateOvertimeDuration() {
+        if (
+            !overtimeDate.value ||
+            !startTime.value ||
+            !endTime.value
+        ) {
+            durationText.textContent =
+                "Isi tanggal dan jam terlebih dahulu";
 
-    if (end.getTime() === start.getTime()) {
-        durationBox.innerText = 'Jam selesai tidak boleh sama dengan jam mulai';
-        return null;
+            overnightMessage.textContent = "";
+            return null;
+        }
+
+        const start =
+            new Date(
+                overtimeDate.value +
+                "T" +
+                startTime.value +
+                ":00"
+            );
+
+        const end =
+            new Date(
+                overtimeDate.value +
+                "T" +
+                endTime.value +
+                ":00"
+            );
+
+        if (end.getTime() === start.getTime()) {
+            durationText.textContent =
+                "Jam mulai dan selesai tidak boleh sama";
+
+            overnightMessage.textContent = "";
+            return null;
+        }
+
+        let finalEnd =
+            new Date(end.getTime());
+
+        let passesMidnight = false;
+
+        if (finalEnd < start) {
+            finalEnd.setDate(
+                finalEnd.getDate() + 1
+            );
+
+            passesMidnight = true;
+        }
+
+        const totalMinutes =
+            Math.floor(
+                (finalEnd - start) / 60000
+            );
+
+        if (
+            totalMinutes <= 0 ||
+            totalMinutes > 1440
+        ) {
+            durationText.textContent =
+                "Durasi lembur tidak valid";
+
+            overnightMessage.textContent = "";
+            return null;
+        }
+
+        durationText.textContent =
+            formatDuration(totalMinutes);
+
+        overnightMessage.textContent =
+            passesMidnight
+                ? "Jam selesai dihitung pada hari berikutnya."
+                : "";
+
+        return totalMinutes;
     }
 
-    if (end < start) {
-        end.setDate(end.getDate() + 1);
+    [
+        overtimeDate,
+        startTime,
+        endTime
+    ].forEach(function (input) {
+        input.addEventListener(
+            "input",
+            calculateOvertimeDuration
+        );
+
+        input.addEventListener(
+            "change",
+            calculateOvertimeDuration
+        );
+    });
+
+    const uploadSettings = [
+        {
+            input: evidenceInputs[0],
+            box: document.getElementById("chatProofBox"),
+            title: document.getElementById("chatProofTitle"),
+            description: document.getElementById(
+                "chatProofDescription"
+            ),
+            defaultTitle: "Bukti chat SPV/Manager"
+        },
+        {
+            input: evidenceInputs[1],
+            box: document.getElementById("overtimePhotoBox"),
+            title: document.getElementById("overtimePhotoTitle"),
+            description: document.getElementById(
+                "overtimePhotoDescription"
+            ),
+            defaultTitle: "Foto saat lembur"
+        },
+        {
+            input: evidenceInputs[2],
+            box: document.getElementById("attendancePhotoBox"),
+            title: document.getElementById("attendancePhotoTitle"),
+            description: document.getElementById(
+                "attendancePhotoDescription"
+            ),
+            defaultTitle: "Foto tap absen"
+        }
+    ];
+
+    function getCombinedFileSize() {
+        return evidenceInputs.reduce(
+            function (total, input) {
+                if (!input.files.length) {
+                    return total;
+                }
+
+                return total + input.files[0].size;
+            },
+            0
+        );
     }
 
-    const totalMinutes = Math.floor((end - start) / 60000);
+    function updateCombinedFileSize() {
+        const totalSize =
+            getCombinedFileSize();
 
-    if (totalMinutes <= 0 || totalMinutes > 1440) {
-        durationBox.innerText = 'Durasi lembur tidak valid';
-        return null;
+        const sizeInMb =
+            totalSize / 1024 / 1024;
+
+        const totalElement =
+            document.getElementById(
+                "overtimeFileTotal"
+            );
+
+        totalElement.textContent =
+            "Total file: " +
+            sizeInMb.toFixed(2) +
+            " MB dari maksimal 5 MB";
+
+        totalElement.classList.toggle(
+            "too-large",
+            totalSize > maximumCombinedSize
+        );
     }
 
-    durationBox.innerText = `Total lembur: ${formatDuration(totalMinutes)}`;
-    return totalMinutes;
-}
+    uploadSettings.forEach(function (setting) {
+        setting.input.addEventListener(
+            "change",
+            function () {
+                if (!setting.input.files.length) {
+                    setting.box.classList.remove(
+                        "file-selected"
+                    );
 
-[dateInput, startInput, endInput].forEach(input => {
-    input.addEventListener('change', calculateDuration);
-    input.addEventListener('input', calculateDuration);
-});
+                    setting.title.textContent =
+                        setting.defaultTitle;
 
-form.addEventListener('submit', function(e) {
-    const totalMinutes = calculateDuration();
+                    setting.description.textContent =
+                        "Klik untuk memilih file";
 
-    if (!totalMinutes) {
-        e.preventDefault();
-        alert('Tanggal dan jam lembur belum valid.');
-        return false;
-    }
+                    updateCombinedFileSize();
+                    return;
+                }
 
-    submitBtn.disabled = true;
-    submitBtn.innerText = 'Memproses...';
-});
+                const file =
+                    setting.input.files[0];
+
+                setting.box.classList.add(
+                    "file-selected"
+                );
+
+                setting.title.textContent =
+                    file.name;
+
+                setting.description.textContent =
+                    (
+                        file.size /
+                        1024 /
+                        1024
+                    ).toFixed(2) + " MB";
+
+                updateCombinedFileSize();
+            }
+        );
+    });
+
+    overtimeForm.addEventListener(
+        "submit",
+        function (event) {
+            const duration =
+                calculateOvertimeDuration();
+
+            if (!duration) {
+                event.preventDefault();
+
+                alert(
+                    "Tanggal dan jam lembur belum valid."
+                );
+
+                return;
+            }
+
+            if (
+                getCombinedFileSize() >
+                maximumCombinedSize
+            ) {
+                event.preventDefault();
+
+                alert(
+                    "Gabungan seluruh file tidak boleh lebih dari 5 MB."
+                );
+
+                return;
+            }
+
+            if (!overtimeForm.checkValidity()) {
+                return;
+            }
+
+            submitButton.disabled = true;
+
+            submitButton.innerHTML = `
+                <span class="login-spinner"></span>
+                Mengirim pengajuan...
+            `;
+        }
+    );
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

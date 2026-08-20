@@ -1,349 +1,648 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ajukan Izin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 600px;
-        }
-        
-        .card {
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
-            color: white;
-            border: none;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .card-header h3 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 1.8rem;
-        }
-        
-        .card-body {
-            padding: 30px;
-        }
-        
-        .form-label {
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-        }
-        
-        .form-control, .form-select {
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #5b86e5;
-            box-shadow: 0 0 0 3px rgba(91, 134, 229, 0.1);
-        }
-        
-        .input-group .form-control {
-            border-right: none;
-        }
-        
-        .input-group .input-group-text {
-            background: #f3f4f6;
-            border: 2px solid #e5e7eb;
-            color: #6b7280;
-        }
-        
-        .required:after {
-            content: " *";
-            color: #ef4444;
-        }
-        
-        .alert {
-            border: none;
-            border-radius: 8px;
-            border-left: 4px solid;
-        }
-        
-        .alert-warning {
-            border-left-color: #f59e0b;
-            background: #fffbeb;
-            color: #92400e;
-        }
-        
-        .alert-info {
-            border-left-color: #5b86e5;
-            background: #eff6ff;
-            color: #1e40af;
-        }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            width: 100%;
-        }
-        
-        .btn-submit:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(91, 134, 229, 0.3);
-        }
-        
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        
-        @media (max-width: 576px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .card-body {
-                padding: 20px;
-            }
-        }
-        
-        .file-input-wrapper {
-            position: relative;
-        }
-        
-        .file-input-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 20px;
-            background: #f9fafb;
-            border: 2px dashed #d1d5db;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .file-input-label:hover {
-            background: #f3f4f6;
-            border-color: #5b86e5;
-        }
-        
-        input[type="file"] {
-            display: none;
-        }
-    </style>
-</head>
-<body>
+{% extends "base_izin.html" %}
 
-<div class="container mt-5">
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="bi bi-calendar-plus"></i> Ajukan Izin</h3>
-        </div>
-        
-        <div class="card-body">
-            <!-- FLASH MESSAGE -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+{% block title %}Ajukan Izin{% endblock %}
+
+{% block header_title %}
+    Ajukan Izin
+{% endblock %}
+
+{% block content %}
+
+<!-- HEADING -->
+<section class="leave-page-heading">
+
+    <div>
+        <p class="dashboard-eyebrow">
+            FORMULIR PENGAJUAN
+        </p>
+
+        <h1>Ajukan izin baru</h1>
+
+        <p>
+            Lengkapi informasi dan bukti pendukung sebelum
+            mengirim pengajuan.
+        </p>
+    </div>
+
+    <a href="/dashboard" class="dashboard-outline-button">
+        <i class="bi bi-arrow-left"></i>
+        Kembali
+    </a>
+
+</section>
+
+<div class="leave-form-layout">
+
+    <!-- FORM UTAMA -->
+    <section class="leave-form-panel">
+
+        <div class="leave-panel-header">
+
+            <div class="leave-panel-icon">
+                <i class="bi bi-calendar2-plus"></i>
             </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-            <form action="/izin" method="POST" enctype="multipart/form-data" id="izinForm">
-                
-                <!-- JENIS IZIN -->
-                <div class="mb-4">
-                    <label class="form-label required">Jenis Izin</label>
-                    <select name="jenis" id="jenis" class="form-select" required>
-                        <option value="">-- Pilih Jenis Izin --</option>
-                        <option value="cuti">🏖️ Cuti</option>
-                        <option value="sakit">🏥 Sakit</option>
-                        <option value="izin_lain">📝 Izin</option>
+
+            <div>
+                <h2>Informasi pengajuan</h2>
+
+                <p>
+                    Kolom dengan tanda bintang wajib diisi.
+                </p>
+            </div>
+
+        </div>
+
+        <form
+            action="/izin"
+            method="POST"
+            enctype="multipart/form-data"
+            id="izinForm"
+            class="leave-form"
+        >
+
+            <!-- JENIS IZIN -->
+            <label class="leave-field leave-full-column">
+
+                <span>
+                    Jenis izin <b>*</b>
+                </span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-card-list"></i>
+
+                    <select name="jenis" id="jenis" required>
+                        <option value="">Pilih jenis izin</option>
+                        <option value="cuti">Cuti</option>
+                        <option value="sakit">Sakit</option>
+                        <option value="izin_lain">Izin lainnya</option>
                     </select>
                 </div>
 
-                <!-- TANGGAL -->
-                <div class="form-row mb-4">
+            </label>
+
+            <!-- TANGGAL MULAI -->
+            <label class="leave-field">
+
+                <span>
+                    Tanggal mulai <b>*</b>
+                </span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-calendar-event"></i>
+
+                    <input
+                        type="date"
+                        name="mulai"
+                        id="mulai"
+                        required
+                    >
+                </div>
+
+            </label>
+
+            <!-- TANGGAL SELESAI -->
+            <label class="leave-field">
+
+                <span>
+                    Tanggal selesai <b>*</b>
+                </span>
+
+                <div class="leave-input-wrapper">
+                    <i class="bi bi-calendar-check"></i>
+
+                    <input
+                        type="date"
+                        name="selesai"
+                        id="selesai"
+                        required
+                    >
+                </div>
+
+            </label>
+
+            <!-- DURASI -->
+            <div class="leave-duration-card leave-full-column">
+
+                <div>
+                    <i class="bi bi-clock-history"></i>
+                </div>
+
+                <div>
+                    <span>Durasi pengajuan</span>
+
+                    <strong id="durationText">
+                        Pilih tanggal terlebih dahulu
+                    </strong>
+                </div>
+
+                <input
+                    type="hidden"
+                    id="durasi"
+                    readonly
+                >
+
+            </div>
+
+            <!-- INFORMASI SURAT DOKTER -->
+            <div
+                class="leave-warning leave-full-column"
+                id="warningSurat"
+                hidden
+            >
+                <i class="bi bi-exclamation-triangle"></i>
+
+                <div>
+                    <strong>Surat dokter wajib dilampirkan</strong>
+
+                    <p>
+                        Pengajuan sakit lebih dari satu hari
+                        membutuhkan surat dokter.
+                    </p>
+                </div>
+            </div>
+
+            <!-- INFORMASI CHAT -->
+            <div class="leave-info-banner leave-full-column">
+
+                <i class="bi bi-info-circle"></i>
+
+                <p>
+                    Bukti chat dengan Leader atau User wajib
+                    dilampirkan untuk seluruh jenis pengajuan.
+                </p>
+
+            </div>
+
+            <!-- ALASAN -->
+            <label class="leave-field leave-full-column">
+
+                <span>
+                    Alasan pengajuan <b>*</b>
+                </span>
+
+                <textarea
+                    name="alasan"
+                    id="alasan"
+                    rows="5"
+                    maxlength="1000"
+                    placeholder="Jelaskan alasan pengajuan secara singkat dan jelas..."
+                    required
+                ></textarea>
+
+                <small>
+                    Maksimal 1.000 karakter.
+                </small>
+
+            </label>
+
+            <!-- SURAT DOKTER -->
+            <div class="leave-upload-field leave-full-column">
+
+                <div class="leave-upload-heading">
                     <div>
-                        <label class="form-label required">Tanggal Mulai</label>
-                        <input type="date" name="mulai" id="mulai" class="form-control" required>
+                        <span>Surat dokter</span>
+
+                        <small id="suratRequired">
+                            Opsional, kecuali sakit lebih dari satu hari.
+                        </small>
                     </div>
+
+                    <span class="leave-file-format">
+                        PDF, JPG, PNG
+                    </span>
+                </div>
+
+                <label
+                    for="file"
+                    class="leave-upload-box"
+                    id="suratUploadBox"
+                >
+                    <input
+                        type="file"
+                        id="file"
+                        name="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                    >
+
+                    <div class="leave-upload-icon">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                    </div>
+
+                    <strong id="suratFileTitle">
+                        Pilih surat dokter
+                    </strong>
+
+                    <span id="suratFileDescription">
+                        Klik untuk memilih file maksimal 5 MB
+                    </span>
+                </label>
+
+            </div>
+
+            <!-- BUKTI CHAT -->
+            <div class="leave-upload-field leave-full-column">
+
+                <div class="leave-upload-heading">
                     <div>
-                        <label class="form-label required">Tanggal Selesai</label>
-                        <input type="date" name="selesai" id="selesai" class="form-control" required>
+                        <span>
+                            Bukti chat <b>*</b>
+                        </span>
+
+                        <small>
+                            Screenshot persetujuan atau pemberitahuan
+                            kepada Leader/User.
+                        </small>
                     </div>
+
+                    <span class="leave-file-format">
+                        JPG, PNG
+                    </span>
                 </div>
 
-                <!-- DURASI -->
-                <div class="mb-4">
-                    <label class="form-label">Durasi</label>
-                    <div class="input-group">
-                        <input type="text" id="durasi" class="form-control" readonly>
-                        <span class="input-group-text"><i class="bi bi-calendar-day"></i> Hari</span>
+                <label
+                    for="file_chat"
+                    class="leave-upload-box"
+                    id="chatUploadBox"
+                >
+                    <input
+                        type="file"
+                        id="file_chat"
+                        name="file_chat"
+                        accept=".jpg,.jpeg,.png"
+                        required
+                    >
+
+                    <div class="leave-upload-icon">
+                        <i class="bi bi-image"></i>
                     </div>
-                </div>
 
-                <!-- ALERT SURAT DOKTER -->
-                <div class="alert alert-warning d-none" id="warningSurat">
-                    <i class="bi bi-exclamation-triangle"></i> <strong>Perhatian!</strong> Untuk sakit lebih dari 1 hari, wajib upload surat dokter.
-                </div>
+                    <strong id="chatFileTitle">
+                        Pilih screenshot bukti chat
+                    </strong>
 
-                <!-- ALERT BUKTI CHAT -->
-                <div class="alert alert-info mb-4" id="warningChat">
-                    <i class="bi bi-info-circle"></i> <strong>Info:</strong> Bukti chat dengan User/Leader wajib diupload untuk semua pengajuan.
-                </div>
+                    <span id="chatFileDescription">
+                        Klik untuk memilih file maksimal 5 MB
+                    </span>
+                </label>
 
-                <!-- ALASAN -->
-                <div class="mb-4">
-                    <label class="form-label required">Alasan</label>
-                    <textarea name="alasan" class="form-control" rows="4" placeholder="Jelaskan alasan izin Anda..." required></textarea>
-                </div>
+            </div>
 
-                <!-- FILE SURAT DOKTER -->
-                <div class="mb-4" id="suratGroup">
-                    <label class="form-label">Upload Surat Dokter <span style="color: #ef4444; display: none;" id="suratRequired">(Wajib untuk sakit >1 hari)</span></label>
-                    <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file">
-                            <i class="bi bi-cloud-arrow-up"></i>
-                            <span>Klik untuk upload atau drag file di sini</span>
-                        </label>
-                        <input type="file" id="file" name="file" accept=".pdf,.jpg,.jpeg,.png">
-                        <small class="text-muted d-block mt-2">Format: PDF, JPG, PNG (Max 5MB)</small>
-                        <div id="filePreview"></div>
-                    </div>
-                </div>
+            <!-- ACTION -->
+            <div class="leave-form-actions leave-full-column">
 
-                <!-- FILE BUKTI CHAT -->
-                <div class="mb-4">
-                    <label class="form-label required">Upload Bukti Chat (Screenshot)</label>
-                    <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file_chat">
-                            <i class="bi bi-image"></i>
-                            <span>Klik untuk upload screenshot izin Anda</span>
-                        </label>
-                        <input type="file" id="file_chat" name="file_chat" accept=".jpg,.jpeg,.png" required>
-                        <small class="text-muted d-block mt-2">Format: JPG, PNG (Max 5MB)</small>
-                        <div id="chatPreview"></div>
-                    </div>
-                </div>
+                <a
+                    href="/dashboard"
+                    class="dashboard-outline-button"
+                >
+                    Batal
+                </a>
 
-                <!-- BUTTON -->
-                <button type="submit" class="btn btn-submit" id="submitBtn">
-                    <i class="bi bi-check-circle"></i> Ajukan Izin
+                <button
+                    type="submit"
+                    class="dashboard-primary-button"
+                    id="submitButton"
+                >
+                    <i class="bi bi-send"></i>
+                    Kirim pengajuan
                 </button>
-            </form>
-        </div>
-    </div>
+
+            </div>
+
+        </form>
+
+    </section>
+
+    <!-- PANEL INFORMASI -->
+    <aside class="leave-form-aside">
+
+        <section class="leave-guide-card">
+
+            <div class="leave-guide-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+
+            <h2>Sebelum mengirim</h2>
+
+            <div class="leave-guide-list">
+
+                <div>
+                    <span>1</span>
+
+                    <p>
+                        Pastikan tanggal mulai dan selesai
+                        sudah sesuai.
+                    </p>
+                </div>
+
+                <div>
+                    <span>2</span>
+
+                    <p>
+                        Beri tahu Leader atau User sebelum
+                        mengajukan izin.
+                    </p>
+                </div>
+
+                <div>
+                    <span>3</span>
+
+                    <p>
+                        Lampirkan screenshot chat yang dapat
+                        terbaca dengan jelas.
+                    </p>
+                </div>
+
+                <div>
+                    <span>4</span>
+
+                    <p>
+                        Surat dokter wajib untuk sakit lebih
+                        dari satu hari.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="leave-user-card">
+
+            <p>PENGAJU</p>
+
+            <div>
+
+                <div class="leave-user-avatar">
+                    {{ (user.nama_lengkap or user.username)[:2]|upper }}
+                </div>
+
+                <div>
+                    <strong>
+                        {{ user.nama_lengkap or user.username }}
+                    </strong>
+
+                    <span>
+                        {{ user.divisi or 'Divisi belum diatur' }}
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="leave-security-card">
+
+            <i class="bi bi-shield-check"></i>
+
+            <div>
+                <strong>Data tersimpan dengan aman</strong>
+
+                <p>
+                    Lampiran hanya dapat dibuka oleh pengguna
+                    yang memiliki akses sistem.
+                </p>
+            </div>
+
+        </section>
+
+    </aside>
+
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+
 <script>
-    const mulai = document.getElementById("mulai");
-    const selesai = document.getElementById("selesai");
-    const durasi = document.getElementById("durasi");
-    const jenis = document.getElementById("jenis");
-    const warningSurat = document.getElementById("warningSurat");
-    const suratRequired = document.getElementById("suratRequired");
-    const fileSurat = document.getElementById("file");
-    const fileChat = document.getElementById("file_chat");
-    const form = document.getElementById("izinForm");
-    const submitBtn = document.getElementById("submitBtn");
-    const filePreview = document.getElementById("filePreview");
-    const chatPreview = document.getElementById("chatPreview");
+    const izinForm =
+        document.getElementById("izinForm");
 
-    function hitungDurasi() {
-        if (mulai.value && selesai.value) {
-            const t1 = new Date(mulai.value);
-            const t2 = new Date(selesai.value);
-            const diff = (t2 - t1) / (1000 * 60 * 60 * 24) + 1;
-            durasi.value = diff > 0 ? diff : 0;
+    const jenisInput =
+        document.getElementById("jenis");
 
-            if (jenis.value === "sakit" && diff > 1) {
-                warningSurat.classList.remove("d-none");
-                suratRequired.style.display = "inline";
-                fileSurat.setAttribute("required", "required");
-            } else {
-                warningSurat.classList.add("d-none");
-                suratRequired.style.display = "none";
-                fileSurat.removeAttribute("required");
-            }
+    const mulaiInput =
+        document.getElementById("mulai");
+
+    const selesaiInput =
+        document.getElementById("selesai");
+
+    const durasiInput =
+        document.getElementById("durasi");
+
+    const durationText =
+        document.getElementById("durationText");
+
+    const warningSurat =
+        document.getElementById("warningSurat");
+
+    const suratRequired =
+        document.getElementById("suratRequired");
+
+    const suratInput =
+        document.getElementById("file");
+
+    const chatInput =
+        document.getElementById("file_chat");
+
+    const suratUploadBox =
+        document.getElementById("suratUploadBox");
+
+    const chatUploadBox =
+        document.getElementById("chatUploadBox");
+
+    const submitButton =
+        document.getElementById("submitButton");
+
+    function calculateDuration() {
+        if (!mulaiInput.value || !selesaiInput.value) {
+            durasiInput.value = "";
+            durationText.textContent =
+                "Pilih tanggal terlebih dahulu";
+
+            warningSurat.hidden = true;
+            suratInput.required = false;
+            return;
         }
+
+        const startDate =
+            new Date(mulaiInput.value + "T00:00:00");
+
+        const endDate =
+            new Date(selesaiInput.value + "T00:00:00");
+
+        const difference =
+            Math.floor(
+                (endDate - startDate) /
+                (1000 * 60 * 60 * 24)
+            ) + 1;
+
+        if (difference < 1) {
+            durasiInput.value = "0";
+
+            durationText.textContent =
+                "Tanggal selesai tidak valid";
+
+            selesaiInput.setCustomValidity(
+                "Tanggal selesai tidak boleh lebih awal."
+            );
+        } else {
+            durasiInput.value = difference;
+
+            durationText.textContent =
+                difference + " hari";
+
+            selesaiInput.setCustomValidity("");
+        }
+
+        const doctorLetterRequired =
+            jenisInput.value === "sakit" &&
+            difference > 1;
+
+        warningSurat.hidden =
+            !doctorLetterRequired;
+
+        suratInput.required =
+            doctorLetterRequired;
+
+        suratRequired.textContent =
+            doctorLetterRequired
+                ? "Wajib untuk sakit lebih dari satu hari."
+                : "Opsional, kecuali sakit lebih dari satu hari.";
     }
 
-    mulai.addEventListener("change", hitungDurasi);
-    selesai.addEventListener("change", hitungDurasi);
-    jenis.addEventListener("change", hitungDurasi);
-
-    // File preview
-    fileSurat.addEventListener("change", function() {
-        if (this.files.length > 0) {
-            filePreview.innerHTML = `<div class="alert alert-success mt-2">✅ File: <strong>${this.files[0].name}</strong></div>`;
-        } else {
-            filePreview.innerHTML = "";
-        }
-    });
-
-    fileChat.addEventListener("change", function() {
-        if (this.files.length > 0) {
-            chatPreview.innerHTML = `<div class="alert alert-success mt-2">✅ Screenshot: <strong>${this.files[0].name}</strong></div>`;
-        } else {
-            chatPreview.innerHTML = "";
-        }
-    });
-
-    form.addEventListener("submit", function(e) {
-        if (!fileChat.files.length) {
-            e.preventDefault();
-            alert("❌ Bukti chat wajib diupload!");
-            return false;
-        }
-        
-        if (jenis.value === "sakit") {
-            const diff = durasi.value;
-            if (diff > 1 && !fileSurat.files.length) {
-                e.preventDefault();
-                alert("❌ Untuk sakit > 1 hari, surat dokter wajib diupload!");
-                return false;
+    mulaiInput.addEventListener(
+        "change",
+        function () {
+            if (
+                !selesaiInput.value ||
+                selesaiInput.value < mulaiInput.value
+            ) {
+                selesaiInput.value =
+                    mulaiInput.value;
             }
+
+            selesaiInput.min =
+                mulaiInput.value;
+
+            calculateDuration();
         }
-        
-        submitBtn.disabled = true;
-        submitBtn.innerText = "⏳ Memproses...";
-    });
+    );
+
+    selesaiInput.addEventListener(
+        "change",
+        calculateDuration
+    );
+
+    jenisInput.addEventListener(
+        "change",
+        calculateDuration
+    );
+
+    function updateFileDisplay(
+        input,
+        uploadBox,
+        titleId,
+        descriptionId
+    ) {
+        const title =
+            document.getElementById(titleId);
+
+        const description =
+            document.getElementById(descriptionId);
+
+        if (!input.files.length) {
+            uploadBox.classList.remove("file-selected");
+            return;
+        }
+
+        const selectedFile =
+            input.files[0];
+
+        const maximumSize =
+            5 * 1024 * 1024;
+
+        if (selectedFile.size > maximumSize) {
+            alert("Ukuran file maksimal 5 MB.");
+            input.value = "";
+            uploadBox.classList.remove("file-selected");
+            return;
+        }
+
+        uploadBox.classList.add("file-selected");
+
+        title.textContent =
+            selectedFile.name;
+
+        description.textContent =
+            (
+                selectedFile.size /
+                1024 /
+                1024
+            ).toFixed(2) + " MB";
+    }
+
+    suratInput.addEventListener(
+        "change",
+        function () {
+            updateFileDisplay(
+                suratInput,
+                suratUploadBox,
+                "suratFileTitle",
+                "suratFileDescription"
+            );
+        }
+    );
+
+    chatInput.addEventListener(
+        "change",
+        function () {
+            updateFileDisplay(
+                chatInput,
+                chatUploadBox,
+                "chatFileTitle",
+                "chatFileDescription"
+            );
+        }
+    );
+
+    izinForm.addEventListener(
+        "submit",
+        function (event) {
+            calculateDuration();
+
+            if (!chatInput.files.length) {
+                event.preventDefault();
+                alert("Bukti chat wajib dilampirkan.");
+                chatInput.focus();
+                return;
+            }
+
+            if (
+                jenisInput.value === "sakit" &&
+                Number(durasiInput.value) > 1 &&
+                !suratInput.files.length
+            ) {
+                event.preventDefault();
+
+                alert(
+                    "Surat dokter wajib untuk sakit lebih dari satu hari."
+                );
+
+                suratInput.focus();
+                return;
+            }
+
+            if (!izinForm.checkValidity()) {
+                return;
+            }
+
+            submitButton.disabled = true;
+
+            submitButton.innerHTML = `
+                <span class="login-spinner"></span>
+                Memproses pengajuan...
+            `;
+        }
+    );
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+
+{% endblock %}

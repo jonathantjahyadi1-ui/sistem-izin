@@ -1,34 +1,552 @@
-{% extends "meeting_room/layout.html" %}
-{% block title %}Detail Booking{% endblock %}
-{% block page_title %}
-<div class="page-header">
-    <h4><i class="bi bi-info-circle"></i> Detail Booking</h4>
-    <a href="/meeting-room/list" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
-</div>
-{% endblock %}
-{% block content %}
-{% set pemohon = meeting_get_user(booking.user_id) %}
-{% set approver = meeting_get_user(booking.approved_by) %}
-<div class="row g-3">
-    <div class="col-lg-8"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0">{{ booking.title }}</h5><span class="badge {{ booking.get_status_badge_class() }} fs-6">{{ booking.status }}</span></div><div class="card-body">
-        <div class="row g-3">
-            <div class="col-sm-6"><label class="text-muted small">Pemohon</label><p class="fw-semibold">{{ meeting_display_name(pemohon) }}</p></div>
-            <div class="col-sm-6"><label class="text-muted small">Divisi</label><p class="fw-semibold">{{ booking.division }}</p></div>
-            <div class="col-sm-6"><label class="text-muted small">Ruangan</label><p class="fw-semibold">{{ booking.room.room_name if booking.room else '-' }}</p></div>
-            <div class="col-sm-6"><label class="text-muted small">Lokasi</label><p class="fw-semibold">{{ booking.room.location if booking.room else '-' }}</p></div>
-            <div class="col-sm-4"><label class="text-muted small">Tanggal</label><p class="fw-semibold">{{ booking.meeting_date }}</p></div>
-            <div class="col-sm-4"><label class="text-muted small">Jam</label><p class="fw-semibold">{{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}</p></div>
-            <div class="col-sm-4"><label class="text-muted small">Peserta/Kapasitas</label><p class="fw-semibold">{{ booking.participant_count }} / {{ booking.room.capacity if booking.room else '-' }} org</p></div>
-            <div class="col-12"><label class="text-muted small">Keperluan</label><p>{{ booking.purpose }}</p></div>
-            {% if booking.notes %}<div class="col-12"><label class="text-muted small">Catatan</label><p>{{ booking.notes }}</p></div>{% endif %}
-        </div>
-    </div></div></div>
-    <div class="col-lg-4"><div class="card mb-3"><div class="card-header"><h6 class="mb-0">Status & Approval</h6></div><div class="card-body">
-        <div class="mb-2"><label class="text-muted small">Diajukan</label><p class="mb-0">{{ booking.created_at.strftime('%d %b %Y, %H:%M') if booking.created_at else '-' }}</p></div>
-        {% if booking.approved_by %}<div class="mb-2"><label class="text-muted small">Diproses oleh</label><p class="mb-0">{{ meeting_display_name(approver) }}</p></div><div class="mb-2"><label class="text-muted small">Tanggal Proses</label><p class="mb-0">{{ booking.approved_at.strftime('%d %b %Y, %H:%M') if booking.approved_at else '-' }}</p></div>{% endif %}
-        {% if booking.reject_reason %}<label class="text-muted small">Alasan Penolakan</label><div class="alert alert-danger py-2 mb-0 mt-1">{{ booking.reject_reason }}</div>{% endif %}
-    </div></div>
-    {% if booking.status == 'Pending' and booking.user_id == user.id %}<div class="card"><div class="card-body"><form method="POST" action="/meeting-room/cancel/{{ booking.id }}" onsubmit="return confirm('Batalkan booking ini?')"><button class="btn btn-outline-danger w-100"><i class="bi bi-x-lg"></i> Batalkan Booking</button></form></div></div>{% endif %}
-    </div>
-</div>
-{% endblock %}
+/* =========================================================
+   MEETING ROOM WEEKLY SCHEDULE
+========================================================= */
+
+.meeting-schedule-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.meeting-schedule-stat {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 17px;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04);
+}
+
+.meeting-stat-icon {
+    display: flex;
+    flex: 0 0 44px;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    font-size: 18px;
+}
+
+.meeting-stat-icon.blue {
+    color: #2563eb;
+    background: #dbeafe;
+}
+
+.meeting-stat-icon.green {
+    color: #059669;
+    background: #d1fae5;
+}
+
+.meeting-stat-icon.orange {
+    color: #d97706;
+    background: #fef3c7;
+}
+
+.meeting-stat-icon.purple {
+    color: #7c3aed;
+    background: #ede9fe;
+}
+
+.meeting-schedule-stat > div:last-child {
+    display: flex;
+    flex-direction: column;
+}
+
+.meeting-schedule-stat span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.meeting-schedule-stat strong {
+    color: #0f172a;
+    font-size: 23px;
+    line-height: 1.2;
+}
+
+.meeting-schedule-filter {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 18px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04);
+}
+
+.meeting-filter-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 17px;
+}
+
+.meeting-filter-heading > div {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.meeting-filter-heading > div > i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 11px;
+}
+
+.meeting-filter-heading span {
+    display: flex;
+    flex-direction: column;
+}
+
+.meeting-filter-heading strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.meeting-filter-heading small {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.meeting-reset-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.meeting-reset-filter:hover {
+    color: #2563eb;
+}
+
+.meeting-filter-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.meeting-filter-button {
+    min-height: 46px;
+    border: 0;
+}
+
+.meeting-week-panel {
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.meeting-week-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.meeting-week-navigation > div:first-child {
+    display: flex;
+    flex-direction: column;
+}
+
+.meeting-week-navigation span {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.meeting-week-navigation h2 {
+    margin: 3px 0 0;
+    color: #0f172a;
+    font-size: 20px;
+}
+
+.meeting-week-buttons {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.meeting-week-buttons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 11px;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.meeting-week-buttons a:hover {
+    color: #ffffff;
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.meeting-week-buttons .meeting-today-button {
+    min-width: 78px;
+}
+
+.meeting-calendar-scroll {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.meeting-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(205px, 1fr));
+    gap: 11px;
+    min-width: 1500px;
+}
+
+.meeting-day-column {
+    min-height: 370px;
+    padding: 9px;
+    background: #f8fafc;
+    border: 1px solid #e5eaf2;
+    border-radius: 16px;
+}
+
+.meeting-day-column.is-today {
+    background: #f0f7ff;
+    border-color: #93c5fd;
+}
+
+.meeting-day-column.is-selected {
+    box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.meeting-day-heading {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 12px 8px;
+    color: #64748b;
+    background: #ffffff;
+    border: 1px solid #edf0f5;
+    border-radius: 12px;
+    text-decoration: none;
+}
+
+.meeting-day-heading:hover {
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.meeting-day-heading span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.meeting-day-heading strong {
+    margin-top: 2px;
+    color: #0f172a;
+    font-size: 25px;
+    line-height: 1.1;
+}
+
+.meeting-day-heading small {
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+.meeting-day-heading em {
+    margin-top: 6px;
+    padding: 3px 7px;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-radius: 999px;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.meeting-day-bookings {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 9px;
+}
+
+.meeting-calendar-booking {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    color: inherit;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-left: 4px solid #94a3b8;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.meeting-calendar-booking:hover {
+    color: inherit;
+    border-color: #bfdbfe;
+    transform: translateY(-2px);
+    box-shadow: 0 9px 20px rgba(15, 23, 42, 0.08);
+}
+
+.meeting-calendar-booking.status-approved {
+    border-left-color: #10b981;
+}
+
+.meeting-calendar-booking.status-pending {
+    border-left-color: #f59e0b;
+}
+
+.meeting-calendar-booking.status-rejected {
+    border-left-color: #ef4444;
+}
+
+.meeting-calendar-booking.status-cancelled {
+    border-left-color: #94a3b8;
+}
+
+.meeting-booking-time {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.meeting-booking-title {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 12px;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+}
+
+.meeting-booking-room {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+    font-size: 10px;
+}
+
+.meeting-booking-requester {
+    display: flex;
+    flex-direction: column;
+    padding-top: 7px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.meeting-booking-requester span {
+    overflow: hidden;
+    color: #334155;
+    font-size: 10px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meeting-booking-requester small {
+    color: #94a3b8;
+    font-size: 9px;
+}
+
+.meeting-booking-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+}
+
+.meeting-booking-footer > span:first-child {
+    color: #64748b;
+    font-size: 9px;
+}
+
+.meeting-calendar-status {
+    padding: 4px 7px;
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 999px;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.status-approved .meeting-calendar-status {
+    color: #047857;
+    background: #d1fae5;
+}
+
+.status-pending .meeting-calendar-status {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.status-rejected .meeting-calendar-status {
+    color: #be123c;
+    background: #ffe4e6;
+}
+
+.meeting-empty-day {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 110px;
+    color: #cbd5e1;
+    text-align: center;
+}
+
+.meeting-empty-day i {
+    font-size: 21px;
+}
+
+.meeting-empty-day span {
+    margin-top: 5px;
+    font-size: 10px;
+}
+
+.meeting-empty-week {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 35px 20px 20px;
+    text-align: center;
+}
+
+.meeting-empty-week > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 18px;
+    font-size: 27px;
+}
+
+.meeting-empty-week h3 {
+    margin: 14px 0 5px;
+    color: #0f172a;
+    font-size: 17px;
+}
+
+.meeting-empty-week p {
+    max-width: 480px;
+    margin: 0 0 16px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.meeting-status-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 18px;
+    padding-top: 15px;
+    color: #64748b;
+    border-top: 1px solid #edf0f5;
+    font-size: 10px;
+}
+
+.meeting-status-legend > span {
+    color: #334155;
+    font-weight: 800;
+}
+
+.meeting-status-legend > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meeting-status-legend i {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background: #94a3b8;
+    border-radius: 50%;
+}
+
+.meeting-status-legend i.approved {
+    background: #10b981;
+}
+
+.meeting-status-legend i.pending {
+    background: #f59e0b;
+}
+
+.meeting-status-legend i.rejected {
+    background: #ef4444;
+}
+
+.meeting-status-legend i.cancelled {
+    background: #94a3b8;
+}
+
+@media (max-width: 1100px) {
+    .meeting-schedule-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .meeting-filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .meeting-schedule-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .meeting-filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .meeting-filter-heading,
+    .meeting-week-navigation {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .meeting-week-buttons {
+        width: 100%;
+    }
+
+    .meeting-week-buttons .meeting-today-button {
+        flex: 1;
+    }
+
+    .meeting-week-panel,
+    .meeting-schedule-filter {
+        padding: 15px;
+    }
+}

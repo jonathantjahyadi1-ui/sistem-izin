@@ -1,99 +1,253 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Pilih Sistem</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        * { 
-            font-family: 'Poppins', sans-serif; 
-        }
+    <title>Pilih Sistem | Severli Internal</title>
 
-        body { 
-            background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
-            min-height: 100vh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-        .card-pilih { 
-            border-radius: 20px; 
-            border: none; 
-            transition: transform 0.3s, box-shadow 0.3s; 
-            cursor: pointer;
-            background: white;
-        }
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
-        .card-pilih:hover { 
-            transform: translateY(-10px); 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
-        }
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
 
-        .system-title {
-            font-weight: 600;
-        }
-
-        .system-icon {
-            font-size: 45px;
-            margin-bottom: 12px;
-        }
-    </style>
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
 
-<body>
+<body class="system-selector-page">
 
-<div class="container text-center">
-    <h2 class="text-white mb-5">
-        Halo, {{ user.username }}! Mau akses apa hari ini?
-    </h2>
+<div class="system-selector-shell">
 
-    <div class="row justify-content-center g-4">
+    <!-- HEADER -->
+    <header class="system-header">
 
-        <!-- Izin -->
-        <div class="col-md-4">
-            <a href="{{ url_for('main_dashboard', system='izin') }}" class="text-decoration-none">
-                <div class="card card-pilih p-5 h-100">
-                    <div class="system-icon">🕒</div>
-                    <h3 class="system-title">Izin & Kehadiran</h3>
-                    <p class="text-muted">
-                        Kelola cuti, sakit, izin, dan rekap kehadiran
-                    </p>
-                </div>
-            </a>
+        <div class="system-brand">
+            <div class="login-brand-mark">S</div>
+
+            <div>
+                <strong>Severli Internal</strong>
+                <span>Employee Workspace</span>
+            </div>
         </div>
 
-        <!-- Lembur -->
-        <div class="col-md-4">
-            <a href="{{ url_for('main_dashboard', system='overtime') }}" class="text-decoration-none">
-                <div class="card card-pilih p-5 h-100">
-                    <div class="system-icon">⏱️</div>
-                    <h3 class="system-title">Lembur</h3>
-                    <p class="text-muted">
-                        Ajukan lembur, upload bukti, dan approval HRD
-                    </p>
-                </div>
+        <div class="system-user-area">
+
+            <div class="system-user-avatar">
+                {{ (user.nama_lengkap or user.username)[:2]|upper }}
+            </div>
+
+            <div class="system-user-info">
+                <strong>{{ user.nama_lengkap or user.username }}</strong>
+
+                <span>
+                    {{ user.role|capitalize }}
+                    {% if user.divisi %}
+                        · {{ user.divisi }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <a href="/logout" class="system-logout" title="Keluar">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Keluar</span>
             </a>
+
         </div>
 
-        <!-- Booking Ruang Meeting -->
-        <div class="col-md-4">
-            <a href="{{ url_for('main_dashboard', system='meeting_room') }}" class="text-decoration-none">
-                <div class="card card-pilih p-5 h-100">
-                    <div class="system-icon">🏢</div>
-                    <h3 class="system-title">Booking Ruang Meeting</h3>
-                    <p class="text-muted">
-                        Ajukan pemakaian ruang meeting dan tunggu approval HRD
+    </header>
+
+    <!-- CONTENT -->
+    <main class="system-selector-content">
+
+        <section class="system-heading">
+
+            <p class="system-eyebrow">SEVERLI WORKSPACE</p>
+
+            <h1>
+                Selamat datang,
+                {{ user.nama_lengkap or user.username }}
+            </h1>
+
+            <p>
+                Pilih sistem yang ingin Anda gunakan hari ini.
+            </p>
+
+        </section>
+
+        <!-- PILIHAN SISTEM -->
+        <section class="system-card-grid">
+
+            <!-- IZIN -->
+            <a
+                href="{{ url_for('main_dashboard', system='izin') }}"
+                class="modern-system-card system-card-indigo"
+            >
+                <div class="system-card-top">
+                    <div class="system-card-icon">
+                        <i class="bi bi-calendar2-check"></i>
+                    </div>
+
+                    <span class="system-status">
+                        Aktif
+                    </span>
+                </div>
+
+                <div class="system-card-body">
+                    <p class="system-card-label">KEHADIRAN</p>
+
+                    <h2>Izin & Cuti</h2>
+
+                    <p>
+                        Ajukan izin, sakit, cuti, dan pantau sisa
+                        kuota cuti dalam satu halaman.
                     </p>
                 </div>
+
+                <div class="system-card-features">
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Pengajuan izin
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Approval HRD
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Rekap kehadiran
+                    </span>
+                </div>
+
+                <div class="system-card-action">
+                    <span>Buka sistem izin</span>
+                    <i class="bi bi-arrow-right"></i>
+                </div>
             </a>
-        </div>
 
-    </div>
+            <!-- LEMBUR -->
+            <a
+                href="{{ url_for('main_dashboard', system='overtime') }}"
+                class="modern-system-card system-card-blue"
+            >
+                <div class="system-card-top">
+                    <div class="system-card-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
 
-    <br>
-    <a href="/logout" class="btn btn-light mt-4">Logout</a>
+                    <span class="system-status">
+                        Aktif
+                    </span>
+                </div>
+
+                <div class="system-card-body">
+                    <p class="system-card-label">OVERTIME</p>
+
+                    <h2>Pengajuan Lembur</h2>
+
+                    <p>
+                        Catat jadwal lembur, durasi pekerjaan,
+                        dan unggah bukti pendukung.
+                    </p>
+                </div>
+
+                <div class="system-card-features">
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Perhitungan durasi
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Upload bukti
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Approval HRD
+                    </span>
+                </div>
+
+                <div class="system-card-action">
+                    <span>Buka sistem lembur</span>
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </a>
+
+            <!-- MEETING ROOM -->
+            <a
+                href="{{ url_for('main_dashboard', system='meeting_room') }}"
+                class="modern-system-card system-card-emerald"
+            >
+                <div class="system-card-top">
+                    <div class="system-card-icon">
+                        <i class="bi bi-door-open"></i>
+                    </div>
+
+                    <span class="system-status">
+                        Aktif
+                    </span>
+                </div>
+
+                <div class="system-card-body">
+                    <p class="system-card-label">MEETING ROOM</p>
+
+                    <h2>Booking Ruangan</h2>
+
+                    <p>
+                        Pilih ruang meeting, periksa jadwal,
+                        dan ajukan pemakaian ruangan.
+                    </p>
+                </div>
+
+                <div class="system-card-features">
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Jadwal ruangan
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Cegah jadwal bentrok
+                    </span>
+
+                    <span>
+                        <i class="bi bi-check-circle"></i>
+                        Approval HRD
+                    </span>
+                </div>
+
+                <div class="system-card-action">
+                    <span>Buka booking ruangan</span>
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </a>
+
+        </section>
+
+        <footer class="system-footer">
+            <i class="bi bi-shield-check"></i>
+
+            <span>
+                Sistem internal Severli. Seluruh aktivitas tersimpan
+                sesuai akun pengguna.
+            </span>
+        </footer>
+
+    </main>
+
 </div>
 
 </body>

@@ -1,308 +1,509 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Detail Lembur</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base_overtime.html" %}
 
-    <style>
-        * { font-family: 'Poppins', sans-serif; }
+{% block title %}Detail Lembur{% endblock %}
 
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-        }
+{% block header_title %}
+    Detail Lembur #{{ overtime.id }}
+{% endblock %}
 
-        body {
-            background: #f8fafc;
-            padding-top: 56px;
-        }
+{% block content %}
 
-        .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
-        }
+<!-- HEADING -->
+<section class="leave-page-heading">
 
-        .card {
-            border: none;
-            border-radius: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
+    <div>
+        <p class="dashboard-eyebrow">
+            DETAIL PENGAJUAN
+        </p>
 
-        .proof-img {
-            max-height: 220px;
-            width: 100%;
-            object-fit: contain;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            background: #f9fafb;
-            padding: 8px;
-        }
+        <h1>Lembur #{{ overtime.id }}</h1>
 
-        .status-badge {
-            font-size: 0.9rem;
-            padding: 8px 12px;
-        }
+        <p>
+            Diajukan pada
+            {{ overtime.created_at.strftime('%d/%m/%Y %H:%M') if overtime.created_at else '-' }}.
+        </p>
+    </div>
 
-        .label-small {
-            color: #6b7280;
-            font-size: 0.85rem;
-            margin-bottom: 3px;
-        }
-
-        .value-strong {
-            font-weight: 700;
-        }
-    </style>
-</head>
-<body>
-
-<nav class="navbar navbar-dark px-4">
-    <a href="/overtime/list" class="btn btn-light btn-sm">
-        <i class="bi bi-arrow-left"></i> Kembali
+    <a
+        href="{{ url_for('overtime.list_overtime') }}"
+        class="dashboard-outline-button"
+    >
+        <i class="bi bi-arrow-left"></i>
+        Kembali
     </a>
 
-    <span class="navbar-brand ms-2 fw-bold">
-        Detail Lembur #{{ overtime.id }}
-    </span>
+</section>
 
-    <div class="ms-auto text-white">
-        {{ user.username }} ({{ user.role }})
-        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
-    </div>
-</nav>
+<div class="overtime-detail-layout">
 
-<div class="container mt-5 pt-4" style="max-width: 1100px;">
+    <!-- CONTENT UTAMA -->
+    <div class="overtime-detail-main">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endwith %}
+        <!-- DETAIL -->
+        <section class="overtime-detail-panel">
 
-    <div class="row g-4">
+            <div class="overtime-detail-header">
 
-        <div class="col-md-8">
-
-            <div class="card p-4 mb-4">
-
-                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                    <div>
-                        <h4 class="fw-bold mb-1">Pengajuan Lembur</h4>
-                        <p class="text-muted mb-0">
-                            Diajukan pada {{ overtime.created_at.strftime('%d/%m/%Y %H:%M') if overtime.created_at else '-' }}
-                        </p>
-                    </div>
-
-                    <div>
-                        {% if overtime.status == 'pending' %}
-                            <span class="badge bg-warning text-dark status-badge">Pending HRD</span>
-                        {% elif overtime.status == 'approved' %}
-                            <span class="badge bg-success status-badge">Approved</span>
-                        {% elif overtime.status == 'rejected' %}
-                            <span class="badge bg-danger status-badge">Rejected</span>
-                        {% else %}
-                            <span class="badge bg-secondary status-badge">{{ overtime.status }}</span>
-                        {% endif %}
-                    </div>
+                <div>
+                    <h2>Informasi lembur</h2>
+                    <p>Jadwal dan keterangan pekerjaan.</p>
                 </div>
 
-                {% if overtime.reject_reason %}
-                <div class="alert alert-danger">
-                    <strong>Alasan Ditolak:</strong><br>
-                    {{ overtime.reject_reason }}
-                </div>
-                {% endif %}
+                {% if overtime.status == 'pending' %}
 
-                <div class="row g-3 mb-4">
+                    <span class="overtime-detail-status pending">
+                        <i class="bi bi-clock"></i>
+                        Menunggu
+                    </span>
 
-                    <div class="col-md-6">
-                        <div class="label-small">Nama Karyawan</div>
-                        <div class="value-strong">{{ overtime.employee_name }}</div>
-                    </div>
+                {% elif overtime.status == 'approved' %}
 
-                    <div class="col-md-6">
-                        <div class="label-small">Divisi</div>
-                        <div class="value-strong">{{ overtime.employee_divisi }}</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="label-small">Tanggal Lembur</div>
-                        <div class="value-strong">
-                            {{ overtime.overtime_date.strftime('%d/%m/%Y') if overtime.overtime_date else '-' }}
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="label-small">Jam Lembur</div>
-                        <div class="value-strong">
-                            {{ overtime.start_time.strftime('%H:%M') if overtime.start_time else '-' }}
-                            -
-                            {{ overtime.end_time.strftime('%H:%M') if overtime.end_time else '-' }}
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="label-small">Total Durasi</div>
-                        <div class="value-strong text-primary">
-                            {{ format_duration_minutes(overtime.duration_minutes) }}
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="label-small">Nama SPV/Manager</div>
-                        <div class="value-strong">
-                            {{ overtime.supervisor_name if overtime.supervisor_name else '-' }}
-                        </div>
-                    </div>
-
-                </div>
-
-                <hr>
-
-                <h5 class="fw-bold">Keterangan Pekerjaan</h5>
-                <p style="white-space: pre-wrap;">{{ overtime.work_description }}</p>
-
-            </div>
-
-            <div class="card p-4">
-                <h5 class="fw-bold mb-3">Bukti Lembur</h5>
-
-                <div class="row g-3">
-
-                    <div class="col-md-4">
-                        <h6>Bukti Chat</h6>
-
-                        {% if is_pdf_file(overtime.chat_proof) %}
-                            <a href="{{ overtime_file_url(overtime.chat_proof) }}"
-                               target="_blank"
-                               class="btn btn-outline-primary w-100">
-                                Buka PDF
-                            </a>
-                        {% else %}
-                            <a href="{{ overtime_file_url(overtime.chat_proof) }}" target="_blank">
-                                <img src="{{ overtime_file_url(overtime.chat_proof) }}" class="proof-img">
-                            </a>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-4">
-                        <h6>Foto Saat Lembur</h6>
-
-                        {% if is_pdf_file(overtime.overtime_photo) %}
-                            <a href="{{ overtime_file_url(overtime.overtime_photo) }}"
-                               target="_blank"
-                               class="btn btn-outline-primary w-100">
-                                Buka PDF
-                            </a>
-                        {% else %}
-                            <a href="{{ overtime_file_url(overtime.overtime_photo) }}" target="_blank">
-                                <img src="{{ overtime_file_url(overtime.overtime_photo) }}" class="proof-img">
-                            </a>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-4">
-                        <h6>Foto Tap Absen</h6>
-
-                        {% if is_pdf_file(overtime.attendance_photo) %}
-                            <a href="{{ overtime_file_url(overtime.attendance_photo) }}"
-                               target="_blank"
-                               class="btn btn-outline-primary w-100">
-                                Buka PDF
-                            </a>
-                        {% else %}
-                            <a href="{{ overtime_file_url(overtime.attendance_photo) }}" target="_blank">
-                                <img src="{{ overtime_file_url(overtime.attendance_photo) }}" class="proof-img">
-                            </a>
-                        {% endif %}
-                    </div>
-
-                </div>
-            </div>
-
-        </div>
-
-        <div class="col-md-4">
-
-            <div class="card p-4 mb-4">
-                <h5 class="fw-bold">Status Approval</h5>
-
-                {% if overtime.status == 'approved' %}
-                    {% set approver = get_user(overtime.approved_by) %}
-                    <p class="mb-1">
-                        <strong>Approved by:</strong>
-                        {{ approver.username if approver else '-' }}
-                    </p>
-                    <p class="text-muted mb-0">
-                        {{ overtime.approved_at.strftime('%d/%m/%Y %H:%M') if overtime.approved_at else '-' }}
-                    </p>
+                    <span class="overtime-detail-status approved">
+                        <i class="bi bi-check-circle"></i>
+                        Disetujui
+                    </span>
 
                 {% elif overtime.status == 'rejected' %}
-                    {% set rejecter = get_user(overtime.rejected_by) %}
-                    <p class="mb-1">
-                        <strong>Rejected by:</strong>
-                        {{ rejecter.username if rejecter else '-' }}
-                    </p>
-                    <p class="text-muted mb-0">
-                        {{ overtime.rejected_at.strftime('%d/%m/%Y %H:%M') if overtime.rejected_at else '-' }}
-                    </p>
+
+                    <span class="overtime-detail-status rejected">
+                        <i class="bi bi-x-circle"></i>
+                        Ditolak
+                    </span>
 
                 {% else %}
-                    <p class="text-muted mb-0">
-                        Menunggu approval HRD.
-                    </p>
+
+                    <span class="overtime-detail-status">
+                        {{ overtime.status }}
+                    </span>
+
                 {% endif %}
+
             </div>
 
-            {% if user.role in approver_roles and overtime.status == 'pending' %}
-            <div class="card p-4">
-                <h5 class="fw-bold">Aksi HRD</h5>
-                <p class="text-muted">
-                    Pastikan bukti chat, foto lembur, dan tap absen sudah sesuai sebelum approve.
-                </p>
+            {% if overtime.reject_reason %}
 
-                <form method="POST" class="mb-3">
-                    <input type="hidden" name="action" value="approve">
+                <div class="overtime-rejection-banner">
 
-                    <button type="submit"
-                            class="btn btn-success w-100"
-                            onclick="return confirm('Yakin approve lembur ini?')">
-                        <i class="bi bi-check-circle"></i> Approve Lembur
-                    </button>
-                </form>
+                    <i class="bi bi-x-octagon"></i>
 
-                <form method="POST">
-                    <input type="hidden" name="action" value="reject">
+                    <div>
+                        <strong>Pengajuan ditolak</strong>
 
-                    <label class="form-label">Alasan Ditolak</label>
-                    <textarea name="reject_reason"
-                              class="form-control mb-2"
-                              rows="3"
-                              required></textarea>
+                        <p>{{ overtime.reject_reason }}</p>
+                    </div>
 
-                    <button type="submit"
-                            class="btn btn-danger w-100"
-                            onclick="return confirm('Yakin reject lembur ini?')">
-                        <i class="bi bi-x-circle"></i> Reject Lembur
-                    </button>
-                </form>
-            </div>
+                </div>
+
             {% endif %}
 
-        </div>
+            <!-- KARYAWAN -->
+            <div class="overtime-employee-banner">
+
+                <div class="overtime-employee-avatar">
+                    {{ overtime.employee_name[:2]|upper }}
+                </div>
+
+                <div>
+                    <span>KARYAWAN</span>
+
+                    <strong>{{ overtime.employee_name }}</strong>
+
+                    <small>
+                        {{ overtime.employee_divisi or '-' }}
+                    </small>
+                </div>
+
+            </div>
+
+            <!-- DATA -->
+            <div class="overtime-information-grid">
+
+                <article>
+                    <div>
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+
+                    <span>Tanggal lembur</span>
+
+                    <strong>
+                        {{ overtime.overtime_date.strftime('%d/%m/%Y') if overtime.overtime_date else '-' }}
+                    </strong>
+                </article>
+
+                <article>
+                    <div>
+                        <i class="bi bi-clock"></i>
+                    </div>
+
+                    <span>Jam lembur</span>
+
+                    <strong>
+                        {{ overtime.start_time.strftime('%H:%M') if overtime.start_time else '-' }}
+                        –
+                        {{ overtime.end_time.strftime('%H:%M') if overtime.end_time else '-' }}
+                    </strong>
+
+                    {% if
+                        overtime.start_time and
+                        overtime.end_time and
+                        overtime.end_time < overtime.start_time
+                    %}
+                        <small>Lewat tengah malam</small>
+                    {% endif %}
+                </article>
+
+                <article>
+                    <div>
+                        <i class="bi bi-stopwatch"></i>
+                    </div>
+
+                    <span>Total durasi</span>
+
+                    <strong class="highlight">
+                        {{ format_duration_minutes(overtime.duration_minutes) }}
+                    </strong>
+                </article>
+
+                <article>
+                    <div>
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+
+                    <span>SPV/Manager</span>
+
+                    <strong>
+                        {{ overtime.supervisor_name or '-' }}
+                    </strong>
+                </article>
+
+            </div>
+
+            <!-- KETERANGAN -->
+            <div class="overtime-work-description">
+
+                <span>KETERANGAN PEKERJAAN</span>
+
+                <p>{{ overtime.work_description }}</p>
+
+            </div>
+
+        </section>
+
+        <!-- BUKTI -->
+        <section class="overtime-detail-panel">
+
+            <div class="overtime-detail-header">
+
+                <div>
+                    <h2>Bukti pendukung</h2>
+                    <p>Periksa ketiga bukti sebelum melakukan approval.</p>
+                </div>
+
+                <div class="admin-panel-icon">
+                    <i class="bi bi-images"></i>
+                </div>
+
+            </div>
+
+            <div class="overtime-proof-grid">
+
+                <!-- CHAT -->
+                <article class="overtime-proof-card">
+
+                    <div class="overtime-proof-heading">
+                        <i class="bi bi-chat-left-text"></i>
+
+                        <div>
+                            <strong>Bukti chat</strong>
+                            <span>Persetujuan SPV/Manager</span>
+                        </div>
+                    </div>
+
+                    {% if is_pdf_file(overtime.chat_proof) %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.chat_proof) }}"
+                            target="_blank"
+                            class="overtime-pdf-proof"
+                        >
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <span>Buka file PDF</span>
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.chat_proof) }}"
+                            target="_blank"
+                            class="overtime-image-proof"
+                        >
+                            <img
+                                src="{{ overtime_file_url(overtime.chat_proof) }}"
+                                alt="Bukti chat lembur"
+                                loading="lazy"
+                            >
+
+                            <span>
+                                <i class="bi bi-arrows-fullscreen"></i>
+                                Buka gambar
+                            </span>
+                        </a>
+
+                    {% endif %}
+
+                </article>
+
+                <!-- FOTO LEMBUR -->
+                <article class="overtime-proof-card">
+
+                    <div class="overtime-proof-heading">
+                        <i class="bi bi-camera"></i>
+
+                        <div>
+                            <strong>Foto saat lembur</strong>
+                            <span>Bukti aktivitas pekerjaan</span>
+                        </div>
+                    </div>
+
+                    {% if is_pdf_file(overtime.overtime_photo) %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.overtime_photo) }}"
+                            target="_blank"
+                            class="overtime-pdf-proof"
+                        >
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <span>Buka file PDF</span>
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.overtime_photo) }}"
+                            target="_blank"
+                            class="overtime-image-proof"
+                        >
+                            <img
+                                src="{{ overtime_file_url(overtime.overtime_photo) }}"
+                                alt="Foto aktivitas lembur"
+                                loading="lazy"
+                            >
+
+                            <span>
+                                <i class="bi bi-arrows-fullscreen"></i>
+                                Buka gambar
+                            </span>
+                        </a>
+
+                    {% endif %}
+
+                </article>
+
+                <!-- ABSEN -->
+                <article class="overtime-proof-card">
+
+                    <div class="overtime-proof-heading">
+                        <i class="bi bi-fingerprint"></i>
+
+                        <div>
+                            <strong>Foto tap absen</strong>
+                            <span>Bukti waktu kepulangan</span>
+                        </div>
+                    </div>
+
+                    {% if is_pdf_file(overtime.attendance_photo) %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.attendance_photo) }}"
+                            target="_blank"
+                            class="overtime-pdf-proof"
+                        >
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <span>Buka file PDF</span>
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="{{ overtime_file_url(overtime.attendance_photo) }}"
+                            target="_blank"
+                            class="overtime-image-proof"
+                        >
+                            <img
+                                src="{{ overtime_file_url(overtime.attendance_photo) }}"
+                                alt="Foto tap absen"
+                                loading="lazy"
+                            >
+
+                            <span>
+                                <i class="bi bi-arrows-fullscreen"></i>
+                                Buka gambar
+                            </span>
+                        </a>
+
+                    {% endif %}
+
+                </article>
+
+            </div>
+
+        </section>
 
     </div>
+
+    <!-- SIDEBAR DETAIL -->
+    <aside class="overtime-detail-aside">
+
+        <!-- STATUS -->
+        <section class="overtime-status-card">
+
+            <p>STATUS APPROVAL</p>
+
+            {% if overtime.status == 'approved' %}
+
+                {% set approver = get_user(overtime.approved_by) %}
+
+                <div class="overtime-status-symbol approved">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+
+                <h2>Disetujui</h2>
+
+                <span>
+                    Diproses oleh
+                    {{ approver.nama_lengkap or approver.username if approver else '-' }}
+                </span>
+
+                <small>
+                    {{ overtime.approved_at.strftime('%d/%m/%Y %H:%M') if overtime.approved_at else '-' }}
+                </small>
+
+            {% elif overtime.status == 'rejected' %}
+
+                {% set rejecter = get_user(overtime.rejected_by) %}
+
+                <div class="overtime-status-symbol rejected">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+
+                <h2>Ditolak</h2>
+
+                <span>
+                    Diproses oleh
+                    {{ rejecter.nama_lengkap or rejecter.username if rejecter else '-' }}
+                </span>
+
+                <small>
+                    {{ overtime.rejected_at.strftime('%d/%m/%Y %H:%M') if overtime.rejected_at else '-' }}
+                </small>
+
+            {% else %}
+
+                <div class="overtime-status-symbol pending">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+
+                <h2>Menunggu approval</h2>
+
+                <span>
+                    Pengajuan belum diproses Admin atau HRD.
+                </span>
+
+            {% endif %}
+
+        </section>
+
+        <!-- AKSI APPROVAL -->
+        {% if
+            user.role in approver_roles and
+            overtime.status == 'pending'
+        %}
+
+            <section class="overtime-approval-card">
+
+                <div class="overtime-approval-heading">
+                    <i class="bi bi-shield-check"></i>
+
+                    <div>
+                        <h2>Aksi approval</h2>
+                        <p>Periksa seluruh bukti terlebih dahulu.</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="approve"
+                    >
+
+                    <button
+                        type="submit"
+                        class="overtime-approve-button"
+                        onclick="return confirm('Setujui pengajuan lembur ini?')"
+                    >
+                        <i class="bi bi-check-lg"></i>
+                        Setujui Lembur
+                    </button>
+
+                </form>
+
+                <div class="overtime-action-divider">
+                    <span>ATAU TOLAK</span>
+                </div>
+
+                <form method="POST">
+
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="reject"
+                    >
+
+                    <label class="user-form-field">
+                        <span>Alasan penolakan <b>*</b></span>
+
+                        <textarea
+                            name="reject_reason"
+                            rows="4"
+                            placeholder="Jelaskan alasan penolakan..."
+                            required
+                        ></textarea>
+                    </label>
+
+                    <button
+                        type="submit"
+                        class="overtime-reject-button"
+                        onclick="return confirm('Tolak pengajuan lembur ini?')"
+                    >
+                        <i class="bi bi-x-lg"></i>
+                        Tolak Lembur
+                    </button>
+
+                </form>
+
+            </section>
+
+        {% endif %}
+
+        <section class="leave-security-card">
+
+            <i class="bi bi-shield-check"></i>
+
+            <div>
+                <strong>Akses terbatas</strong>
+
+                <p>
+                    Bukti hanya dapat dilihat oleh pemilik data,
+                    Admin, dan HRD.
+                </p>
+            </div>
+
+        </section>
+
+    </aside>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

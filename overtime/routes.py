@@ -34,7 +34,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 # Sesuai permintaan: approval lembur hanya oleh HRD.
 # Admin tetap diberi akses melihat semua data dan export untuk kebutuhan kontrol sistem.
 FULL_ACCESS_ROLES = ['admin', 'hrd']
-APPROVER_ROLES = ['hrd']
+APPROVER_ROLES = ['admin', 'hrd']
 
 ALLOWED_OVERTIME_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 

@@ -2,22 +2,11 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>
-        {% block title %}Booking Ruang Meeting{% endblock %}
-        | Severli Internal
+        {% block title %}Sistem Izin{% endblock %} | Severli Internal
     </title>
-
-    <!-- Bootstrap dipertahankan sementara untuk halaman lama -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,126 +26,102 @@
         href="{{ url_for('static', filename='css/style.css') }}"
     >
 
-    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
+
+{% set active_user = user if user is defined else current_user %}
 
 <body class="izin-app-page">
 
-<div class="izin-app-shell" id="meetingAppShell">
+<div class="izin-app-shell" id="izinAppShell">
 
     <!-- SIDEBAR -->
-    <aside class="izin-sidebar" id="meetingSidebar">
+    <aside class="izin-sidebar" id="izinSidebar">
 
         <div class="izin-sidebar-brand">
-
-            <div class="izin-brand-mark">
-                <i class="bi bi-door-open"></i>
-            </div>
+            <div class="izin-brand-mark">S</div>
 
             <div class="izin-brand-text">
-                <strong>Meeting Room</strong>
+                <strong>Sistem Izin</strong>
                 <span>Severli Internal</span>
             </div>
 
             <button
                 type="button"
                 class="izin-mobile-close"
-                id="closeMeetingSidebar"
+                id="closeSidebar"
                 aria-label="Tutup sidebar"
             >
                 <i class="bi bi-x-lg"></i>
             </button>
-
         </div>
 
         <nav class="izin-sidebar-navigation">
 
-            <p class="izin-nav-label">
-                BOOKING RUANGAN
-            </p>
+            <p class="izin-nav-label">MENU UTAMA</p>
 
             <a
-                href="/meeting-room/list"
+                href="/dashboard"
                 class="izin-nav-item
-                {{ 'active' if request.endpoint in [
-                    'meeting_room.list_booking',
-                    'meeting_room.detail_booking'
-                ] else '' }}"
+                {{ 'active' if request.path == '/dashboard' else '' }}"
             >
-                <i class="bi bi-calendar2-check"></i>
-                <span>Daftar Booking</span>
+                <i class="bi bi-grid"></i>
+                <span>Dashboard</span>
             </a>
 
             <a
-                href="/meeting-room/form"
+                href="/form_izin"
                 class="izin-nav-item
-                {{ 'active' if
-                    request.endpoint == 'meeting_room.create_booking'
-                    else ''
-                }}"
+                {{ 'active' if request.path == '/form_izin' else '' }}"
             >
                 <i class="bi bi-plus-circle"></i>
-                <span>Ajukan Booking</span>
+                <span>Ajukan Izin</span>
             </a>
 
-            <a
-                href="/meeting-room/schedule"
-                class="izin-nav-item
-                {{ 'active' if
-                    request.endpoint == 'meeting_room.schedule'
-                    else ''
-                }}"
-            >
-                <i class="bi bi-calendar-week"></i>
-                <span>Jadwal Ruangan</span>
-            </a>
+            {% if active_user.role in ['admin', 'hrd', 'direktur'] %}
 
-            {% if meeting_is_supervisor(user) %}
+                <a
+                    href="/approval"
+                    class="izin-nav-item
+                    {{ 'active' if request.path == '/approval' else '' }}"
+                >
+                    <i class="bi bi-check2-square"></i>
+                    <span>Persetujuan</span>
+                </a>
+
+                <a
+                    href="/semua_izin"
+                    class="izin-nav-item
+                    {{ 'active' if request.path == '/semua_izin' else '' }}"
+                >
+                    <i class="bi bi-card-list"></i>
+                    <span>Semua Pengajuan</span>
+                </a>
+
+            {% endif %}
+
+            {% if active_user.role in ['admin', 'hrd'] %}
 
                 <p class="izin-nav-label izin-nav-section">
                     ADMINISTRASI
                 </p>
 
                 <a
-                    href="/meeting-room/approval"
+                    href="/manage_users"
                     class="izin-nav-item
-                    {{ 'active' if
-                        request.endpoint and
-                        request.endpoint.startswith(
-                            'meeting_room.approval'
-                        )
-                        else ''
-                    }}"
+                    {{ 'active' if request.path == '/manage_users' else '' }}"
                 >
-                    <i class="bi bi-check2-square"></i>
-                    <span>Approval Booking</span>
+                    <i class="bi bi-people"></i>
+                    <span>Manajemen User</span>
                 </a>
 
                 <a
-                    href="/meeting-room/rooms"
+                    href="/manage_quota"
                     class="izin-nav-item
-                    {{ 'active' if
-                        request.endpoint and
-                        request.endpoint.startswith(
-                            'meeting_room.room'
-                        )
-                        else ''
-                    }}"
+                    {{ 'active' if request.path == '/manage_quota' else '' }}"
                 >
-                    <i class="bi bi-building-gear"></i>
-                    <span>Master Ruangan</span>
-                </a>
-
-                <a
-                    href="/meeting-room/report"
-                    class="izin-nav-item
-                    {{ 'active' if
-                        request.endpoint == 'meeting_room.report'
-                        else ''
-                    }}"
-                >
-                    <i class="bi bi-bar-chart"></i>
-                    <span>Laporan Booking</span>
+                    <i class="bi bi-calendar2-check"></i>
+                    <span>Kuota Cuti</span>
                 </a>
 
             {% endif %}
@@ -177,18 +142,18 @@
             <div class="izin-sidebar-profile">
 
                 <div class="izin-sidebar-avatar">
-                    {{ meeting_display_name(user)[:2]|upper }}
+                    {{ (active_user.nama_lengkap or active_user.username)[:2]|upper }}
                 </div>
 
                 <div class="izin-sidebar-user">
                     <strong>
-                        {{ meeting_display_name(user) }}
+                        {{ active_user.nama_lengkap or active_user.username }}
                     </strong>
 
                     <span>
-                        {{ user.role|capitalize }}
-                        {% if user.divisi %}
-                            · {{ user.divisi }}
+                        {{ active_user.role|capitalize }}
+                        {% if active_user.divisi %}
+                            · {{ active_user.divisi }}
                         {% endif %}
                     </span>
                 </div>
@@ -208,11 +173,11 @@
     <button
         type="button"
         class="izin-sidebar-overlay"
-        id="meetingSidebarOverlay"
+        id="sidebarOverlay"
         aria-label="Tutup sidebar"
     ></button>
 
-    <!-- MAIN -->
+    <!-- BAGIAN UTAMA -->
     <div class="izin-app-main">
 
         <header class="izin-topbar">
@@ -222,7 +187,7 @@
                 <button
                     type="button"
                     class="izin-mobile-menu"
-                    id="openMeetingSidebar"
+                    id="openSidebar"
                     aria-label="Buka sidebar"
                 >
                     <i class="bi bi-list"></i>
@@ -231,7 +196,7 @@
                 <button
                     type="button"
                     class="izin-compact-button"
-                    id="toggleMeetingCompact"
+                    id="toggleCompactSidebar"
                     aria-label="Perkecil sidebar"
                 >
                     <i class="bi bi-layout-sidebar-inset"></i>
@@ -239,10 +204,9 @@
 
                 <div class="izin-topbar-heading">
                     <span>Severli Internal</span>
-
                     <strong>
                         {% block header_title %}
-                            Booking Ruang Meeting
+                            Sistem Izin
                         {% endblock %}
                     </strong>
                 </div>
@@ -263,19 +227,19 @@
 
                     <div>
                         <strong>
-                            {{ meeting_display_name(user) }}
+                            {{ active_user.nama_lengkap or active_user.username }}
                         </strong>
 
                         <span>
-                            {{ user.role|capitalize }}
-                            {% if user.divisi %}
-                                · {{ user.divisi }}
+                            {{ active_user.role|capitalize }}
+                            {% if active_user.divisi %}
+                                · {{ active_user.divisi }}
                             {% endif %}
                         </span>
                     </div>
 
                     <div class="izin-topbar-avatar">
-                        {{ meeting_display_name(user)[:2]|upper }}
+                        {{ (active_user.nama_lengkap or active_user.username)[:2]|upper }}
                     </div>
 
                 </div>
@@ -288,9 +252,7 @@
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% for category, message in messages %}
-
                     <div class="izin-alert izin-alert-{{ category }}">
-
                         <i class="bi bi-info-circle"></i>
 
                         <span>{{ message }}</span>
@@ -298,17 +260,14 @@
                         <button
                             type="button"
                             onclick="this.parentElement.remove()"
-                            aria-label="Tutup"
+                            aria-label="Tutup notifikasi"
                         >
                             <i class="bi bi-x"></i>
                         </button>
-
                     </div>
-
                 {% endfor %}
             {% endwith %}
 
-            {% block page_title %}{% endblock %}
             {% block content %}{% endblock %}
 
         </main>
@@ -317,70 +276,66 @@
 
 </div>
 
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-></script>
-
 <script>
-    const meetingAppShell =
-        document.getElementById("meetingAppShell");
+    const izinAppShell =
+        document.getElementById("izinAppShell");
 
-    const meetingSidebar =
-        document.getElementById("meetingSidebar");
+    const izinSidebar =
+        document.getElementById("izinSidebar");
 
-    const meetingSidebarOverlay =
-        document.getElementById("meetingSidebarOverlay");
+    const openSidebarButton =
+        document.getElementById("openSidebar");
 
-    const openMeetingSidebar =
-        document.getElementById("openMeetingSidebar");
+    const closeSidebarButton =
+        document.getElementById("closeSidebar");
 
-    const closeMeetingSidebar =
-        document.getElementById("closeMeetingSidebar");
+    const sidebarOverlay =
+        document.getElementById("sidebarOverlay");
 
-    const toggleMeetingCompact =
-        document.getElementById("toggleMeetingCompact");
+    const toggleCompactSidebar =
+        document.getElementById("toggleCompactSidebar");
 
-    function openMeetingMobileSidebar() {
-        meetingSidebar.classList.add("mobile-open");
-        meetingSidebarOverlay.classList.add("visible");
+    function openMobileSidebar() {
+        izinSidebar.classList.add("mobile-open");
+        sidebarOverlay.classList.add("visible");
         document.body.classList.add("sidebar-lock");
     }
 
-    function closeMeetingMobileSidebar() {
-        meetingSidebar.classList.remove("mobile-open");
-        meetingSidebarOverlay.classList.remove("visible");
+    function closeMobileSidebar() {
+        izinSidebar.classList.remove("mobile-open");
+        sidebarOverlay.classList.remove("visible");
         document.body.classList.remove("sidebar-lock");
     }
 
-    openMeetingSidebar.addEventListener(
+    openSidebarButton.addEventListener(
         "click",
-        openMeetingMobileSidebar
+        openMobileSidebar
     );
 
-    closeMeetingSidebar.addEventListener(
+    closeSidebarButton.addEventListener(
         "click",
-        closeMeetingMobileSidebar
+        closeMobileSidebar
     );
 
-    meetingSidebarOverlay.addEventListener(
+    sidebarOverlay.addEventListener(
         "click",
-        closeMeetingMobileSidebar
+        closeMobileSidebar
     );
 
-    toggleMeetingCompact.addEventListener(
+    toggleCompactSidebar.addEventListener(
         "click",
         function () {
-            meetingAppShell.classList.toggle(
+            izinAppShell.classList.toggle(
                 "sidebar-compact"
             );
 
             const compact =
-                meetingAppShell.classList.contains(
+                izinAppShell.classList.contains(
                     "sidebar-compact"
                 );
 
             localStorage.setItem(
-                "severli_meeting_sidebar_compact",
+                "severli_sidebar_compact",
                 compact ? "true" : "false"
             );
         }
@@ -388,22 +343,22 @@
 
     if (
         localStorage.getItem(
-            "severli_meeting_sidebar_compact"
+            "severli_sidebar_compact"
         ) === "true"
     ) {
-        meetingAppShell.classList.add(
+        izinAppShell.classList.add(
             "sidebar-compact"
         );
     }
 
     window.addEventListener("resize", function () {
         if (window.innerWidth > 900) {
-            closeMeetingMobileSidebar();
+            closeMobileSidebar();
         }
     });
 </script>
 
-{% block extra_js %}{% endblock %}
+{% block scripts %}{% endblock %}
 
 </body>
 </html>

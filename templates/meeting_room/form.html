@@ -1,94 +1,1161 @@
 {% extends "meeting_room/layout.html" %}
+
 {% block title %}Ajukan Booking{% endblock %}
-{% block page_title %}
-<div class="page-header">
-    <h4><i class="bi bi-plus-circle"></i> Ajukan Booking Ruang Meeting</h4>
-    <span class="text-muted">Booking minimal H-{{ min_days }} sebelum tanggal meeting</span>
-</div>
-{% endblock %}
+{% block header_title %}Ajukan Booking{% endblock %}
+{% block page_title %}{% endblock %}
+
+
 {% block content %}
-<div class="card"><div class="card-body">
-    <form method="POST" id="bookingForm">
-        <div class="row g-3">
-            <div class="col-12">
-                <label class="form-label">Judul Meeting <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="title" placeholder="Contoh: Weekly Meeting Marketing" required>
+
+
+<!-- =====================================================
+     HEADING
+===================================================== -->
+
+<section class="leave-page-heading">
+
+    <div>
+
+        <span class="leave-eyebrow">
+            BOOKING RUANGAN
+        </span>
+
+        <h1>
+            Ajukan Booking
+        </h1>
+
+        <p>
+            Isi informasi meeting dan pilih ruang
+            yang sesuai dengan kebutuhan.
+        </p>
+
+    </div>
+
+
+    <a
+        href="{{ url_for('meeting_room.schedule') }}"
+        class="meeting-schedule-button"
+    >
+        <i class="bi bi-calendar-week"></i>
+        Lihat Jadwal
+    </a>
+
+</section>
+
+
+
+<!-- =====================================================
+     RULE
+===================================================== -->
+
+<div class="meeting-rule-banner">
+
+    <i class="bi bi-info-circle"></i>
+
+    <div>
+
+        <strong>
+            Ketentuan Booking
+        </strong>
+
+        <span>
+            Pengajuan ruang meeting harus dilakukan
+            minimal H-{{ min_days }} sebelum tanggal meeting.
+            Pastikan jadwal dan jumlah peserta sudah benar.
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     LAYOUT
+===================================================== -->
+
+<section class="leave-form-layout">
+
+
+    <!-- =================================================
+         MAIN FORM
+    ================================================= -->
+
+    <div class="leave-form-panel">
+
+
+        <div class="leave-panel-header">
+
+            <div class="leave-panel-icon meeting-form-icon">
+                <i class="bi bi-calendar2-plus"></i>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Divisi</label>
-                <input type="text" class="form-control" value="{{ user.divisi or '-' }}" readonly>
-                <input type="hidden" name="division" value="{{ user.divisi or '-' }}">
+
+            <div>
+
+                <h2>
+                    Informasi Booking
+                </h2>
+
+                <p>
+                    Lengkapi data booking ruang meeting.
+                </p>
+
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Ruangan <span class="text-danger">*</span></label>
-                <select class="form-select" id="room_id" name="room_id" required onchange="updateRoomInfo()">
-                    <option value="">-- Pilih Ruangan --</option>
-                    {% for room in rooms %}
-                    <option value="{{ room.id }}" data-capacity="{{ room.capacity }}" data-location="{{ room.location }}" data-facilities="{{ room.facilities }}">
-                        {{ room.room_name }} - {{ room.capacity }} orang
-                    </option>
-                    {% endfor %}
-                </select>
-                <div id="roomInfo" class="form-text mt-1" style="display:none"></div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Tanggal Meeting <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" name="meeting_date" required>
-                <div class="form-text">Minimal H-{{ min_days }} dari hari ini</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Jam Mulai <span class="text-danger">*</span></label>
-                <input type="time" class="form-control" name="start_time" required>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Jam Selesai <span class="text-danger">*</span></label>
-                <input type="time" class="form-control" name="end_time" required>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Jumlah Peserta <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" id="participant_count" name="participant_count" min="1" required>
-                <div id="capacityWarning" class="form-text text-danger" style="display:none"></div>
-            </div>
-            <div class="col-md-8">
-                <label class="form-label">Keperluan <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="purpose" placeholder="Contoh: Diskusi campaign bulan depan" required>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Catatan Tambahan</label>
-                <textarea class="form-control" name="notes" rows="3" placeholder="Opsional"></textarea>
-            </div>
+
         </div>
-        <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Ajukan Booking</button>
-            <a href="/meeting-room/list" class="btn btn-outline-secondary">Batal</a>
+
+
+
+        <form
+            method="POST"
+            class="leave-form meeting-booking-form"
+            id="meetingBookingForm"
+        >
+
+
+            <!-- =================================================
+                 USER
+            ================================================= -->
+
+            <div class="meeting-booking-full">
+
+                <div class="meeting-user-summary">
+
+                    <div class="meeting-user-avatar">
+                        {{ meeting_display_name(user)[:2] | upper }}
+                    </div>
+
+
+                    <div class="meeting-user-data">
+
+                        <span>
+                            PEMOHON
+                        </span>
+
+                        <strong>
+                            {{ meeting_display_name(user) }}
+                        </strong>
+
+                        <small>
+                            {{ user.divisi or '-' }}
+                            ·
+                            {{ user.role | capitalize }}
+                        </small>
+
+                    </div>
+
+
+                    <div class="meeting-pending-label">
+
+                        <i class="bi bi-hourglass-split"></i>
+
+                        Menunggu Approval
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- TITLE -->
+
+            <div class="leave-field meeting-booking-full">
+
+                <label for="title">
+
+                    Judul Meeting
+
+                    <span>
+                        *
+                    </span>
+
+                </label>
+
+
+                <div class="leave-input-wrapper">
+
+                    <i class="bi bi-type"></i>
+
+                    <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        value="{{ request.form.get('title', '') }}"
+                        placeholder="Contoh: Weekly Marketing Meeting"
+                        autocomplete="off"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ROOM -->
+
+            <div class="leave-field meeting-booking-full">
+
+                <label for="room_id">
+
+                    Pilih Ruangan
+
+                    <span>
+                        *
+                    </span>
+
+                </label>
+
+
+                <div class="leave-input-wrapper">
+
+                    <i class="bi bi-door-open"></i>
+
+                    <select
+                        id="room_id"
+                        name="room_id"
+                        required
+                    >
+
+                        <option value="">
+                            Pilih ruang meeting
+                        </option>
+
+
+                        {% for room in rooms %}
+
+                            <option
+                                value="{{ room.id }}"
+                                data-name="{{ room.room_name }}"
+                                data-capacity="{{ room.capacity }}"
+                                data-location="{{ room.location }}"
+                                data-facilities="{{ room.facilities or '-' }}"
+                                {% if request.form.get('room_id')|string == room.id|string %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ room.room_name }}
+                                — {{ room.capacity }} orang
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ROOM PREVIEW -->
+
+            <div
+                class="meeting-room-preview meeting-booking-full"
+                id="roomPreview"
+                hidden
+            >
+
+
+                <div class="meeting-room-preview-heading">
+
+                    <div>
+
+                        <span>
+                            Ruangan Dipilih
+                        </span>
+
+                        <strong id="previewRoomName">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <span
+                        class="meeting-capacity-badge"
+                        id="previewCapacity"
+                    >
+                        0 orang
+                    </span>
+
+                </div>
+
+
+
+                <div class="meeting-room-preview-grid">
+
+
+                    <div>
+
+                        <i class="bi bi-geo-alt"></i>
+
+                        <span>
+
+                            <small>
+                                Lokasi
+                            </small>
+
+                            <strong id="previewLocation">
+                                -
+                            </strong>
+
+                        </span>
+
+                    </div>
+
+
+
+                    <div>
+
+                        <i class="bi bi-display"></i>
+
+                        <span>
+
+                            <small>
+                                Fasilitas
+                            </small>
+
+                            <strong id="previewFacilities">
+                                -
+                            </strong>
+
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- DATE + TIME -->
+
+            <div class="meeting-schedule-fields meeting-booking-full">
+
+
+                <div class="leave-field">
+
+                    <label for="meeting_date">
+
+                        Tanggal
+
+                        <span>*</span>
+
+                    </label>
+
+
+                    <div class="leave-input-wrapper">
+
+                        <i class="bi bi-calendar3"></i>
+
+                        <input
+                            type="date"
+                            id="meeting_date"
+                            name="meeting_date"
+                            value="{{ request.form.get('meeting_date', '') }}"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="leave-field">
+
+                    <label for="start_time">
+
+                        Jam Mulai
+
+                        <span>*</span>
+
+                    </label>
+
+
+                    <div class="leave-input-wrapper">
+
+                        <i class="bi bi-clock"></i>
+
+                        <input
+                            type="time"
+                            id="start_time"
+                            name="start_time"
+                            value="{{ request.form.get('start_time', '') }}"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="leave-field">
+
+                    <label for="end_time">
+
+                        Jam Selesai
+
+                        <span>*</span>
+
+                    </label>
+
+
+                    <div class="leave-input-wrapper">
+
+                        <i class="bi bi-clock-history"></i>
+
+                        <input
+                            type="time"
+                            id="end_time"
+                            name="end_time"
+                            value="{{ request.form.get('end_time', '') }}"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- DURATION -->
+
+            <div
+                class="meeting-duration-card meeting-booking-full"
+                id="durationCard"
+            >
+
+                <div>
+
+                    <i class="bi bi-stopwatch"></i>
+
+                    <span>
+
+                        <small>
+                            Durasi Meeting
+                        </small>
+
+                        <strong id="durationText">
+                            Pilih jam mulai dan selesai
+                        </strong>
+
+                    </span>
+
+                </div>
+
+
+                <span
+                    class="meeting-duration-status"
+                    id="durationStatus"
+                >
+                    Belum dihitung
+                </span>
+
+            </div>
+
+
+
+            <!-- PARTICIPANT -->
+
+            <div class="leave-field">
+
+                <label for="participant_count">
+
+                    Jumlah Peserta
+
+                    <span>*</span>
+
+                </label>
+
+
+                <div class="leave-input-wrapper">
+
+                    <i class="bi bi-people"></i>
+
+                    <input
+                        type="number"
+                        id="participant_count"
+                        name="participant_count"
+                        value="{{ request.form.get('participant_count', '') }}"
+                        min="1"
+                        placeholder="Contoh: 8"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    class="meeting-capacity-warning"
+                    id="capacityWarning"
+                >
+                    <i class="bi bi-exclamation-circle"></i>
+
+                    Jumlah peserta melebihi kapasitas ruangan.
+                </div>
+
+            </div>
+
+
+
+            <!-- PURPOSE -->
+
+            <div class="leave-field">
+
+                <label for="purpose">
+
+                    Keperluan
+
+                    <span>*</span>
+
+                </label>
+
+
+                <div class="leave-input-wrapper">
+
+                    <i class="bi bi-briefcase"></i>
+
+                    <input
+                        type="text"
+                        id="purpose"
+                        name="purpose"
+                        value="{{ request.form.get('purpose', '') }}"
+                        placeholder="Contoh: Evaluasi campaign"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+
+            <!-- NOTES -->
+
+            <div class="leave-field meeting-booking-full">
+
+                <label for="notes">
+                    Catatan Tambahan
+                </label>
+
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                    placeholder="Tambahkan catatan jika diperlukan..."
+                >{{ request.form.get('notes', '') }}</textarea>
+
+            </div>
+
+
+
+            <!-- HIDDEN DIVISI -->
+
+            <input
+                type="hidden"
+                name="division"
+                value="{{ user.divisi or '-' }}"
+            >
+
+
+
+            <!-- ACTION -->
+
+            <div class="leave-form-actions meeting-booking-full">
+
+
+                <a
+                    href="{{ url_for('meeting_room.list_booking') }}"
+                    class="dashboard-secondary-button"
+                >
+                    Batal
+                </a>
+
+
+                <button
+                    type="submit"
+                    id="submitBookingButton"
+                    class="dashboard-primary-button"
+                >
+                    <i class="bi bi-send"></i>
+                    Ajukan Booking
+                </button>
+
+
+            </div>
+
+
+        </form>
+
+
+    </div>
+
+
+
+    <!-- =================================================
+         RIGHT SIDEBAR
+    ================================================= -->
+
+    <aside class="leave-form-aside">
+
+
+        <!-- USER -->
+
+        <div class="leave-user-card">
+
+            <p>
+                INFORMASI PEMOHON
+            </p>
+
+
+            <div>
+
+                <div class="leave-user-avatar">
+
+                    {{ meeting_display_name(user)[:2] | upper }}
+
+                </div>
+
+
+                <div>
+
+                    <strong>
+                        {{ meeting_display_name(user) }}
+                    </strong>
+
+                    <span>
+                        {{ user.divisi or '-' }}
+                    </span>
+
+                </div>
+
+            </div>
+
         </div>
-    </form>
-</div></div>
+
+
+
+        <!-- GUIDE -->
+
+        <div class="leave-guide-card">
+
+            <div class="leave-guide-icon">
+                <i class="bi bi-lightbulb"></i>
+            </div>
+
+
+            <h2>
+                Sebelum Booking
+            </h2>
+
+
+            <div class="leave-guide-list">
+
+
+                <div>
+
+                    <span>
+                        1
+                    </span>
+
+                    <p>
+                        Periksa jadwal ruangan terlebih dahulu.
+                    </p>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        2
+                    </span>
+
+                    <p>
+                        Pastikan jumlah peserta tidak
+                        melebihi kapasitas.
+                    </p>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        3
+                    </span>
+
+                    <p>
+                        Booking akan aktif setelah
+                        disetujui HRD.
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- SCHEDULE -->
+
+        <a
+            href="{{ url_for('meeting_room.schedule') }}"
+            class="meeting-schedule-link-card"
+        >
+
+            <div>
+
+                <i class="bi bi-calendar-week"></i>
+
+                <span>
+
+                    <strong>
+                        Cek Jadwal Ruangan
+                    </strong>
+
+                    <small>
+                        Lihat slot yang sudah terisi
+                    </small>
+
+                </span>
+
+            </div>
+
+
+            <i class="bi bi-arrow-right"></i>
+
+        </a>
+
+
+    </aside>
+
+
+</section>
+
+
 {% endblock %}
+
+
+
 {% block extra_js %}
+
 <script>
-function updateRoomInfo(){
-    const select=document.getElementById('room_id');
-    const selected=select.options[select.selectedIndex];
-    const info=document.getElementById('roomInfo');
-    const participant=document.getElementById('participant_count');
-    if(selected.value){
-        info.style.display='block';
-        info.innerHTML='<strong>Lokasi:</strong> '+selected.dataset.location+' | <strong>Fasilitas:</strong> '+(selected.dataset.facilities || '-');
-        participant.max=selected.dataset.capacity;
-    } else {
-        info.style.display='none';
-        participant.removeAttribute('max');
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const roomSelect =
+        document.getElementById('room_id');
+
+    const roomPreview =
+        document.getElementById('roomPreview');
+
+    const previewRoomName =
+        document.getElementById('previewRoomName');
+
+    const previewCapacity =
+        document.getElementById('previewCapacity');
+
+    const previewLocation =
+        document.getElementById('previewLocation');
+
+    const previewFacilities =
+        document.getElementById('previewFacilities');
+
+
+    const participantInput =
+        document.getElementById('participant_count');
+
+    const capacityWarning =
+        document.getElementById('capacityWarning');
+
+
+    const startTime =
+        document.getElementById('start_time');
+
+    const endTime =
+        document.getElementById('end_time');
+
+    const durationCard =
+        document.getElementById('durationCard');
+
+    const durationText =
+        document.getElementById('durationText');
+
+    const durationStatus =
+        document.getElementById('durationStatus');
+
+
+    const meetingDate =
+        document.getElementById('meeting_date');
+
+
+    const bookingForm =
+        document.getElementById('meetingBookingForm');
+
+    const submitButton =
+        document.getElementById('submitBookingButton');
+
+
+
+    /* =========================================
+       MINIMUM BOOKING DATE
+    ========================================= */
+
+    const minimumDays = {{ min_days | int }};
+
+    const minimumDate = new Date();
+
+    minimumDate.setDate(
+        minimumDate.getDate() + minimumDays
+    );
+
+
+    const year =
+        minimumDate.getFullYear();
+
+    const month =
+        String(
+            minimumDate.getMonth() + 1
+        ).padStart(2, '0');
+
+    const day =
+        String(
+            minimumDate.getDate()
+        ).padStart(2, '0');
+
+
+    meetingDate.min =
+        `${year}-${month}-${day}`;
+
+
+
+    /* =========================================
+       ROOM PREVIEW
+    ========================================= */
+
+    function updateRoomPreview() {
+
+        const option =
+            roomSelect.options[
+                roomSelect.selectedIndex
+            ];
+
+
+        if (
+            !option ||
+            !option.value
+        ) {
+
+            roomPreview.hidden = true;
+
+            participantInput.removeAttribute(
+                'max'
+            );
+
+            checkCapacity();
+
+            return;
+
+        }
+
+
+        const roomName =
+            option.dataset.name || '-';
+
+        const capacity =
+            option.dataset.capacity || '0';
+
+        const location =
+            option.dataset.location || '-';
+
+        const facilities =
+            option.dataset.facilities || '-';
+
+
+        previewRoomName.textContent =
+            roomName;
+
+        previewCapacity.textContent =
+            `${capacity} orang`;
+
+        previewLocation.textContent =
+            location;
+
+        previewFacilities.textContent =
+            facilities;
+
+
+        participantInput.max =
+            capacity;
+
+
+        roomPreview.hidden = false;
+
+
+        checkCapacity();
+
     }
-}
-document.getElementById('participant_count').addEventListener('input',function(){
-    const select=document.getElementById('room_id');
-    const selected=select.options[select.selectedIndex];
-    const warning=document.getElementById('capacityWarning');
-    if(selected.value && parseInt(this.value)>parseInt(selected.dataset.capacity)){
-        warning.style.display='block';
-        warning.textContent='Melebihi kapasitas ('+selected.dataset.capacity+' orang)';
-    } else { warning.style.display='none'; }
+
+
+
+    /* =========================================
+       CAPACITY
+    ========================================= */
+
+    function checkCapacity() {
+
+        const option =
+            roomSelect.options[
+                roomSelect.selectedIndex
+            ];
+
+
+        if (
+            !option ||
+            !option.value
+        ) {
+
+            capacityWarning.classList.remove(
+                'is-visible'
+            );
+
+            return;
+
+        }
+
+
+        const capacity =
+            parseInt(
+                option.dataset.capacity || '0',
+                10
+            );
+
+
+        const participants =
+            parseInt(
+                participantInput.value || '0',
+                10
+            );
+
+
+        if (
+            participants > capacity &&
+            capacity > 0
+        ) {
+
+            capacityWarning.classList.add(
+                'is-visible'
+            );
+
+        }
+
+        else {
+
+            capacityWarning.classList.remove(
+                'is-visible'
+            );
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       DURATION
+    ========================================= */
+
+    function calculateDuration() {
+
+        durationCard.classList.remove(
+            'is-valid',
+            'is-invalid'
+        );
+
+
+        if (
+            !startTime.value ||
+            !endTime.value
+        ) {
+
+            durationText.textContent =
+                'Pilih jam mulai dan selesai';
+
+            durationStatus.textContent =
+                'Belum dihitung';
+
+            return;
+
+        }
+
+
+        const [
+            startHour,
+            startMinute
+        ] =
+        startTime.value
+            .split(':')
+            .map(Number);
+
+
+        const [
+            endHour,
+            endMinute
+        ] =
+        endTime.value
+            .split(':')
+            .map(Number);
+
+
+        const startTotal =
+            startHour * 60 +
+            startMinute;
+
+
+        const endTotal =
+            endHour * 60 +
+            endMinute;
+
+
+        const difference =
+            endTotal - startTotal;
+
+
+        if (difference <= 0) {
+
+            durationCard.classList.add(
+                'is-invalid'
+            );
+
+            durationText.textContent =
+                'Jam selesai harus setelah jam mulai';
+
+            durationStatus.textContent =
+                'Tidak valid';
+
+            return;
+
+        }
+
+
+        const hours =
+            Math.floor(
+                difference / 60
+            );
+
+        const minutes =
+            difference % 60;
+
+
+        let durationLabel = '';
+
+
+        if (hours > 0) {
+
+            durationLabel +=
+                `${hours} jam`;
+
+        }
+
+
+        if (minutes > 0) {
+
+            if (hours > 0) {
+                durationLabel += ' ';
+            }
+
+            durationLabel +=
+                `${minutes} menit`;
+
+        }
+
+
+        durationCard.classList.add(
+            'is-valid'
+        );
+
+        durationText.textContent =
+            durationLabel;
+
+        durationStatus.textContent =
+            'Valid';
+
+    }
+
+
+
+    /* =========================================
+       EVENTS
+    ========================================= */
+
+    roomSelect.addEventListener(
+        'change',
+        updateRoomPreview
+    );
+
+
+    participantInput.addEventListener(
+        'input',
+        checkCapacity
+    );
+
+
+    startTime.addEventListener(
+        'change',
+        calculateDuration
+    );
+
+
+    endTime.addEventListener(
+        'change',
+        calculateDuration
+    );
+
+
+
+    /* =========================================
+       SUBMIT
+    ========================================= */
+
+    bookingForm.addEventListener(
+        'submit',
+        function () {
+
+            submitButton.disabled = true;
+
+            submitButton.innerHTML =
+                '<i class="bi bi-hourglass-split"></i> Mengirim...';
+
+        }
+    );
+
+
+
+    /* =========================================
+       INITIAL
+    ========================================= */
+
+    updateRoomPreview();
+
+    calculateDuration();
+
 });
+
 </script>
+
 {% endblock %}

@@ -670,13 +670,24 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login_view():
     if request.method == 'POST':
-        user = User.query.filter_by(username=request.form['username']).first()
-        if not user or not check_password_hash(user.password, request.form['password']):
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        user = User.query.filter_by(username=username).first()
+
+        if not user or not check_password_hash(user.password, password):
             flash("Username / password salah!", "danger")
             return redirect('/login')
+
+        # Hapus session lama agar active_system sebelumnya
+        # tidak langsung membuka sistem lama setelah login.
+        session.clear()
+
         session['user_id'] = user.id
         session['role'] = user.role
+
         return redirect('/main_dashboard')
+
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -713,11 +724,16 @@ def main_dashboard():
         return redirect('/login')
 
     user = User.query.get(session['user_id'])
+
     if not user:
         session.clear()
         return redirect('/login')
 
     selected_system = request.args.get('system')
+
+    # =========================
+    # PILIH SISTEM
+    # =========================
 
     if selected_system == 'izin':
         session['active_system'] = 'izin'
@@ -731,16 +747,26 @@ def main_dashboard():
         session['active_system'] = 'meeting_room'
         return redirect('/meeting-room/list')
 
-    if session.get('active_system') == 'izin':
+    # =========================
+    # JIKA SUDAH PILIH SISTEM
+    # =========================
+
+    active_system = session.get('active_system')
+
+    if active_system == 'izin':
         return redirect('/dashboard')
 
-    elif session.get('active_system') == 'overtime':
+    elif active_system == 'overtime':
         return redirect('/overtime/list')
 
-    elif session.get('active_system') == 'meeting_room':
+    elif active_system == 'meeting_room':
         return redirect('/meeting-room/list')
 
-    return render_template('main_dashboard.html', user=user)
+    # Kalau belum pilih sistem
+    return render_template(
+        'main_dashboard.html',
+        user=user
+    )
 
 @app.route('/change_system')
 def change_system():
@@ -838,7 +864,20 @@ def dashboard():
 def form_izin():
     if 'user_id' not in session:
         return redirect('/login')
-    return render_template('izin.html')
+
+    user = db.session.get(
+        User,
+        session['user_id']
+    )
+
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    return render_template(
+        'izin.html',
+        user=user
+    )
 
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
 ALLOWED_DOCUMENT_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}

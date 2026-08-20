@@ -1,232 +1,302 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Daftar Akun | Severli Internal</title>
 
-    <!-- Poppins Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
 
-    <style>
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-        }
-
-        body { 
-            background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
-            min-height: 100vh;
-        }
-        .card {
-            border-radius: 14px;
-            border: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 2px solid #e5e7eb;
-            padding: 10px 14px;
-            font-size: 0.95rem;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(91, 134, 229, 0.1);
-        }
-        .btn-success {
-            background: var(--success);
-            border: none;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        .btn-success:hover {
-            background: #059669;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        .strength-bar {
-            width: 100%;
-            height: 6px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .strength-fill {
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-    </style>
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
 
-<body>
+<body class="register-page">
 
-<div class="container d-flex justify-content-center align-items-center vh-100">
+<main class="register-shell">
 
-    <form method="POST" class="card p-4 shadow fade-in" style="width: 360px;" id="formRegister">
-        
-        <h4 class="text-center mb-4 fw-bold">
-            <i class="bi bi-person-plus"></i> Register
-        </h4>
-<!-- FLASH MESSAGE -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% for category, message in messages %}
-    <div class="alert alert-{{ category }} py-2 alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-{% endfor %}
-{% endwith %}
+    <!-- PANEL KIRI -->
+    <section class="register-brand-panel">
 
-        <!-- NAMA LENGKAP -->
-<div class="mb-3">
-    <label class="form-label fw-600">Nama Lengkap</label>
-    <input name="username"
-           id="username"
-           class="form-control"
-           placeholder="Contoh: Budi Santoso"
-           required>
-    <small class="text-muted">
-        Wajib menggunakan nama lengkap sesuai data karyawan, minimal 2 kata.
-    </small>
-</div>
+        <div class="register-brand">
+            <div class="login-brand-mark">S</div>
 
-        <!-- PASSWORD -->
-        <div class="mb-3">
-            <label class="form-label fw-600">Password</label>
-            <div class="input-group">
-                <input type="password" name="password" id="password" class="form-control" required>
-                <button type="button" class="btn btn-outline-secondary" id="togglePass">
-                    <i class="bi bi-eye"></i>
+            <div>
+                <strong>Severli</strong>
+                <span>Internal Workspace</span>
+            </div>
+        </div>
+
+        <div class="register-message">
+
+            <div class="secure-pill">
+                <i class="bi bi-person-check"></i>
+                Pendaftaran karyawan
+            </div>
+
+            <h1>
+                Satu akun untuk seluruh kebutuhan internal.
+            </h1>
+
+            <p>
+                Setelah akun dibuat, HRD akan melengkapi data karyawan,
+                menetapkan role, join date, dan hak akses sistem.
+            </p>
+
+        </div>
+
+        <div class="login-footnote">
+            SEVERLI INTERNAL · 2026
+        </div>
+
+    </section>
+
+    <!-- PANEL FORM -->
+    <section class="register-form-panel">
+
+        <div class="register-card">
+
+            <a href="/login" class="back-to-login">
+                <i class="bi bi-arrow-left"></i>
+                Kembali ke login
+            </a>
+
+            <p class="login-eyebrow">PENDAFTARAN AKUN</p>
+
+            <h2>Buat akun karyawan</h2>
+
+            <p class="register-subtitle">
+                Masukkan data dasar untuk membuat akun Severli Internal.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="login-alert login-alert-{{ category }}">
+                        <i class="bi bi-info-circle"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endwith %}
+
+            <form method="POST" id="registerForm">
+
+                <!-- NAMA LENGKAP -->
+                <label class="register-field">
+                    <span>Nama lengkap <b>*</b></span>
+
+                    <div class="login-input-wrapper">
+                        <i class="bi bi-person"></i>
+
+                        <input
+                            type="text"
+                            name="username"
+                            id="registerUsername"
+                            placeholder="Contoh: Budi Santoso"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+
+                    <small>
+                        Gunakan nama lengkap sesuai data karyawan,
+                        minimal dua kata.
+                    </small>
+                </label>
+
+                <!-- DIVISI -->
+                <label class="register-field">
+                    <span>Divisi <b>*</b></span>
+
+                    <div class="login-input-wrapper">
+                        <i class="bi bi-building"></i>
+
+                        <select name="divisi" id="division" required>
+                            <option value="">Pilih divisi</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Operational">Operational</option>
+                            <option value="Hostlive">Hostlive</option>
+                            <option value="Creative">Creative</option>
+                        </select>
+                    </div>
+                </label>
+
+                <!-- PASSWORD -->
+                <label class="register-field">
+                    <span>Kata sandi <b>*</b></span>
+
+                    <div class="login-input-wrapper">
+                        <i class="bi bi-lock"></i>
+
+                        <input
+                            type="password"
+                            name="password"
+                            id="registerPassword"
+                            placeholder="Minimal 6 karakter"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            id="toggleRegisterPassword"
+                            aria-label="Tampilkan kata sandi"
+                        >
+                            <i class="bi bi-eye" id="registerPasswordIcon"></i>
+                        </button>
+                    </div>
+                </label>
+
+                <!-- KONFIRMASI PASSWORD -->
+                <label class="register-field">
+                    <span>Konfirmasi kata sandi <b>*</b></span>
+
+                    <div class="login-input-wrapper">
+                        <i class="bi bi-shield-lock"></i>
+
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            placeholder="Ulangi kata sandi"
+                            autocomplete="new-password"
+                            required
+                        >
+                    </div>
+
+                    <small id="passwordMessage"></small>
+                </label>
+
+                <div class="register-info">
+                    <i class="bi bi-info-circle"></i>
+
+                    <p>
+                        Role, tanggal bergabung, kuota cuti, dan data pribadi
+                        akan dilengkapi oleh Admin atau HRD.
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    class="login-submit"
+                    id="registerButton"
+                >
+                    <span>Kirim pendaftaran</span>
+                    <i class="bi bi-arrow-right"></i>
                 </button>
-            </div>
 
-            <!-- strength -->
-            <div class="strength-bar mt-2">
-                <div id="strengthFill" class="strength-fill bg-danger"></div>
-            </div>
-            <small id="strengthText" class="text-muted"></small>
+            </form>
+
         </div>
 
-        <!-- CONFIRM -->
-        <div class="mb-3">
-            <label class="form-label fw-600">Konfirmasi Password</label>
-            <input type="password" id="confirmPassword" class="form-control" required>
-            <small id="matchText"></small>
-        </div>
+    </section>
 
-        <!-- DIVISI -->
-        <div class="mb-4">
-            <label class="form-label fw-600">Divisi</label>
-            <select name="divisi" class="form-control" required>
-                <option value="">-- Pilih Divisi --</option>
-                <option>Marketing</option>
-                <option>Operational</option>
-                <option>Hostlive</option>
-                <option>Creative</option>
-                <option>Accounting</option>
-                <option>IT Support</option>
-                <option>HRD</option>
-            </select>
-        </div>
-
-        <!-- BUTTON -->
-        <button class="btn btn-success w-100 shadow-sm" id="btnSubmit">
-            <i class="bi bi-check-circle"></i> Register
-        </button>
-
-        <!-- LINK -->
-        <a href="/login" class="text-center mt-3 d-block text-decoration-none">
-            Sudah punya akun? <strong>Login</strong>
-        </a>
-
-    </form>
-
-</div>
+</main>
 
 <script>
-const pass = document.getElementById("password");
-const username = document.getElementById("username");
-const confirmPass = document.getElementById("confirmPassword");
-const matchText = document.getElementById("matchText");
-const strengthFill = document.getElementById("strengthFill");
-const strengthText = document.getElementById("strengthText");
-const toggle = document.getElementById("togglePass");
-const form = document.getElementById("formRegister");
+    const registerForm = document.getElementById("registerForm");
+    const registerUsername = document.getElementById("registerUsername");
+    const registerPassword = document.getElementById("registerPassword");
+    const confirmPassword = document.getElementById("confirmPassword");
+    const passwordMessage = document.getElementById("passwordMessage");
+    const registerButton = document.getElementById("registerButton");
 
-toggle.addEventListener("click", () => {
-    pass.type = pass.type === "password" ? "text" : "password";
-});
+    const toggleRegisterPassword =
+        document.getElementById("toggleRegisterPassword");
 
-pass.addEventListener("input", () => {
-    const val = pass.value;
-    let score = 0;
+    const registerPasswordIcon =
+        document.getElementById("registerPasswordIcon");
 
-    if (val.length >= 6) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
+    toggleRegisterPassword.addEventListener("click", function () {
+        const passwordIsHidden =
+            registerPassword.type === "password";
 
-    const widths = ["25%", "50%", "75%", "100%"];
-    const colors = ["bg-danger", "bg-warning", "bg-info", "bg-success"];
-    const texts = ["Lemah", "Lumayan", "Kuat", "Sangat Kuat"];
+        registerPassword.type =
+            passwordIsHidden ? "text" : "password";
 
-    if (score > 0) {
-        strengthFill.style.width = widths[score-1];
-        strengthFill.className = "strength-fill " + colors[score-1];
-        strengthText.innerText = texts[score-1];
-    } else {
-        strengthFill.style.width = "0%";
-        strengthText.innerText = "";
-    }
-});
+        confirmPassword.type =
+            passwordIsHidden ? "text" : "password";
 
-confirmPass.addEventListener("input", () => {
-    if (confirmPass.value !== pass.value) {
-        matchText.innerText = "Password tidak sama";
-        matchText.className = "text-danger";
-    } else {
-        matchText.innerText = "Password cocok";
-        matchText.className = "text-success";
-    }
-});
+        registerPasswordIcon.className =
+            passwordIsHidden
+                ? "bi bi-eye-slash"
+                : "bi bi-eye";
+    });
 
-form.addEventListener("submit", (e) => {
-    const fullName = username.value.trim().replace(/\s+/g, " ");
+    function checkPasswordMatch() {
+        if (!confirmPassword.value) {
+            passwordMessage.textContent = "";
+            passwordMessage.className = "";
+            return;
+        }
 
-    if (fullName.split(" ").length < 2) {
-        e.preventDefault();
-        alert("Nama wajib menggunakan nama lengkap minimal 2 kata.");
-        return;
+        if (registerPassword.value === confirmPassword.value) {
+            passwordMessage.textContent = "Kata sandi sudah sama.";
+            passwordMessage.className = "password-match-success";
+        } else {
+            passwordMessage.textContent = "Kata sandi belum sama.";
+            passwordMessage.className = "password-match-error";
+        }
     }
 
-    username.value = fullName;
+    registerPassword.addEventListener("input", checkPasswordMatch);
+    confirmPassword.addEventListener("input", checkPasswordMatch);
 
-    if (confirmPass.value !== pass.value) {
-        e.preventDefault();
-        alert("Password tidak sama!");
-        return;
-    }
+    registerForm.addEventListener("submit", function (event) {
+        const normalizedName =
+            registerUsername.value.trim().replace(/\s+/g, " ");
 
-    document.getElementById("btnSubmit").innerText = "Loading...";
-});
+        registerUsername.value = normalizedName;
+
+        if (normalizedName.split(" ").length < 2) {
+            event.preventDefault();
+
+            alert(
+                "Nama lengkap wajib terdiri dari minimal dua kata."
+            );
+
+            registerUsername.focus();
+            return;
+        }
+
+        if (registerPassword.value.length < 6) {
+            event.preventDefault();
+
+            alert("Kata sandi minimal 6 karakter.");
+
+            registerPassword.focus();
+            return;
+        }
+
+        if (registerPassword.value !== confirmPassword.value) {
+            event.preventDefault();
+
+            alert("Konfirmasi kata sandi belum sama.");
+
+            confirmPassword.focus();
+            return;
+        }
+
+        registerButton.disabled = true;
+
+        registerButton.innerHTML = `
+            <span class="login-spinner"></span>
+            <span>Mengirim...</span>
+        `;
+    });
 </script>
 
 </body>

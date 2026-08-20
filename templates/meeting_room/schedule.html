@@ -1,13 +1,312 @@
 {% extends "meeting_room/layout.html" %}
+
 {% block title %}Jadwal Ruangan{% endblock %}
-{% block page_title %}<div class="page-header"><h4><i class="bi bi-calendar-week"></i> Jadwal Ruang Meeting</h4></div>{% endblock %}
+{% block header_title %}Jadwal Ruangan{% endblock %}
+{% block page_title %}{% endblock %}
+
 {% block content %}
-<div class="card mb-3"><div class="card-body"><form method="GET" class="row g-2 align-items-end"><div class="col-md-3"><label class="form-label small">Tanggal</label><input type="date" class="form-control form-control-sm" name="date" value="{{ current_date }}"></div><div class="col-md-3"><label class="form-label small">Ruangan</label><select class="form-select form-select-sm" name="room_id"><option value="">Semua Ruangan</option>{% for room in rooms %}<option value="{{ room.id }}" {{ 'selected' if room_id == room.id }}>{{ room.room_name }}</option>{% endfor %}</select></div><div class="col-md-3"><label class="form-label small">Status</label><select class="form-select form-select-sm" name="status"><option value="Approved" {{ 'selected' if status == 'Approved' }}>Approved</option><option value="Pending" {{ 'selected' if status == 'Pending' }}>Pending</option><option value="All" {{ 'selected' if status == 'All' }}>Semua</option></select></div><div class="col-md-3 d-flex gap-2"><button class="btn btn-sm btn-primary flex-fill">Filter</button><a href="/meeting-room/schedule" class="btn btn-sm btn-outline-secondary">Reset</a></div></form></div></div>
-<div class="card"><div class="card-body">
-{% if bookings %}
-<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Tanggal</th><th>Judul</th><th>Pemohon</th><th>Divisi</th><th>Ruangan</th><th>Jam</th><th>Status</th></tr></thead><tbody>{% for b in bookings %}{% set pemohon = meeting_get_user(b.user_id) %}<tr><td>{{ b.meeting_date }}</td><td>{{ b.title }}</td><td>{{ meeting_display_name(pemohon) }}</td><td>{{ b.division }}</td><td>{{ b.room.room_name if b.room else '-' }}</td><td>{{ b.start_time.strftime('%H:%M') }} - {{ b.end_time.strftime('%H:%M') }}</td><td><span class="badge {{ b.get_status_badge_class() }}">{{ b.status }}</span></td></tr>{% endfor %}</tbody></table></div>
-{% else %}
-<div class="text-center py-5 text-muted"><i class="bi bi-calendar-week" style="font-size:4rem"></i><h5 class="mt-3">Tidak ada jadwal</h5></div>
-{% endif %}
-</div></div>
+<section class="leave-page-heading">
+    <div>
+        <span class="leave-eyebrow">Kalender Meeting</span>
+        <h1>Jadwal Ruang Meeting</h1>
+        <p>
+            Periksa ketersediaan ruangan sebelum mengajukan booking baru.
+        </p>
+    </div>
+
+    <a href="/meeting-room/form"
+       class="leave-primary-button">
+        <i class="bi bi-plus-lg"></i>
+        Ajukan Booking
+    </a>
+</section>
+
+<section class="meeting-schedule-stats">
+    <div class="meeting-schedule-stat">
+        <div class="meeting-stat-icon blue">
+            <i class="bi bi-calendar-week"></i>
+        </div>
+        <div>
+            <span>Total jadwal minggu ini</span>
+            <strong>{{ bookings|length }}</strong>
+        </div>
+    </div>
+
+    <div class="meeting-schedule-stat">
+        <div class="meeting-stat-icon green">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+            <span>Sudah disetujui</span>
+            <strong>{{ approved_count }}</strong>
+        </div>
+    </div>
+
+    <div class="meeting-schedule-stat">
+        <div class="meeting-stat-icon orange">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+            <span>Menunggu approval</span>
+            <strong>{{ pending_count }}</strong>
+        </div>
+    </div>
+
+    <div class="meeting-schedule-stat">
+        <div class="meeting-stat-icon purple">
+            <i class="bi bi-door-open"></i>
+        </div>
+        <div>
+            <span>Ruangan aktif</span>
+            <strong>{{ rooms|length }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="meeting-schedule-filter">
+    <div class="meeting-filter-heading">
+        <div>
+            <i class="bi bi-funnel"></i>
+            <span>
+                <strong>Filter jadwal</strong>
+                <small>Pilih minggu, ruangan, dan status</small>
+            </span>
+        </div>
+
+        <a href="/meeting-room/schedule"
+           class="meeting-reset-filter">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            Reset
+        </a>
+    </div>
+
+    <form method="GET" class="meeting-filter-form">
+        <div class="leave-field">
+            <label for="date">Pilih tanggal</label>
+
+            <div class="leave-input-wrapper">
+                <i class="bi bi-calendar3"></i>
+                <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    value="{{ current_date.isoformat() }}">
+            </div>
+        </div>
+
+        <div class="leave-field">
+            <label for="room_id">Ruangan</label>
+
+            <div class="leave-input-wrapper">
+                <i class="bi bi-building"></i>
+                <select id="room_id" name="room_id">
+                    <option value="">Semua ruangan</option>
+
+                    {% for room in rooms %}
+                    <option
+                        value="{{ room.id }}"
+                        {% if room_id == room.id %}selected{% endif %}>
+                        {{ room.room_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="leave-field">
+            <label for="status">Status booking</label>
+
+            <div class="leave-input-wrapper">
+                <i class="bi bi-check-circle"></i>
+                <select id="status" name="status">
+                    <option
+                        value="Approved"
+                        {% if status == 'Approved' %}selected{% endif %}>
+                        Disetujui
+                    </option>
+
+                    <option
+                        value="Pending"
+                        {% if status == 'Pending' %}selected{% endif %}>
+                        Menunggu
+                    </option>
+
+                    <option
+                        value="All"
+                        {% if status == 'All' %}selected{% endif %}>
+                        Semua status
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit"
+                class="leave-primary-button meeting-filter-button">
+            <i class="bi bi-search"></i>
+            Tampilkan
+        </button>
+    </form>
+</section>
+
+<section class="meeting-week-panel">
+    <div class="meeting-week-navigation">
+        <div>
+            <span>Jadwal minggu</span>
+            <h2>{{ week_label }}</h2>
+        </div>
+
+        <div class="meeting-week-buttons">
+            <a
+                href="/meeting-room/schedule?date={{ previous_week }}&room_id={{ room_id or '' }}&status={{ status }}"
+                title="Minggu sebelumnya">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+
+            <a
+                href="/meeting-room/schedule?date={{ today_iso }}&room_id={{ room_id or '' }}&status={{ status }}"
+                class="meeting-today-button">
+                Hari ini
+            </a>
+
+            <a
+                href="/meeting-room/schedule?date={{ next_week }}&room_id={{ room_id or '' }}&status={{ status }}"
+                title="Minggu berikutnya">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="meeting-calendar-scroll">
+        <div class="meeting-week-grid">
+            {% for day in week_days %}
+            <article class="
+                meeting-day-column
+                {% if day.is_today %}is-today{% endif %}
+                {% if day.is_selected %}is-selected{% endif %}
+            ">
+                <a
+                    href="/meeting-room/schedule?date={{ day.date_iso }}&room_id={{ room_id or '' }}&status={{ status }}"
+                    class="meeting-day-heading">
+
+                    <span>{{ day.day_name }}</span>
+
+                    <strong>{{ day.date_number }}</strong>
+
+                    <small>{{ day.month_name }}</small>
+
+                    {% if day.is_today %}
+                    <em>Hari ini</em>
+                    {% endif %}
+                </a>
+
+                <div class="meeting-day-bookings">
+                    {% if day.bookings %}
+                        {% for booking in day.bookings %}
+                            {% set pemohon = meeting_get_user(booking.user_id) %}
+
+                            <a
+                                href="/meeting-room/detail/{{ booking.id }}"
+                                class="meeting-calendar-booking status-{{ booking.status|lower }}">
+
+                                <div class="meeting-booking-time">
+                                    <i class="bi bi-clock"></i>
+                                    {{ booking.start_time.strftime('%H:%M') }}
+                                    –
+                                    {{ booking.end_time.strftime('%H:%M') }}
+                                </div>
+
+                                <strong class="meeting-booking-title">
+                                    {{ booking.title }}
+                                </strong>
+
+                                <div class="meeting-booking-room">
+                                    <i class="bi bi-door-open"></i>
+                                    {{ booking.room.room_name if booking.room else '-' }}
+                                </div>
+
+                                <div class="meeting-booking-requester">
+                                    <span>
+                                        {{ meeting_display_name(pemohon) }}
+                                    </span>
+
+                                    <small>{{ booking.division }}</small>
+                                </div>
+
+                                <div class="meeting-booking-footer">
+                                    <span>
+                                        <i class="bi bi-people"></i>
+                                        {{ booking.participant_count }}
+                                    </span>
+
+                                    <span class="meeting-calendar-status">
+                                        {% if booking.status == 'Approved' %}
+                                            Disetujui
+                                        {% elif booking.status == 'Pending' %}
+                                            Menunggu
+                                        {% elif booking.status == 'Rejected' %}
+                                            Ditolak
+                                        {% else %}
+                                            Dibatalkan
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="meeting-empty-day">
+                            <i class="bi bi-calendar2"></i>
+                            <span>Tidak ada jadwal</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if not bookings %}
+    <div class="meeting-empty-week">
+        <div>
+            <i class="bi bi-calendar2-check"></i>
+        </div>
+
+        <h3>Belum ada jadwal pada minggu ini</h3>
+
+        <p>
+            Ruangan masih tersedia atau tidak ada data yang cocok dengan
+            filter yang dipilih.
+        </p>
+
+        <a href="/meeting-room/form"
+           class="leave-primary-button">
+            <i class="bi bi-plus-lg"></i>
+            Ajukan Booking
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="meeting-status-legend">
+        <span>Keterangan:</span>
+
+        <div>
+            <i class="approved"></i>
+            Disetujui
+        </div>
+
+        <div>
+            <i class="pending"></i>
+            Menunggu
+        </div>
+
+        <div>
+            <i class="rejected"></i>
+            Ditolak
+        </div>
+
+        <div>
+            <i class="cancelled"></i>
+            Dibatalkan
+        </div>
+    </div>
+</section>
 {% endblock %}

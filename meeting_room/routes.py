@@ -33,7 +33,10 @@ def is_supervisor(user):
 
 
 def is_hrd(user):
-    return bool(user and user.role == 'hrd')
+    return bool(
+        user and
+        user.role in ['admin', 'hrd']
+    )
 
 
 def display_name(user):
@@ -49,7 +52,7 @@ def get_user_by_id(user_id):
 
 
 def get_min_booking_days():
-    raw_value = os.getenv('MIN_BOOKING_DAYS', '14')
+    raw_value = os.getenv('MIN_BOOKING_DAYS', '7')
     try:
         return int(raw_value)
     except ValueError:
@@ -119,6 +122,18 @@ def inject_meeting_room_helpers():
         'meeting_is_hrd': is_hrd,
     }
 
+@meeting_room_bp.route('/')
+def meeting_room_home():
+    if not require_login():
+        return redirect('/login')
+
+    user = get_current_user()
+
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    return redirect('/meeting-room/list')
 
 @meeting_room_bp.route('/list')
 def list_booking():
@@ -126,29 +141,60 @@ def list_booking():
         return redirect('/login')
 
     user = get_current_user()
-    status_filter = request.args.get('status', '')
-    tanggal_filter = request.args.get('tanggal', '')
+
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    status_filter = request.args.get('status', '').strip()
+    tanggal_filter = request.args.get('tanggal', '').strip()
     room_id_filter = request.args.get('room_id', type=int)
 
-    query = RoomBooking.query.order_by(RoomBooking.created_at.desc())
+    query = RoomBooking.query.order_by(
+        RoomBooking.created_at.desc()
+    )
 
+    # Karyawan hanya melihat booking sendiri.
+    # Admin / HRD / Direktur bisa melihat semua.
     if not is_supervisor(user):
-        query = query.filter_by(user_id=user.id)
+        query = query.filter(
+            RoomBooking.user_id == user.id
+        )
 
     if status_filter:
-        query = query.filter_by(status=status_filter)
+        query = query.filter(
+            RoomBooking.status == status_filter
+        )
 
     if tanggal_filter:
         try:
-            query = query.filter_by(meeting_date=parse_date(tanggal_filter))
+            meeting_date = datetime.strptime(
+                tanggal_filter,
+                '%Y-%m-%d'
+            ).date()
+
+            query = query.filter(
+                RoomBooking.meeting_date == meeting_date
+            )
+
         except ValueError:
-            pass
+            flash(
+                'Format tanggal filter tidak valid.',
+                'warning'
+            )
 
     if room_id_filter:
-        query = query.filter_by(room_id=room_id_filter)
+        query = query.filter(
+            RoomBooking.room_id == room_id_filter
+        )
 
     bookings = query.all()
-    rooms = MeetingRoom.get_active_rooms()
+
+    rooms = MeetingRoom.query.filter_by(
+        is_active=True
+    ).order_by(
+        MeetingRoom.room_name.asc()
+    ).all()
 
     return render_template(
         'meeting_room/list.html',
@@ -261,24 +307,93 @@ def approval_list():
         return redirect('/login')
 
     user = get_current_user()
+
     if not is_supervisor(user):
-        flash('Kamu tidak punya akses ke halaman approval.', 'danger')
+        flash(
+            'Kamu tidak punya akses ke halaman approval.',
+            'danger'
+        )
         return redirect('/meeting-room/list')
 
-    status_filter = request.args.get('status', RoomBooking.STATUS_PENDING)
+    allowed_filters = (
+        RoomBooking.VALID_STATUSES + ['All']
+    )
+
+    status_filter = request.args.get(
+        'status',
+        RoomBooking.STATUS_PENDING
+    )
+
+    if status_filter not in allowed_filters:
+        status_filter = RoomBooking.STATUS_PENDING
+
     query = RoomBooking.query
 
-    if status_filter and status_filter != 'All':
-        query = query.filter_by(status=status_filter)
+    if status_filter != 'All':
+        query = query.filter(
+            RoomBooking.status == status_filter
+        )
 
-    bookings = query.order_by(RoomBooking.created_at.asc()).all()
+    if status_filter == RoomBooking.STATUS_PENDING:
+        query = query.order_by(
+            RoomBooking.created_at.asc()
+        )
+    else:
+        query = query.order_by(
+            RoomBooking.created_at.desc()
+        )
+
+    bookings = query.all()
+
+    # Mengambil user sekaligus agar halaman lebih ringan
+    user_ids = {
+        booking.user_id
+        for booking in bookings
+        if booking.user_id
+    }
+
+    if user_ids:
+        booking_users = User.query.filter(
+            User.id.in_(user_ids)
+        ).all()
+
+        users_by_id = {
+            booking_user.id: booking_user
+            for booking_user in booking_users
+        }
+    else:
+        users_by_id = {}
+
+    status_counts = {
+        RoomBooking.STATUS_PENDING:
+            RoomBooking.query.filter_by(
+                status=RoomBooking.STATUS_PENDING
+            ).count(),
+
+        RoomBooking.STATUS_APPROVED:
+            RoomBooking.query.filter_by(
+                status=RoomBooking.STATUS_APPROVED
+            ).count(),
+
+        RoomBooking.STATUS_REJECTED:
+            RoomBooking.query.filter_by(
+                status=RoomBooking.STATUS_REJECTED
+            ).count(),
+
+        RoomBooking.STATUS_CANCELLED:
+            RoomBooking.query.filter_by(
+                status=RoomBooking.STATUS_CANCELLED
+            ).count(),
+    }
 
     return render_template(
         'meeting_room/approval.html',
         user=user,
         bookings=bookings,
-        statuses=RoomBooking.VALID_STATUSES,
+        users_by_id=users_by_id,
         current_filter=status_filter,
+        status_counts=status_counts,
+        total_count=RoomBooking.query.count(),
     )
 
 
@@ -461,25 +576,140 @@ def schedule():
         return redirect('/login')
 
     user = get_current_user()
+
     current_date_str = request.args.get('date', '')
     room_id = request.args.get('room_id', type=int)
-    status = request.args.get('status', RoomBooking.STATUS_APPROVED)
+    status = request.args.get(
+        'status',
+        RoomBooking.STATUS_APPROVED
+    )
 
     try:
-        current_date = parse_date(current_date_str) if current_date_str else date.today()
+        current_date = (
+            parse_date(current_date_str)
+            if current_date_str
+            else date.today()
+        )
     except ValueError:
         current_date = date.today()
 
-    query = RoomBooking.query.filter(RoomBooking.meeting_date == current_date)
+    # Menentukan hari Senin dan Minggu pada minggu aktif
+    week_start = current_date - timedelta(
+        days=current_date.weekday()
+    )
+    week_end = week_start + timedelta(days=6)
+
+    query = RoomBooking.query.filter(
+        RoomBooking.meeting_date >= week_start,
+        RoomBooking.meeting_date <= week_end
+    )
 
     if room_id:
-        query = query.filter(RoomBooking.room_id == room_id)
+        query = query.filter(
+            RoomBooking.room_id == room_id
+        )
 
     if status and status != 'All':
-        query = query.filter(RoomBooking.status == status)
+        query = query.filter(
+            RoomBooking.status == status
+        )
 
-    bookings = query.order_by(RoomBooking.start_time.asc()).all()
+    bookings = query.order_by(
+        RoomBooking.meeting_date.asc(),
+        RoomBooking.start_time.asc()
+    ).all()
+
     rooms = MeetingRoom.get_active_rooms()
+
+    # Mengelompokkan booking berdasarkan tanggal
+    bookings_by_date = {
+        week_start + timedelta(days=index): []
+        for index in range(7)
+    }
+
+    for booking in bookings:
+        if booking.meeting_date in bookings_by_date:
+            bookings_by_date[booking.meeting_date].append(
+                booking
+            )
+
+    day_names = [
+        'Senin',
+        'Selasa',
+        'Rabu',
+        'Kamis',
+        'Jumat',
+        'Sabtu',
+        'Minggu'
+    ]
+
+    month_names = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember'
+    ]
+
+    week_days = []
+
+    for index in range(7):
+        day_date = week_start + timedelta(days=index)
+
+        week_days.append({
+            'date': day_date,
+            'date_iso': day_date.isoformat(),
+            'day_name': day_names[index],
+            'date_number': day_date.day,
+            'month_name': month_names[day_date.month - 1],
+            'is_today': day_date == date.today(),
+            'is_selected': day_date == current_date,
+            'bookings': bookings_by_date[day_date]
+        })
+
+    if (
+        week_start.month == week_end.month
+        and week_start.year == week_end.year
+    ):
+        week_label = (
+            f'{week_start.day}–{week_end.day} '
+            f'{month_names[week_end.month - 1]} '
+            f'{week_end.year}'
+        )
+    elif week_start.year == week_end.year:
+        week_label = (
+            f'{week_start.day} '
+            f'{month_names[week_start.month - 1]} – '
+            f'{week_end.day} '
+            f'{month_names[week_end.month - 1]} '
+            f'{week_end.year}'
+        )
+    else:
+        week_label = (
+            f'{week_start.day} '
+            f'{month_names[week_start.month - 1]} '
+            f'{week_start.year} – '
+            f'{week_end.day} '
+            f'{month_names[week_end.month - 1]} '
+            f'{week_end.year}'
+        )
+
+    approved_count = sum(
+        1 for booking in bookings
+        if booking.status == RoomBooking.STATUS_APPROVED
+    )
+
+    pending_count = sum(
+        1 for booking in bookings
+        if booking.status == RoomBooking.STATUS_PENDING
+    )
 
     return render_template(
         'meeting_room/schedule.html',
@@ -489,6 +719,13 @@ def schedule():
         current_date=current_date,
         room_id=room_id,
         status=status,
+        week_days=week_days,
+        week_label=week_label,
+        previous_week=(week_start - timedelta(days=7)).isoformat(),
+        next_week=(week_start + timedelta(days=7)).isoformat(),
+        today_iso=date.today().isoformat(),
+        approved_count=approved_count,
+        pending_count=pending_count,
     )
 
 

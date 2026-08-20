@@ -1,430 +1,924 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manajemen User</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Poppins Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-        }
-        body { background: #f8fafc; padding-top: 56px; }
-        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important; }
-        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px); background: white; transition: 0.3s; z-index: 999; padding-top: 20px; box-shadow: 4px 0 12px rgba(0,0,0,0.08); }
-        #sidebar.active { left: 0; }
-        #sidebar a { display: block; color: var(--dark); padding: 12px 20px; text-decoration: none; border-left: 4px solid transparent; margin: 5px 0; transition: all 0.2s ease; }
-        #sidebar a:hover { background: var(--light); border-left-color: var(--primary); color: var(--primary); }
-        #mainContent { margin-left: 0; transition: 0.3s; padding: 20px; }
-        #mainContent.shift { margin-left: 250px; }
-        .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .table thead { background: var(--light); }
-    </style>
-</head>
-<body>
+{% extends "base_izin.html" %}
 
-<nav class="navbar navbar-dark px-4">
-    <button class="btn btn-light btn-sm" onclick="toggleSidebar()">☰</button>
-    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
-    <div class="ms-auto text-white">
-        {{ current_user.username }} ({{ current_user.role }})
-        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
+{% block title %}Manajemen User{% endblock %}
+
+{% block header_title %}
+    Manajemen User
+{% endblock %}
+
+{% block content %}
+
+<!-- HEADING -->
+<section class="dashboard-page-heading">
+
+    <div>
+        <p class="dashboard-eyebrow">
+            ADMINISTRASI
+        </p>
+
+        <h1>Manajemen user</h1>
+
+        <p>
+            Kelola identitas, role, divisi, join date,
+            dan akses pengguna.
+        </p>
     </div>
-</nav>
 
-<div id="sidebar">
-    <a href="/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
-    <a href="/semua_izin"><i class="bi bi-list-check"></i> Semua Izin</a>
-    <a href="/approval"><i class="bi bi-hourglass-split"></i> Pending</a>
-    <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
-    <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
-</div>
+    <div class="user-heading-actions">
 
-<div id="mainContent" class="container-fluid mt-4 px-4">
-    
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold"><i class="bi bi-people"></i> Manajemen User</h4>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            + Tambah User
+        <a
+            href="/manage_quota"
+            class="dashboard-outline-button"
+        >
+            <i class="bi bi-calendar2-check"></i>
+            Kelola Kuota
+        </a>
+
+        <button
+            type="button"
+            class="dashboard-primary-button"
+            onclick="openUserModal('addUserModal')"
+        >
+            <i class="bi bi-person-plus"></i>
+            Tambah User
         </button>
+
     </div>
-    
-    <!-- FLASH MESSAGE -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+</section>
+
+<!-- STATISTIK -->
+<section class="user-stat-grid">
+
+    <article>
+        <div class="user-stat-icon user-stat-indigo">
+            <i class="bi bi-people"></i>
         </div>
-    {% endfor %}
-    {% endwith %}
-    
-    <!-- TABLE USERS -->
-<div class="card p-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
+
+        <div>
+            <span>Total pengguna</span>
+            <strong>{{ users|length }}</strong>
+        </div>
+    </article>
+
+    <article>
+        <div class="user-stat-icon user-stat-blue">
+            <i class="bi bi-person"></i>
+        </div>
+
+        <div>
+            <span>Karyawan</span>
+
+            <strong>
+                {{
+                    users
+                    | selectattr('role', 'equalto', 'karyawan')
+                    | list
+                    | length
+                }}
+            </strong>
+        </div>
+    </article>
+
+    <article>
+        <div class="user-stat-icon user-stat-green">
+            <i class="bi bi-shield-check"></i>
+        </div>
+
+        <div>
+            <span>Akun khusus</span>
+
+            <strong>
+                {{
+                    (users|length) -
+                    (
+                        users
+                        | selectattr('role', 'equalto', 'karyawan')
+                        | list
+                        | length
+                    )
+                }}
+            </strong>
+        </div>
+    </article>
+
+</section>
+
+<!-- FILTER -->
+<section class="user-toolbar">
+
+    <div class="user-search">
+
+        <i class="bi bi-search"></i>
+
+        <input
+            type="search"
+            id="userSearch"
+            placeholder="Cari nama, username, ID, atau divisi..."
+            autocomplete="off"
+        >
+
+    </div>
+
+    <select id="userRoleFilter">
+        <option value="">Semua role</option>
+        <option value="karyawan">Karyawan</option>
+        <option value="hrd">HRD</option>
+        <option value="admin">Admin / IT</option>
+        <option value="accounting">Accounting</option>
+        <option value="direktur">Direktur</option>
+    </select>
+
+    <select id="userDivisionFilter">
+        <option value="">Semua divisi</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Operational">Operational</option>
+        <option value="Hostlive">Hostlive</option>
+        <option value="Creative">Creative</option>
+        <option value="Accounting">Accounting</option>
+        <option value="IT Support">IT Support</option>
+        <option value="HRD">HRD</option>
+        <option value="Direksi">Direksi</option>
+    </select>
+
+</section>
+
+<!-- TABLE -->
+<section class="user-panel">
+
+    <div class="user-panel-header">
+
+        <div>
+            <h2>Data pengguna</h2>
+
+            <p>
+                <span id="visibleUserCount">{{ users|length }}</span>
+                dari {{ users|length }} pengguna ditampilkan.
+            </p>
+        </div>
+
+        <div class="records-total-badge">
+            <i class="bi bi-database"></i>
+            {{ users|length }} user
+        </div>
+
+    </div>
+
+    <div class="dashboard-table-wrapper">
+
+        <table class="dashboard-table user-table">
+
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Username Login</th>
-                    <th>Nama Lengkap</th>
-                    <th>Tempat Lahir</th>
-                    <th>Tanggal Lahir</th>
-                    <th>Join Date</th>
+                    <th>Username login</th>
+                    <th>Nama lengkap</th>
+                    <th>Tempat/Tanggal lahir</th>
+                    <th>Join date</th>
                     <th>Role</th>
                     <th>Divisi</th>
+                    <th>Kuota</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
 
-            <tbody>
-            {% for u in users %}
-                <tr>
-                    <td><strong>#{{ u.id }}</strong></td>
-                    <td>{{ u.username }}</td>
-                    <td>{{ u.nama_lengkap or '-' }}</td>
-                    <td>{{ u.tempat_lahir or '-' }}</td>
-                    <td>{{ u.tanggal_lahir.strftime('%d/%m/%Y') if u.tanggal_lahir else '-' }}</td>
-                    <td>{{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}</td>
-                    <td><span class="badge bg-info">{{ u.role }}</span></td>
-                    <td>{{ u.divisi }}</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
-                                data-bs-target="#editUserModal{{ u.id }}">
-                            Edit Data
-                        </button>
+            <tbody id="userTableBody">
 
-                        {% if current_user.role == 'admin' %}
-                        <button class="btn btn-primary btn-sm mb-1" data-bs-toggle="modal" 
-        data-bs-target="#editUserModal{{ u.id }}">
-    Edit Data
-</button>
+                {% for u in users %}
 
-<button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" 
-        data-bs-target="#resetModal{{ u.id }}">
-    Reset Password
-</button>
-                        {% endif %}
-                    </td>
-                </tr>
+                    <tr
+                        class="user-table-row"
+                        data-search="{{ (
+                            u.id|string ~ ' ' ~
+                            u.username ~ ' ' ~
+                            (u.nama_lengkap or '') ~ ' ' ~
+                            (u.tempat_lahir or '') ~ ' ' ~
+                            (u.divisi or '')
+                        )|lower|e }}"
+                        data-role="{{ u.role|lower|e }}"
+                        data-division="{{ (u.divisi or '')|e }}"
+                    >
 
-                <!-- Modal Edit User -->
-                <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form action="/update_user/{{ u.id }}" method="POST">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Edit Data Diri - {{ u.username }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
+                        <td>
+                            <strong class="user-id">
+                                #{{ u.id }}
+                            </strong>
+                        </td>
 
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Username Login</label>
-                                        <input type="text"
-                                               class="form-control"
-                                               value="{{ u.username }}"
-                                               disabled>
-                                        <small class="text-muted">
-                                            Username login tidak diubah dari sini.
-                                        </small>
-                                    </div>
+                        <td>
+                            <strong class="user-username">
+                                {{ u.username }}
+                            </strong>
+                        </td>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Nama Lengkap</label>
-                                        <input type="text"
-                                               name="nama_lengkap"
-                                               class="form-control"
-                                               value="{{ u.nama_lengkap or '' }}"
-                                               placeholder="Contoh: Muhammad Alfiqih">
-                                    </div>
+                        <td>
+                            {{ u.nama_lengkap or '-' }}
+                        </td>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Tempat Lahir</label>
-                                        <input type="text"
-                                               name="tempat_lahir"
-                                               class="form-control"
-                                               value="{{ u.tempat_lahir or '' }}"
-                                               placeholder="Contoh: Jakarta">
-                                    </div>
+                        <td>
+                            <div class="user-birth-data">
+                                <strong>
+                                    {{ u.tempat_lahir or '-' }}
+                                </strong>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Tanggal Lahir</label>
-                                        <input type="date"
-                                               name="tanggal_lahir"
-                                               class="form-control"
-                                               value="{{ u.tanggal_lahir.strftime('%Y-%m-%d') if u.tanggal_lahir else '' }}">
-                                    </div>
+                                <span>
+                                    {{ u.tanggal_lahir.strftime('%d/%m/%Y') if u.tanggal_lahir else '-' }}
+                                </span>
+                            </div>
+                        </td>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Join Date</label>
-                                        <input type="date"
-                                                name="join_date"
-                                                class="form-control"
-                                                value="{{ u.join_date.strftime('%Y-%m-%d') if u.join_date else '' }}">
-                                    </div>
+                        <td>
+                            <strong class="user-date">
+                                {{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}
+                            </strong>
+                        </td>
 
-                                    {% if current_user.role == 'admin' %}
-                                    <div class="mb-3">
-                                        <label class="form-label">Role</label>
-                                        <select name="role" class="form-control" required>
-                                            <option value="karyawan" {% if u.role == 'karyawan' %}selected{% endif %}>Karyawan</option>
-                                            <option value="hrd" {% if u.role == 'hrd' %}selected{% endif %}>HRD</option>
-                                            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
-                                            <option value="accounting" {% if u.role == 'accounting' %}selected{% endif %}>Accounting</option>
-                                            <option value="direktur" {% if u.role == 'direktur' %}selected{% endif %}>Direktur</option>
-                                        </select>
-                                    </div>
-                                    {% else %}
-                                        <input type="hidden" name="role" value="{{ u.role }}">
-                                    {% endif %}
+                        <td>
+                            <span class="user-role-chip user-role-{{ u.role }}">
+                                {% if u.role == 'admin' %}
+                                    Admin / IT
+                                {% else %}
+                                    {{ u.role|capitalize }}
+                                {% endif %}
+                            </span>
+                        </td>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">Divisi</label>
-                                        <select name="divisi" class="form-control" required>
-                                            <option value="Marketing" {% if u.divisi == 'Marketing' %}selected{% endif %}>Marketing</option>
-                                            <option value="Operational" {% if u.divisi == 'Operational' %}selected{% endif %}>Operational</option>
-                                            <option value="Hostlive" {% if u.divisi == 'Hostlive' %}selected{% endif %}>Hostlive</option>
-                                            <option value="Creative" {% if u.divisi == 'Creative' %}selected{% endif %}>Creative</option>
-                                            <option value="Accounting" {% if u.divisi == 'Accounting' %}selected{% endif %}>Accounting</option>
-                                            <option value="IT Support" {% if u.divisi == 'IT Support' %}selected{% endif %}>IT Support</option>
-                                            <option value="HRD" {% if u.divisi == 'HRD' %}selected{% endif %}>HRD</option>
-                                            <option value="IT" {% if u.divisi == 'IT' %}selected{% endif %}>IT</option>
-                                            <option value="Direksi" {% if u.divisi == 'Direksi' %}selected{% endif %}>Direksi</option>
-                                        </select>
-                                    </div>
-                                </div>
+                        <td>
+                            <span class="admin-division-badge">
+                                {{ u.divisi or '-' }}
+                            </span>
+                        </td>
 
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">
-                                        Simpan Data
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                        <td>
+                            <strong class="user-quota">
+                                {{ u.kuota_cuti or 0 }} hari
+                            </strong>
+                        </td>
 
-                <!-- Modal Edit User -->
-<div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="/update_user/{{ u.id }}" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Data Diri - {{ u.username }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                        <td>
+                            <div class="user-actions">
 
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Username Login</label>
-                        <input type="text" class="form-control" value="{{ u.username }}" disabled>
-                        <small class="text-muted">
-                            Username login tidak diubah dari sini.
-                        </small>
-                    </div>
+                                <button
+                                    type="button"
+                                    class="user-action-button edit"
+                                    data-id="{{ u.id }}"
+                                    data-username="{{ u.username|e }}"
+                                    data-full-name="{{ (u.nama_lengkap or '')|e }}"
+                                    data-birth-place="{{ (u.tempat_lahir or '')|e }}"
+                                    data-birth-date="{{ u.tanggal_lahir.strftime('%Y-%m-%d') if u.tanggal_lahir else '' }}"
+                                    data-join-date="{{ u.join_date.strftime('%Y-%m-%d') if u.join_date else '' }}"
+                                    data-role="{{ u.role|e }}"
+                                    data-division="{{ (u.divisi or '')|e }}"
+                                    onclick="openEditUser(this)"
+                                >
+                                    <i class="bi bi-pencil"></i>
+                                    Edit
+                                </button>
 
-                    <div class="mb-3">
-                        <label class="form-label">Nama Lengkap</label>
-                        <input type="text"
-                               name="nama_lengkap"
-                               class="form-control"
-                               value="{{ u.nama_lengkap or '' }}"
-                               placeholder="Contoh: Muhammad Alfiqih">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Tempat Lahir</label>
-                        <input type="text"
-                               name="tempat_lahir"
-                               class="form-control"
-                               value="{{ u.tempat_lahir or '' }}"
-                               placeholder="Contoh: Jakarta">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Tanggal Lahir</label>
-                        <input type="date"
-                               name="tanggal_lahir"
-                               class="form-control"
-                               value="{{ u.tanggal_lahir.strftime('%Y-%m-%d') if u.tanggal_lahir else '' }}">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Join Date</label>
-                        <input type="date"
-                               name="join_date"
-                               class="form-control"
-                               value="{{ u.join_date.strftime('%Y-%m-%d') if u.join_date else '' }}">
-                    </div>
-
-                    {% if current_user.role == 'admin' %}
-                    <div class="mb-3">
-                        <label class="form-label">Role</label>
-                        <select name="role" class="form-control" required>
-                            <option value="karyawan" {% if u.role == 'karyawan' %}selected{% endif %}>Karyawan</option>
-                            <option value="hrd" {% if u.role == 'hrd' %}selected{% endif %}>HRD</option>
-                            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
-                            <option value="accounting" {% if u.role == 'accounting' %}selected{% endif %}>Accounting</option>
-                            <option value="direktur" {% if u.role == 'direktur' %}selected{% endif %}>Direktur</option>
-                        </select>
-                    </div>
-                    {% else %}
-                        <input type="hidden" name="role" value="{{ u.role }}">
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <label class="form-label">Divisi</label>
-                        <select name="divisi" class="form-control" required>
-                            <option value="Marketing" {% if u.divisi == 'Marketing' %}selected{% endif %}>Marketing</option>
-                            <option value="Operational" {% if u.divisi == 'Operational' %}selected{% endif %}>Operational</option>
-                            <option value="Hostlive" {% if u.divisi == 'Hostlive' %}selected{% endif %}>Hostlive</option>
-                            <option value="Creative" {% if u.divisi == 'Creative' %}selected{% endif %}>Creative</option>
-                            <option value="Accounting" {% if u.divisi == 'Accounting' %}selected{% endif %}>Accounting</option>
-                            <option value="IT Support" {% if u.divisi == 'IT Support' %}selected{% endif %}>IT Support</option>
-                            <option value="HRD" {% if u.divisi == 'HRD' %}selected{% endif %}>HRD</option>
-                            <option value="IT" {% if u.divisi == 'IT' %}selected{% endif %}>IT</option>
-                            <option value="Direksi" {% if u.divisi == 'Direksi' %}selected{% endif %}>Direksi</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">
-                        Simpan Data
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-                <!-- Modal Reset Password -->
-                <div class="modal fade" id="resetModal{{ u.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form action="/reset_password/{{ u.id }}" method="POST">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Reset Password - {{ u.username }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-
-                                <div class="modal-body">
-                                    <label class="form-label">Password Baru</label>
-                                    <input type="text" name="new_password" class="form-control" required>
-                                </div>
-
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-warning">
+                                {% if current_user.role == 'admin' %}
+                                    <button
+                                        type="button"
+                                        class="user-action-button reset"
+                                        data-id="{{ u.id }}"
+                                        data-name="{{ (u.nama_lengkap or u.username)|e }}"
+                                        onclick="openResetPassword(this)"
+                                    >
+                                        <i class="bi bi-key"></i>
                                         Reset
                                     </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
+                                {% endif %}
+
+                            </div>
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
             </tbody>
+
         </table>
+
     </div>
-</div>
 
-<!-- Modal Tambah User -->
-<div class="modal fade" id="addUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="/add_user" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Tambah User Baru</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" name="username" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-    <label class="form-label">Nama Lengkap</label>
-    <input type="text"
-           name="nama_lengkap"
-           class="form-control"
-           placeholder="Boleh dikosongkan dulu">
-</div>
+    <div class="user-filter-empty" id="userFilterEmpty" hidden>
+        <i class="bi bi-search"></i>
+        <h3>User tidak ditemukan</h3>
+        <p>Coba ubah pencarian atau filter.</p>
+    </div>
 
-<div class="mb-3">
-    <label class="form-label">Tempat Lahir</label>
-    <input type="text"
-           name="tempat_lahir"
-           class="form-control"
-           placeholder="Boleh dikosongkan dulu">
-</div>
+</section>
 
-<div class="mb-3">
-    <label class="form-label">Tanggal Lahir</label>
-    <input type="date"
-           name="tanggal_lahir"
-           class="form-control">
-</div>
+<!-- MODAL TAMBAH USER -->
+<div
+    class="user-modal-backdrop"
+    id="addUserModal"
+    onclick="closeUserModalFromBackground(event)"
+>
 
-<div class="mb-3">
-    <label class="form-label">Join Date</label>
-    <input type="date"
-           name="join_date"
-           class="form-control">
-</div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="text" name="password" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Role</label>
-                        <select name="role" class="form-control" required>
-                            <option value="karyawan">Karyawan</option>
-                            <option value="hrd">HRD</option>
-                            <option value="admin">Admin</option>
-                            <option value="accounting">Accounting</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Divisi</label>
-                        <select name="divisi" class="form-control" required>
-                            <option>Marketing</option>
-                            <option>Operational</option>
-                            <option>Hostlive</option>
-                            <option>Creative</option>
-                            <option>Accounting</option>
-                            <option>IT Support</option>
-                            <option>HRD</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                </div>
-            </form>
+    <section class="user-modal user-modal-large">
+
+        <div class="user-modal-header">
+
+            <div>
+                <p class="dashboard-eyebrow">USER BARU</p>
+                <h2>Tambah pengguna</h2>
+                <span>Lengkapi identitas dan akses awal pengguna.</span>
+            </div>
+
+            <button
+                type="button"
+                onclick="closeUserModal('addUserModal')"
+                aria-label="Tutup"
+            >
+                <i class="bi bi-x-lg"></i>
+            </button>
+
         </div>
-    </div>
+
+        <form
+            method="POST"
+            action="/add_user"
+            class="user-modal-form user-form-grid"
+        >
+
+            <label class="user-form-field">
+                <span>Username login <b>*</b></span>
+
+                <input
+                    type="text"
+                    name="username"
+                    placeholder="Minimal dua kata"
+                    required
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Nama lengkap</span>
+
+                <input
+                    type="text"
+                    name="nama_lengkap"
+                    placeholder="Nama sesuai data HRD"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Tempat lahir</span>
+
+                <input
+                    type="text"
+                    name="tempat_lahir"
+                    placeholder="Contoh: Jakarta"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Tanggal lahir</span>
+
+                <input
+                    type="date"
+                    name="tanggal_lahir"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Join date</span>
+
+                <input
+                    type="date"
+                    name="join_date"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Password awal <b>*</b></span>
+
+                <input
+                    type="text"
+                    name="password"
+                    minlength="6"
+                    placeholder="Minimal 6 karakter"
+                    required
+                >
+            </label>
+
+            {% if current_user.role == 'admin' %}
+
+                <label class="user-form-field">
+                    <span>Role <b>*</b></span>
+
+                    <select name="role" required>
+                        <option value="karyawan">Karyawan</option>
+                        <option value="hrd">HRD</option>
+                        <option value="admin">Admin / IT</option>
+                        <option value="accounting">Accounting</option>
+                        <option value="direktur">Direktur</option>
+                    </select>
+                </label>
+
+            {% else %}
+
+                <input
+                    type="hidden"
+                    name="role"
+                    value="karyawan"
+                >
+
+                <label class="user-form-field">
+                    <span>Role</span>
+
+                    <input
+                        type="text"
+                        value="Karyawan"
+                        disabled
+                    >
+                </label>
+
+            {% endif %}
+
+            <label class="user-form-field">
+                <span>Divisi <b>*</b></span>
+
+                <select name="divisi" required>
+                    <option value="">Pilih divisi</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Operational">Operational</option>
+                    <option value="Hostlive">Hostlive</option>
+                    <option value="Creative">Creative</option>
+                    <option value="Accounting">Accounting</option>
+                    <option value="IT Support">IT Support</option>
+                    <option value="HRD">HRD</option>
+                    <option value="Direksi">Direksi</option>
+                </select>
+            </label>
+
+            <div class="user-modal-info user-form-span">
+                <i class="bi bi-info-circle"></i>
+
+                <p>
+                    Kuota cuti dapat diatur setelah pengguna dibuat
+                    melalui menu Kelola Kuota.
+                </p>
+            </div>
+
+            <div class="user-modal-actions user-form-span">
+
+                <button
+                    type="button"
+                    class="dashboard-outline-button"
+                    onclick="closeUserModal('addUserModal')"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="dashboard-primary-button"
+                >
+                    <i class="bi bi-person-plus"></i>
+                    Simpan User
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- MODAL EDIT USER -->
+<div
+    class="user-modal-backdrop"
+    id="editUserModal"
+    onclick="closeUserModalFromBackground(event)"
+>
+
+    <section class="user-modal user-modal-large">
+
+        <div class="user-modal-header">
+
+            <div>
+                <p class="dashboard-eyebrow">EDIT USER</p>
+                <h2 id="editUserTitle">Edit pengguna</h2>
+                <span>Perbarui identitas dan data pekerjaan.</span>
+            </div>
+
+            <button
+                type="button"
+                onclick="closeUserModal('editUserModal')"
+                aria-label="Tutup"
+            >
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+        </div>
+
+        <form
+            method="POST"
+            id="editUserForm"
+            class="user-modal-form user-form-grid"
+        >
+
+            <label class="user-form-field">
+                <span>Username login <b>*</b></span>
+
+                <input
+                    type="text"
+                    name="username"
+                    id="editUsername"
+                    required
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Nama lengkap</span>
+
+                <input
+                    type="text"
+                    name="nama_lengkap"
+                    id="editFullName"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Tempat lahir</span>
+
+                <input
+                    type="text"
+                    name="tempat_lahir"
+                    id="editBirthPlace"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Tanggal lahir</span>
+
+                <input
+                    type="date"
+                    name="tanggal_lahir"
+                    id="editBirthDate"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Join date</span>
+
+                <input
+                    type="date"
+                    name="join_date"
+                    id="editJoinDate"
+                >
+            </label>
+
+            <label class="user-form-field">
+                <span>Divisi <b>*</b></span>
+
+                <select
+                    name="divisi"
+                    id="editDivision"
+                    required
+                >
+                    <option value="">Pilih divisi</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Operational">Operational</option>
+                    <option value="Hostlive">Hostlive</option>
+                    <option value="Creative">Creative</option>
+                    <option value="Accounting">Accounting</option>
+                    <option value="IT Support">IT Support</option>
+                    <option value="HRD">HRD</option>
+                    <option value="IT">IT</option>
+                    <option value="Direksi">Direksi</option>
+                </select>
+            </label>
+
+            {% if current_user.role == 'admin' %}
+
+                <label class="user-form-field user-form-span">
+                    <span>Role dan hak akses <b>*</b></span>
+
+                    <select
+                        name="role"
+                        id="editRole"
+                        required
+                    >
+                        <option value="karyawan">Karyawan</option>
+                        <option value="hrd">HRD</option>
+                        <option value="admin">Admin / IT</option>
+                        <option value="accounting">Accounting</option>
+                        <option value="direktur">Direktur</option>
+                    </select>
+                </label>
+
+            {% endif %}
+
+            <div class="user-modal-info user-form-span">
+                <i class="bi bi-calendar2-check"></i>
+
+                <p>
+                    Perubahan join date atau role akan menyinkronkan
+                    kembali jadwal penambahan kuota cuti otomatis.
+                </p>
+            </div>
+
+            <div class="user-modal-actions user-form-span">
+
+                <button
+                    type="button"
+                    class="dashboard-outline-button"
+                    onclick="closeUserModal('editUserModal')"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="dashboard-primary-button"
+                >
+                    <i class="bi bi-save"></i>
+                    Simpan Perubahan
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+<!-- MODAL RESET PASSWORD -->
+{% if current_user.role == 'admin' %}
+
+<div
+    class="user-modal-backdrop"
+    id="resetPasswordModal"
+    onclick="closeUserModalFromBackground(event)"
+>
+
+    <section class="user-modal user-modal-small">
+
+        <div class="user-modal-header">
+
+            <div>
+                <p class="dashboard-eyebrow">KEAMANAN</p>
+                <h2>Reset password</h2>
+
+                <span id="resetPasswordUser">
+                    Pilih pengguna
+                </span>
+            </div>
+
+            <button
+                type="button"
+                onclick="closeUserModal('resetPasswordModal')"
+                aria-label="Tutup"
+            >
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+        </div>
+
+        <form
+            method="POST"
+            id="resetPasswordForm"
+            class="user-modal-form"
+        >
+
+            <label class="user-form-field">
+                <span>Password baru <b>*</b></span>
+
+                <input
+                    type="text"
+                    name="new_password"
+                    minlength="6"
+                    placeholder="Minimal 6 karakter"
+                    required
+                >
+            </label>
+
+            <div class="user-modal-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+
+                <p>
+                    Pengguna akan menggunakan password baru
+                    pada login berikutnya.
+                </p>
+            </div>
+
+            <div class="user-modal-actions">
+
+                <button
+                    type="button"
+                    class="dashboard-outline-button"
+                    onclick="closeUserModal('resetPasswordModal')"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="user-reset-submit"
+                >
+                    <i class="bi bi-key"></i>
+                    Reset Password
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+
 <script>
-function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("active");
-    document.getElementById("mainContent").classList.toggle("shift");
-}
+    const userSearch =
+        document.getElementById("userSearch");
+
+    const userRoleFilter =
+        document.getElementById("userRoleFilter");
+
+    const userDivisionFilter =
+        document.getElementById("userDivisionFilter");
+
+    const userRows =
+        document.querySelectorAll(".user-table-row");
+
+    const visibleUserCount =
+        document.getElementById("visibleUserCount");
+
+    const userFilterEmpty =
+        document.getElementById("userFilterEmpty");
+
+    function filterUsers() {
+        const query =
+            userSearch.value.trim().toLowerCase();
+
+        const selectedRole =
+            userRoleFilter.value.toLowerCase();
+
+        const selectedDivision =
+            userDivisionFilter.value;
+
+        let visible = 0;
+
+        userRows.forEach(function (row) {
+            const matchesSearch =
+                !query ||
+                row.dataset.search.includes(query);
+
+            const matchesRole =
+                !selectedRole ||
+                row.dataset.role === selectedRole;
+
+            const matchesDivision =
+                !selectedDivision ||
+                row.dataset.division === selectedDivision;
+
+            const shouldShow =
+                matchesSearch &&
+                matchesRole &&
+                matchesDivision;
+
+            row.hidden = !shouldShow;
+
+            if (shouldShow) {
+                visible += 1;
+            }
+        });
+
+        visibleUserCount.textContent = visible;
+        userFilterEmpty.hidden = visible !== 0;
+    }
+
+    userSearch.addEventListener("input", filterUsers);
+    userRoleFilter.addEventListener("change", filterUsers);
+    userDivisionFilter.addEventListener("change", filterUsers);
+
+    function openUserModal(modalId) {
+        const modal =
+            document.getElementById(modalId);
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.add("visible");
+        document.body.classList.add("sidebar-lock");
+    }
+
+    function closeUserModal(modalId) {
+        const modal =
+            document.getElementById(modalId);
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove("visible");
+        document.body.classList.remove("sidebar-lock");
+    }
+
+    function closeUserModalFromBackground(event) {
+        if (
+            event.target.classList.contains(
+                "user-modal-backdrop"
+            )
+        ) {
+            closeUserModal(event.target.id);
+        }
+    }
+
+    function openEditUser(button) {
+        const userId =
+            button.dataset.id;
+
+        document.getElementById(
+            "editUserForm"
+        ).action = "/update_user/" + userId;
+
+        document.getElementById(
+            "editUserTitle"
+        ).textContent =
+            "Edit " + button.dataset.fullName;
+
+        document.getElementById(
+            "editUsername"
+        ).value = button.dataset.username || "";
+
+        document.getElementById(
+            "editFullName"
+        ).value = button.dataset.fullName || "";
+
+        document.getElementById(
+            "editBirthPlace"
+        ).value = button.dataset.birthPlace || "";
+
+        document.getElementById(
+            "editBirthDate"
+        ).value = button.dataset.birthDate || "";
+
+        document.getElementById(
+            "editJoinDate"
+        ).value = button.dataset.joinDate || "";
+
+        document.getElementById(
+            "editDivision"
+        ).value = button.dataset.division || "";
+
+        const editRole =
+            document.getElementById("editRole");
+
+        if (editRole) {
+            editRole.value =
+                button.dataset.role || "karyawan";
+        }
+
+        openUserModal("editUserModal");
+    }
+
+    function openResetPassword(button) {
+        const resetForm =
+            document.getElementById("resetPasswordForm");
+
+        const resetUser =
+            document.getElementById("resetPasswordUser");
+
+        if (!resetForm || !resetUser) {
+            return;
+        }
+
+        resetForm.action =
+            "/reset_password/" + button.dataset.id;
+
+        resetUser.textContent =
+            "Password untuk " + button.dataset.name;
+
+        openUserModal("resetPasswordModal");
+    }
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+            if (event.key !== "Escape") {
+                return;
+            }
+
+            document
+                .querySelectorAll(".user-modal-backdrop.visible")
+                .forEach(function (modal) {
+                    closeUserModal(modal.id);
+                });
+        }
+    );
 </script>
-</body>
-</html>
+
+{% endblock %}

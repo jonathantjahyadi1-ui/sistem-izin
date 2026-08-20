@@ -1,1003 +1,340 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semua Pengajuan Izin</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-soft: #eff6ff;
-            --success: #059669;
-            --success-soft: #d1fae5;
-            --warning: #d97706;
-            --warning-soft: #fef3c7;
-            --danger: #dc2626;
-            --danger-soft: #fee2e2;
-            --ink: #0f172a;
-            --muted: #64748b;
-            --border: #e2e8f0;
-            --surface: #ffffff;
-            --page: #f8fafc;
-            --sidebar-width: 260px;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            padding-top: 64px;
-            background: var(--page);
-            color: var(--ink);
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-        }
-
-        .topbar {
-            position: fixed;
-            inset: 0 0 auto 0;
-            z-index: 1050;
-            height: 64px;
-            padding: 0 24px;
-            display: flex;
-            align-items: center;
-            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
-            box-shadow: 0 1px 8px rgba(15, 23, 42, .12);
-        }
-
-        .menu-button {
-            width: 38px;
-            height: 38px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 0;
-            border-radius: 9px;
-            background: rgba(255, 255, 255, .95);
-            color: var(--ink);
-            font-size: 1.1rem;
-        }
-
-        .brand-title {
-            margin-left: 12px;
-            color: #fff;
-            font-size: 1.05rem;
-            font-weight: 700;
-        }
-
-        .topbar-user {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: #fff;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 64px;
-            bottom: 0;
-            left: calc(var(--sidebar-width) * -1);
-            z-index: 1040;
-            width: var(--sidebar-width);
-            padding: 18px 12px;
-            overflow-y: auto;
-            background: #fff;
-            border-right: 1px solid var(--border);
-            box-shadow: 5px 0 18px rgba(15, 23, 42, .08);
-            transition: left .25s ease;
-        }
-
-        .sidebar.active { left: 0; }
-
-        .sidebar a {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            margin-bottom: 4px;
-            padding: 11px 13px;
-            border-radius: 9px;
-            color: #334155;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .sidebar a:hover,
-        .sidebar a.active {
-            background: var(--primary-soft);
-            color: var(--primary);
-        }
-
-        .sidebar-overlay {
-            position: fixed;
-            inset: 64px 0 0;
-            z-index: 1030;
-            display: none;
-            background: rgba(15, 23, 42, .35);
-        }
-
-        .sidebar-overlay.show { display: block; }
-
-        .main-content {
-            min-height: calc(100vh - 64px);
-            padding: 28px;
-            transition: margin-left .25s ease;
-        }
-
-        .main-content.shift { margin-left: var(--sidebar-width); }
-
-        .page-heading {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .page-heading h1 {
-            margin: 0 0 5px;
-            font-size: 1.45rem;
-            font-weight: 700;
-        }
-
-        .page-heading p {
-            margin: 0;
-            color: var(--muted);
-        }
-
-        .heading-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .panel {
-            overflow: hidden;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
-        }
-
-        .filter-panel {
-            margin-bottom: 20px;
-            padding: 18px;
-        }
-
-        .form-label {
-            margin-bottom: 6px;
-            color: #475569;
-            font-size: .76rem;
-            font-weight: 600;
-        }
-
-        .form-control,
-        .form-select {
-            min-height: 42px;
-            border-color: var(--border);
-            border-radius: 9px;
-            font-size: .85rem;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: #93c5fd;
-            box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .10);
-        }
-
-        .filter-submit { min-height: 42px; }
-
-        .table-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .table-toolbar h2 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .table-toolbar span {
-            color: var(--muted);
-            font-size: .8rem;
-        }
-
-        .table-wrap { overflow-x: auto; }
-
-        .request-table {
-            min-width: 1120px;
-            margin: 0;
-            vertical-align: middle;
-        }
-
-        .request-table thead th {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            background: #f8fafc;
-            color: #64748b;
-            font-size: .72rem;
-            font-weight: 700;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-
-        .request-table tbody td {
-            padding: 15px 16px;
-            border-color: var(--border);
-        }
-
-        .request-table tbody tr:hover { background: #fbfdff; }
-
-        .person-name {
-            display: block;
-            color: var(--ink);
-            font-size: .86rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .person-meta,
-        .cell-subtext {
-            display: block;
-            margin-top: 3px;
-            color: var(--muted);
-            font-size: .72rem;
-        }
-
-        .period-text {
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        .submitted-date {
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .reason-cell { width: 250px; }
-
-        .reason-preview {
-            max-width: 220px;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            color: #334155;
-            line-height: 1.45;
-        }
-
-        .detail-link {
-            margin-top: 4px;
-            padding: 0;
-            border: 0;
-            background: transparent;
-            color: var(--primary);
-            font-size: .74rem;
-            font-weight: 600;
-        }
-
-        .type-badge,
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 5px 9px;
-            border-radius: 999px;
-            font-size: .7rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .type-cuti { background: #dbeafe; color: #1d4ed8; }
-        .type-sakit { background: var(--danger-soft); color: #b91c1c; }
-        .type-lain { background: #cffafe; color: #0e7490; }
-        .status-pending { background: var(--warning-soft); color: #92400e; }
-        .status-approved { background: var(--success-soft); color: #047857; }
-        .status-rejected { background: var(--danger-soft); color: #b91c1c; }
-
-        .attachment-actions,
-        .row-actions {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .icon-button {
-            width: 34px;
-            height: 34px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
-            color: #475569;
-        }
-
-        .icon-button:hover {
-            border-color: #93c5fd;
-            background: var(--primary-soft);
-            color: var(--primary);
-        }
-
-        .approve-button { color: var(--success); }
-        .reject-button { color: var(--danger); }
-
-        .empty-state {
-            padding: 70px 20px;
-            color: var(--muted);
-            text-align: center;
-        }
-
-        .mobile-list { display: none; }
-
-        .mobile-card {
-            padding: 17px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .mobile-card:last-child { border-bottom: 0; }
-
-        .mobile-card-header,
-        .mobile-card-footer {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .mobile-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            margin: 16px 0;
-        }
-
-        .mobile-label {
-            display: block;
-            margin-bottom: 4px;
-            color: var(--muted);
-            font-size: .68rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .mobile-reason {
-            margin-bottom: 16px;
-            padding: 12px;
-            border-radius: 9px;
-            background: #f8fafc;
-        }
-
-        .pagination-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 16px 20px;
-            border-top: 1px solid var(--border);
-        }
-
-        .pagination-info {
-            color: var(--muted);
-            font-size: .78rem;
-        }
-
-        .page-link {
-            color: #475569;
-            border-color: var(--border);
-            font-size: .78rem;
-        }
-
-        .page-item.active .page-link {
-            border-color: var(--primary);
-            background: var(--primary);
-        }
-
-        .custom-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: rgba(15, 23, 42, .62);
-        }
-
-        .custom-modal.show { display: flex; }
-
-        .custom-modal-dialog {
-            width: min(960px, 96vw);
-            overflow: hidden;
-            border-radius: 14px;
-            background: #fff;
-            box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
-        }
-
-        .reason-dialog { width: min(560px, 96vw); }
-
-        .custom-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .custom-modal-header h3 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .file-frame {
-            width: 100%;
-            height: min(72vh, 720px);
-            border: 0;
-            background: #f8fafc;
-        }
-
-        .reason-content {
-            padding: 20px;
-            color: #334155;
-            line-height: 1.7;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        @media (max-width: 991.98px) {
-            .main-content.shift { margin-left: 0; }
-            .main-content { padding: 20px; }
-        }
-
-        @media (max-width: 767.98px) {
-            body { padding-top: 60px; }
-            .topbar { height: 60px; padding: 0 14px; }
-            .sidebar { top: 60px; }
-            .sidebar-overlay { inset: 60px 0 0; }
-            .topbar-user .user-label { display: none; }
-            .main-content { padding: 16px 12px 24px; }
-            .page-heading { flex-direction: column; }
-            .heading-actions { width: 100%; }
-            .heading-actions .btn { flex: 1; }
-            .desktop-table { display: none; }
-            .mobile-list { display: block; }
-            .pagination-wrap { align-items: flex-start; flex-direction: column; }
-        }
-
-        @media (max-width: 420px) {
-            .mobile-grid { grid-template-columns: 1fr; }
-            .mobile-card-footer { align-items: stretch; flex-direction: column; }
-        }
-    </style>
-</head>
-
-<body>
-    <nav class="topbar">
-        <button type="button" class="menu-button" onclick="toggleSidebar()" aria-label="Buka atau tutup menu">
-            <i class="bi bi-list"></i>
-        </button>
-        <span class="brand-title">Sistem Izin</span>
-
-        <div class="topbar-user">
-            <span class="user-label">
-                {{ user.nama_lengkap if user.nama_lengkap else user.username }} · {{ user.role|upper }}
-            </span>
-            <a href="/logout" class="btn btn-light btn-sm">
-                <i class="bi bi-box-arrow-right"></i>
-                <span class="d-none d-sm-inline">Logout</span>
-            </a>
-        </div>
-    </nav>
-
-    <aside id="sidebar" class="sidebar">
-        <a href="/dashboard"><i class="bi bi-grid"></i> Dashboard</a>
-        <a href="/semua_izin" class="active"><i class="bi bi-card-list"></i> Semua Izin</a>
-        <a href="/approval"><i class="bi bi-hourglass-split"></i> Pending Approval</a>
-        <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
-        <a href="/change_system"><i class="bi bi-arrow-left-right"></i> Ganti Sistem</a>
-
-        {% if user.role in ['admin', 'hrd'] %}
-        <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
-        <a href="/manage_quota"><i class="bi bi-calendar-check"></i> Kuota Cuti</a>
-        {% endif %}
-    </aside>
-    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
-
-    <main id="mainContent" class="main-content">
-        <header class="page-heading">
-            <div>
-                <h1>Semua Pengajuan Izin</h1>
-                <p>Pantau pengajuan izin, tanggal pengajuan, lampiran, dan status karyawan.</p>
-            </div>
-
-            <div class="heading-actions">
-                <a href="/semua_izin" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reset
-                </a>
-                <a href="{{ url_for(
-                    'export_excel',
-                    status=status_filter,
-                    jenis=jenis_filter,
-                    search=search,
-                    divisi=divisi_filter,
-                    nama=nama_filter
-                ) }}" class="btn btn-success">
-                    <i class="bi bi-file-earmark-excel"></i> Export
-                </a>
-            </div>
-        </header>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
-            </div>
-            {% endfor %}
-        {% endwith %}
-
-        <section class="panel filter-panel">
-            <form method="GET" action="/semua_izin" class="row g-3 align-items-end">
-                <div class="col-xl-3 col-md-6">
-                    <label class="form-label" for="search">Cari alasan</label>
-                    <input id="search" type="text" name="search" class="form-control"
-                           placeholder="Contoh: sakit, keluarga..." value="{{ search }}">
-                </div>
-
-                <div class="col-xl-2 col-md-6">
-                    <label class="form-label" for="nama">Nama pengaju</label>
-                    <input id="nama" type="text" name="nama" class="form-control"
-                           placeholder="Cari nama..." value="{{ nama_filter }}">
-                </div>
-
-                <div class="col-xl-2 col-md-4">
-                    <label class="form-label" for="status">Status</label>
-                    <select id="status" name="status" class="form-select">
-                        <option value="">Semua status</option>
-                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                    </select>
-                </div>
-
-                <div class="col-xl-2 col-md-4">
-                    <label class="form-label" for="jenis">Jenis izin</label>
-                    <select id="jenis" name="jenis" class="form-select">
-                        <option value="">Semua jenis</option>
-                        <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
-                        <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
-                        <option value="izin_lain" {% if jenis_filter == 'izin_lain' %}selected{% endif %}>Izin Lain</option>
-                    </select>
-                </div>
-
-                <div class="col-xl-2 col-md-4">
-                    <label class="form-label" for="divisi">Divisi</label>
-                    <select id="divisi" name="divisi" class="form-select">
-                        <option value="">Semua divisi</option>
-                        {% for d in divisi_list %}
-                        <option value="{{ d }}" {% if divisi_filter == d %}selected{% endif %}>{{ d }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-xl-1 col-md-12">
-                    <button type="submit" class="btn btn-primary w-100 filter-submit">
-                        <i class="bi bi-funnel"></i>
-                        <span class="d-xl-none">Filter</span>
-                    </button>
-                </div>
-            </form>
-        </section>
-
-        <section class="panel">
-            <div class="table-toolbar">
-                <div>
-                    <h2>Daftar Pengajuan</h2>
-                    <span>{{ pagination.total }} data ditemukan</span>
-                </div>
-            </div>
-
-            {% if data %}
-            <div class="desktop-table table-wrap">
-                <table class="table request-table">
-                    <thead>
-                        <tr>
-                            <th>Pengaju</th>
-                            <th>Jenis</th>
-                            <th>Periode Izin</th>
-                            <th>Diajukan</th>
-                            <th>Alasan</th>
-                            <th>Lampiran</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for i, pengaju in data %}
-                        <tr>
-                            <td>
-                                <span class="person-name">
-                                    {{ pengaju.nama_lengkap if pengaju and pengaju.nama_lengkap else (pengaju.username if pengaju else '-') }}
-                                </span>
-                                <span class="person-meta">
-                                    #{{ i.id }} · {{ pengaju.divisi if pengaju and pengaju.divisi else 'Tanpa divisi' }}
-                                </span>
-                            </td>
-
-                            <td>
-                                {% if i.jenis_izin == 'cuti' %}
-                                    <span class="type-badge type-cuti">Cuti</span>
-                                {% elif i.jenis_izin == 'sakit' %}
-                                    <span class="type-badge type-sakit">Sakit</span>
-                                {% else %}
-                                    <span class="type-badge type-lain">Izin Lain</span>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                <span class="period-text">
-                                    {{ i.tanggal_mulai|tanggal_id }}
-                                    {% if i.tanggal_selesai and i.tanggal_selesai != i.tanggal_mulai %}
-                                        – {{ i.tanggal_selesai|tanggal_id }}
-                                    {% endif %}
-                                </span>
-                                <span class="cell-subtext">{{ i.durasi }} hari</span>
-                            </td>
-
-                            <td>
-                                <span class="submitted-date">{{ i.created_at|tanggal_id }}</span>
-                            </td>
-
-                            <td class="reason-cell">
-                                <div class="reason-preview">{{ i.alasan or '-' }}</div>
-                                {% if i.alasan %}
-                                <button type="button" class="detail-link"
-                                        data-alasan="{{ i.alasan|e }}"
-                                        onclick="openReasonModal(this)">
-                                    Lihat lengkap
-                                </button>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                <div class="attachment-actions">
-                                    {% if i.file_surat %}
-                                    <button type="button" class="icon-button"
-                                            title="Lihat surat dokter"
-                                            aria-label="Lihat surat dokter"
-                                            data-file-url="{{ url_for('download_file', filename=i.file_surat) }}"
-                                            data-file-title="Surat Dokter"
-                                            onclick="openFileModal(this)">
-                                        <i class="bi bi-file-earmark-medical"></i>
-                                    </button>
-                                    {% endif %}
-
-                                    {% if i.file_chat %}
-                                    <button type="button" class="icon-button"
-                                            title="Lihat bukti chat"
-                                            aria-label="Lihat bukti chat"
-                                            data-file-url="{{ url_for('download_file', filename=i.file_chat) }}"
-                                            data-file-title="Bukti Chat"
-                                            onclick="openFileModal(this)">
-                                        <i class="bi bi-chat-square-text"></i>
-                                    </button>
-                                    {% endif %}
-
-                                    {% if not i.file_surat and not i.file_chat %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-
-                            <td>
-                                {% if i.status == 'pending' %}
-                                    <span class="status-badge status-pending">Pending</span>
-                                {% elif i.status == 'approved' %}
-                                    <span class="status-badge status-approved">Approved</span>
-                                {% else %}
-                                    <span class="status-badge status-rejected">Rejected</span>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                {% if user.role in ['admin', 'hrd', 'direktur'] and i.status == 'pending' %}
-                                <div class="row-actions">
-                                    <form action="/approve/{{ i.id }}" method="POST">
-                                        <button type="submit" class="icon-button approve-button"
-                                                title="Approve" aria-label="Approve pengajuan"
-                                                onclick="return confirm('Yakin ingin menyetujui pengajuan ini?')">
-                                            <i class="bi bi-check-lg"></i>
-                                        </button>
-                                    </form>
-                                    <form action="/reject/{{ i.id }}" method="POST">
-                                        <button type="submit" class="icon-button reject-button"
-                                                title="Reject" aria-label="Reject pengajuan"
-                                                onclick="return confirm('Yakin ingin menolak pengajuan ini?')">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mobile-list">
-                {% for i, pengaju in data %}
-                <article class="mobile-card">
-                    <div class="mobile-card-header">
-                        <div>
-                            <span class="person-name">
-                                {{ pengaju.nama_lengkap if pengaju and pengaju.nama_lengkap else (pengaju.username if pengaju else '-') }}
-                            </span>
-                            <span class="person-meta">
-                                #{{ i.id }} · {{ pengaju.divisi if pengaju and pengaju.divisi else 'Tanpa divisi' }}
-                            </span>
-                        </div>
-
-                        {% if i.status == 'pending' %}
-                            <span class="status-badge status-pending">Pending</span>
-                        {% elif i.status == 'approved' %}
-                            <span class="status-badge status-approved">Approved</span>
-                        {% else %}
-                            <span class="status-badge status-rejected">Rejected</span>
-                        {% endif %}
-                    </div>
-
-                    <div class="mobile-grid">
-                        <div>
-                            <span class="mobile-label">Jenis</span>
-                            {% if i.jenis_izin == 'cuti' %}
-                                <span class="type-badge type-cuti">Cuti</span>
-                            {% elif i.jenis_izin == 'sakit' %}
-                                <span class="type-badge type-sakit">Sakit</span>
-                            {% else %}
-                                <span class="type-badge type-lain">Izin Lain</span>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <span class="mobile-label">Diajukan</span>
-                            <strong>{{ i.created_at|tanggal_id }}</strong>
-                        </div>
-                        <div>
-                            <span class="mobile-label">Periode Izin</span>
-                            <span>{{ i.tanggal_mulai|tanggal_id }}</span>
-                            {% if i.tanggal_selesai and i.tanggal_selesai != i.tanggal_mulai %}
-                                <span>– {{ i.tanggal_selesai|tanggal_id }}</span>
-                            {% endif %}
-                            <span class="cell-subtext">{{ i.durasi }} hari</span>
-                        </div>
-                    </div>
-
-                    <div class="mobile-reason">
-                        <span class="mobile-label">Alasan</span>
-                        <div class="reason-preview">{{ i.alasan or '-' }}</div>
-                        {% if i.alasan %}
-                        <button type="button" class="detail-link"
-                                data-alasan="{{ i.alasan|e }}"
-                                onclick="openReasonModal(this)">
-                            Lihat lengkap
-                        </button>
-                        {% endif %}
-                    </div>
-
-                    <div class="mobile-card-footer">
-                        <div class="attachment-actions">
-                            {% if i.file_surat %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                    data-file-url="{{ url_for('download_file', filename=i.file_surat) }}"
-                                    data-file-title="Surat Dokter"
-                                    onclick="openFileModal(this)">
-                                <i class="bi bi-file-earmark-medical"></i> Surat
-                            </button>
-                            {% endif %}
-
-                            {% if i.file_chat %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                    data-file-url="{{ url_for('download_file', filename=i.file_chat) }}"
-                                    data-file-title="Bukti Chat"
-                                    onclick="openFileModal(this)">
-                                <i class="bi bi-chat-square-text"></i> Chat
-                            </button>
-                            {% endif %}
-                        </div>
-
-                        {% if user.role in ['admin', 'hrd', 'direktur'] and i.status == 'pending' %}
-                        <div class="row-actions">
-                            <form action="/approve/{{ i.id }}" method="POST">
-                                <button type="submit" class="btn btn-sm btn-outline-success"
-                                        onclick="return confirm('Yakin ingin menyetujui pengajuan ini?')">
-                                    <i class="bi bi-check-lg"></i> Approve
-                                </button>
-                            </form>
-                            <form action="/reject/{{ i.id }}" method="POST">
-                                <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Yakin ingin menolak pengajuan ini?')">
-                                    <i class="bi bi-x-lg"></i> Reject
-                                </button>
-                            </form>
-                        </div>
-                        {% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-
-            {% if pagination.pages > 1 %}
-            {% set start_item = ((pagination.page - 1) * pagination.per_page) + 1 %}
-            {% set end_item = start_item + (data|length) - 1 %}
-            <div class="pagination-wrap">
-                <span class="pagination-info">
-                    Menampilkan {{ start_item }}–{{ end_item }} dari {{ pagination.total }} data
-                </span>
-
-                <nav aria-label="Navigasi halaman">
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for(
-                                'semua_izin',
-                                page=pagination.prev_num if pagination.has_prev else 1,
-                                status=status_filter,
-                                jenis=jenis_filter,
-                                search=search,
-                                divisi=divisi_filter,
-                                nama=nama_filter
-                            ) }}">Sebelumnya</a>
-                        </li>
-
-                        {% for page_number in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                            {% if page_number %}
-                            <li class="page-item {% if page_number == pagination.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for(
-                                    'semua_izin',
-                                    page=page_number,
-                                    status=status_filter,
-                                    jenis=jenis_filter,
-                                    search=search,
-                                    divisi=divisi_filter,
-                                    nama=nama_filter
-                                ) }}">{{ page_number }}</a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled"><span class="page-link">…</span></li>
-                            {% endif %}
-                        {% endfor %}
-
-                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for(
-                                'semua_izin',
-                                page=pagination.next_num if pagination.has_next else pagination.page,
-                                status=status_filter,
-                                jenis=jenis_filter,
-                                search=search,
-                                divisi=divisi_filter,
-                                nama=nama_filter
-                            ) }}">Berikutnya</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-            {% endif %}
-
-            {% else %}
-            <div class="empty-state">
-                <i class="bi bi-inbox" style="font-size: 2.6rem;"></i>
-                <h5 class="mt-3 mb-1">Data tidak ditemukan</h5>
-                <p class="mb-0">Coba ubah atau reset filter yang digunakan.</p>
-            </div>
-            {% endif %}
-        </section>
-    </main>
-
-    <div id="fileModal" class="custom-modal" onclick="closeModalFromBackdrop(event, 'fileModal')">
-        <div class="custom-modal-dialog">
-            <div class="custom-modal-header">
-                <h3 id="fileModalTitle">Preview Lampiran</h3>
-                <button type="button" class="btn-close" onclick="closeFileModal()" aria-label="Tutup"></button>
-            </div>
-            <iframe id="filePreviewFrame" class="file-frame" title="Preview lampiran"></iframe>
-        </div>
-    </div>
-
-    <div id="reasonModal" class="custom-modal" onclick="closeModalFromBackdrop(event, 'reasonModal')">
-        <div class="custom-modal-dialog reason-dialog">
-            <div class="custom-modal-header">
-                <h3>Alasan Lengkap</h3>
-                <button type="button" class="btn-close" onclick="closeReasonModal()" aria-label="Tutup"></button>
-            </div>
-            <div id="reasonModalText" class="reason-content"></div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
-        const mainContent = document.getElementById('mainContent');
-
-        function toggleSidebar() {
-            const isOpen = sidebar.classList.toggle('active');
-            sidebarOverlay.classList.toggle('show', isOpen);
-
-            if (window.innerWidth >= 992) {
-                mainContent.classList.toggle('shift', isOpen);
-                sidebarOverlay.classList.remove('show');
-            }
-        }
-
-        function closeSidebar() {
-            sidebar.classList.remove('active');
-            sidebarOverlay.classList.remove('show');
-            mainContent.classList.remove('shift');
-        }
-
-        function openFileModal(button) {
-            document.getElementById('fileModalTitle').textContent = button.dataset.fileTitle || 'Preview Lampiran';
-            document.getElementById('filePreviewFrame').src = button.dataset.fileUrl;
-            document.getElementById('fileModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeFileModal() {
-            document.getElementById('filePreviewFrame').src = '';
-            document.getElementById('fileModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        function openReasonModal(button) {
-            document.getElementById('reasonModalText').textContent = button.dataset.alasan || '-';
-            document.getElementById('reasonModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeReasonModal() {
-            document.getElementById('reasonModalText').textContent = '';
-            document.getElementById('reasonModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        function closeModalFromBackdrop(event, modalId) {
-            if (event.target.id === modalId) {
-                if (modalId === 'fileModal') closeFileModal();
-                if (modalId === 'reasonModal') closeReasonModal();
-            }
-        }
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeFileModal();
-                closeReasonModal();
-                closeSidebar();
-            }
-        });
-
-        window.addEventListener('resize', function () {
-            if (window.innerWidth < 992) {
-                mainContent.classList.remove('shift');
-            } else {
-                sidebarOverlay.classList.remove('show');
-                mainContent.classList.toggle('shift', sidebar.classList.contains('active'));
-            }
-        });
-    </script>
-</body>
-</html>
+/* ==================================================
+   PERSETUJUAN IZIN
+================================================== */
+
+.approval-summary {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border: 1px solid #fde68a;
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            100deg,
+            #fffbeb 0%,
+            #fffdf6 60%,
+            #ffffff 100%
+        );
+}
+
+.approval-summary-icon {
+    display: grid;
+    flex: 0 0 auto;
+    width: 45px;
+    height: 45px;
+    place-items: center;
+    border-radius: 12px;
+    color: #d97706;
+    background: #fef3c7;
+    font-size: 19px;
+}
+
+.approval-summary p {
+    margin: 0 0 5px;
+    color: #d97706;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.approval-summary h2 {
+    margin: 0;
+    color: #78350f;
+    font-size: 15px;
+}
+
+.approval-summary span {
+    display: block;
+    margin-top: 5px;
+    color: #92400e;
+    font-size: 9px;
+}
+
+.approval-panel {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 15px;
+    background: #ffffff;
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.04);
+}
+
+.approval-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.approval-panel-header h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 14px;
+}
+
+.approval-panel-header p {
+    margin: 5px 0 0;
+    color: #94a3b8;
+    font-size: 9px;
+}
+
+.approval-header-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 10px;
+    color: #4f46e5;
+    background: #eef2ff;
+    font-size: 16px;
+}
+
+.approval-table {
+    min-width: 1120px;
+}
+
+.approval-user {
+    display: flex;
+    min-width: 190px;
+    align-items: center;
+    gap: 9px;
+}
+
+.approval-user-avatar {
+    display: grid;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+    color: #4338ca;
+    background: #eef2ff;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.approval-user strong {
+    display: block;
+    color: #1e293b;
+    font-size: 9px;
+}
+
+.approval-user span,
+.approval-user small {
+    display: block;
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 7px;
+}
+
+.approval-user small {
+    color: #c0cad8;
+}
+
+.approval-reason-cell {
+    max-width: 230px;
+}
+
+.approval-reason-cell p {
+    max-width: 230px;
+    margin: 0;
+    overflow: hidden;
+    color: #475569;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.approval-reason-button {
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    color: #4f46e5;
+    background: transparent;
+    font-family: inherit;
+    font-size: 8px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.approval-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.approval-actions form {
+    margin: 0;
+}
+
+.approval-button {
+    display: inline-flex;
+    min-height: 31px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 9px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 8px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.approval-button.approve {
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+    background: #f0fdf4;
+}
+
+.approval-button.approve:hover {
+    color: #ffffff;
+    background: #16a34a;
+}
+
+.approval-button.reject {
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.approval-button.reject:hover {
+    color: #ffffff;
+    background: #dc2626;
+}
+
+.approval-empty-state {
+    display: grid;
+    min-height: 390px;
+    place-items: center;
+    align-content: center;
+    padding: 35px;
+    text-align: center;
+}
+
+.approval-empty-state > div {
+    display: grid;
+    width: 55px;
+    height: 55px;
+    place-items: center;
+    border-radius: 15px;
+    color: #15803d;
+    background: #f0fdf4;
+    font-size: 24px;
+}
+
+.approval-empty-state h2 {
+    margin: 15px 0 0;
+    color: #1e293b;
+    font-size: 15px;
+}
+
+.approval-empty-state p {
+    margin: 7px 0 18px;
+    color: #94a3b8;
+    font-size: 9px;
+}
+
+/* MODAL ALASAN */
+
+.approval-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    padding: 20px;
+    place-items: center;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(3px);
+}
+
+.approval-modal-backdrop.visible {
+    display: grid;
+}
+
+.approval-modal {
+    position: relative;
+    width: min(100%, 520px);
+    padding: 25px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
+}
+
+.approval-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    color: #64748b;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.approval-modal-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 17px;
+    place-items: center;
+    border-radius: 12px;
+    color: #4f46e5;
+    background: #eef2ff;
+    font-size: 19px;
+}
+
+.approval-modal h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 19px;
+}
+
+.approval-modal > span {
+    display: block;
+    margin-top: 7px;
+    color: #94a3b8;
+    font-size: 9px;
+}
+
+.approval-modal-reason {
+    max-height: 300px;
+    margin: 20px 0;
+    padding: 15px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    color: #334155;
+    background: #f8fafc;
+    font-size: 11px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.approval-modal .dashboard-primary-button {
+    width: 100%;
+    border: 1px solid #4f46e5;
+    cursor: pointer;
+}
+
+@media (max-width: 680px) {
+    .approval-summary {
+        align-items: flex-start;
+    }
+
+    .approval-summary h2 {
+        font-size: 13px;
+    }
+
+    .approval-modal {
+        padding: 21px;
+    }
+}

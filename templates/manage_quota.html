@@ -1,184 +1,593 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manajemen Kuota Cuti</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Poppins Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        :root {
-            --primary: #5b86e5;
-            --secondary: #36d1dc;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-        }
-        body { background: #f8fafc; padding-top: 56px; }
-        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important; }
-        #sidebar { position: fixed; top: 56px; left: -250px; width: 250px; height: calc(100vh - 56px); background: white; transition: 0.3s; z-index: 999; padding-top: 20px; box-shadow: 4px 0 12px rgba(0,0,0,0.08); }
-        #sidebar.active { left: 0; }
-        #sidebar a { display: block; color: var(--dark); padding: 12px 20px; text-decoration: none; border-left: 4px solid transparent; margin: 5px 0; transition: all 0.2s ease; }
-        #sidebar a:hover { background: var(--light); border-left-color: var(--primary); color: var(--primary); }
-        #mainContent { margin-left: 0; transition: 0.3s; padding: 20px; }
-        #mainContent.shift { margin-left: 250px; }
-        .card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .table thead { background: var(--light); }
-        .table th { white-space: nowrap; color: #334155; font-size: 0.82rem; }
-        .table td { vertical-align: middle; }
-        .user-name { font-weight: 600; color: #0f172a; }
-        .user-meta { color: #64748b; font-size: 0.75rem; text-transform: capitalize; }
-        .schedule-date { white-space: nowrap; font-size: 0.9rem; font-weight: 600; color: #334155; }
-        .rule-note { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; }
-        .status-badge { font-size: 0.72rem; font-weight: 600; }
-        @media (max-width: 767.98px) {
-            #mainContent { padding: 12px; }
-            #mainContent.shift { margin-left: 0; }
-            .navbar { padding-left: 12px !important; padding-right: 12px !important; }
-            .navbar .ms-auto { font-size: 0; }
-            .navbar .btn { font-size: 0.8rem; }
-            .card { padding: 12px !important; }
-        }
-    </style>
-</head>
-<body>
-<nav class="navbar navbar-dark px-4">
-    <button class="btn btn-light btn-sm" onclick="toggleSidebar()">☰</button>
-    <span class="navbar-brand ms-2 fw-bold">Sistem Izin</span>
-    <div class="ms-auto text-white">
-        {{ current_user.username }} ({{ current_user.role }})
-        <a href="/logout" class="btn btn-sm btn-light ms-3">Logout</a>
+{% extends "base_izin.html" %}
+
+{% block title %}Kelola Kuota Cuti{% endblock %}
+
+{% block header_title %}
+    Kelola Kuota Cuti
+{% endblock %}
+
+{% block content %}
+
+<!-- HEADING -->
+<section class="dashboard-page-heading">
+
+    <div>
+        <p class="dashboard-eyebrow">
+            ADMINISTRASI CUTI
+        </p>
+
+        <h1>Kelola kuota cuti</h1>
+
+        <p>
+            Pantau jadwal accrual dan lakukan koreksi kuota manual.
+        </p>
     </div>
-</nav>
 
-<div id="sidebar">
-    <a href="/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
-    <a href="/semua_izin"><i class="bi bi-list-check"></i> Semua Izin</a>
-    <a href="/approval"><i class="bi bi-hourglass-split"></i> Pending</a>
-    <a href="/form_izin"><i class="bi bi-plus-circle"></i> Ajukan Izin</a>
-    <a href="/manage_users"><i class="bi bi-people"></i> Manajemen User</a>
-    <a href="/manage_quota"><i class="bi bi-calendar-check"></i> Kuota Cuti</a>
-</div>
+    <a
+        href="/manage_users"
+        class="dashboard-outline-button"
+    >
+        <i class="bi bi-people"></i>
+        Manajemen User
+    </a>
 
-<div id="mainContent" class="container-fluid mt-4 px-4">
-    <h4 class="fw-bold mb-3"><i class="bi bi-calendar-check"></i> Manajemen Kuota Cuti</h4>
+</section>
 
-    <div class="alert rule-note d-flex gap-2 align-items-start mb-3" role="alert">
-        <i class="bi bi-info-circle-fill mt-1"></i>
-        <div>
-            Kuota pegawai bertambah <strong>+1 setiap tanggal 1</strong> setelah genap bekerja 6 bulan.
+<!-- INFORMASI ATURAN -->
+<section class="quota-rule-banner">
+
+    <div class="quota-rule-icon">
+        <i class="bi bi-calendar2-check"></i>
+    </div>
+
+    <div>
+        <p>ATURAN KUOTA OTOMATIS</p>
+
+        <h2>
+            Kuota bertambah +1 setiap bulan setelah masa kerja 6 bulan
+        </h2>
+
+        <span>
             Berlaku untuk Karyawan, IT/Admin, HRD, dan Accounting.
-        </div>
+            Koreksi manual tidak mengubah jadwal penambahan otomatis.
+        </span>
     </div>
 
-    <div class="card p-4">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Karyawan</th>
-            <th>Divisi</th>
-            <th>Join Date</th>
-            <th>Kuota</th>
-            <th>Sisa Cuti</th>
-            <th>Auto +1 Berikutnya</th>
-            <th>Aksi</th>
-        </tr>
-    </thead>
+</section>
 
-    <tbody>
-        {% for u in users %}
-        <tr>
-            <td><strong>#{{ u.id }}</strong></td>
-            <td>
-                <div class="user-name">{{ u.username }}</div>
-                <div class="user-meta">{{ u.role }}</div>
-            </td>
-            <td>{{ u.divisi or '-' }}</td>
-            <td>{{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}</td>
-            <td><span class="badge bg-primary">{{ u.kuota }} hari</span></td>
-            <td class="{% if u.sisa < 0 %}text-danger fw-bold{% elif u.sisa < 3 %}text-warning fw-bold{% else %}text-success fw-bold{% endif %}">
-                {{ u.sisa }} hari
-            </td>
-            <td>
-                {% if u.status_accrual == 'aktif' %}
-                    <span class="badge bg-success-subtle text-success-emphasis status-badge mb-1">Aktif</span>
-                {% elif u.status_accrual == 'menunggu_6_bulan' %}
-                    <span class="badge bg-warning-subtle text-warning-emphasis status-badge mb-1">Belum 6 bulan</span>
-                {% elif u.status_accrual == 'join_date_kosong' %}
-                    <span class="badge bg-danger-subtle text-danger-emphasis status-badge mb-1">Join date kosong</span>
-                {% else %}
-                    <span class="badge bg-secondary-subtle text-secondary-emphasis status-badge mb-1">Tidak otomatis</span>
-                {% endif %}
+<!-- STATISTIK -->
+<section class="quota-stat-grid">
 
-                {% if u.status_accrual != 'tidak_otomatis' %}
-                <div class="schedule-date">
-                    {{ u.tanggal_accrual_berikutnya.strftime('%d/%m/%Y') if u.tanggal_accrual_berikutnya else '-' }}
+    <article>
+        <div class="quota-stat-icon quota-stat-indigo">
+            <i class="bi bi-people"></i>
+        </div>
+
+        <div>
+            <span>Total pengguna</span>
+            <strong>{{ users|length }}</strong>
+        </div>
+    </article>
+
+    <article>
+        <div class="quota-stat-icon quota-stat-green">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+
+        <div>
+            <span>Accrual aktif</span>
+
+            <strong>
+                {{
+                    users
+                    | selectattr('status_accrual', 'equalto', 'aktif')
+                    | list
+                    | length
+                }}
+            </strong>
+        </div>
+    </article>
+
+    <article>
+        <div class="quota-stat-icon quota-stat-amber">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+
+        <div>
+            <span>Belum 6 bulan</span>
+
+            <strong>
+                {{
+                    users
+                    | selectattr(
+                        'status_accrual',
+                        'equalto',
+                        'menunggu_6_bulan'
+                    )
+                    | list
+                    | length
+                }}
+            </strong>
+        </div>
+    </article>
+
+    <article>
+        <div class="quota-stat-icon quota-stat-red">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+
+        <div>
+            <span>Join date kosong</span>
+
+            <strong>
+                {{
+                    users
+                    | selectattr(
+                        'status_accrual',
+                        'equalto',
+                        'join_date_kosong'
+                    )
+                    | list
+                    | length
+                }}
+            </strong>
+        </div>
+    </article>
+
+</section>
+
+<!-- FILTER -->
+<section class="quota-toolbar">
+
+    <div class="quota-search">
+        <i class="bi bi-search"></i>
+
+        <input
+            type="search"
+            id="quotaSearch"
+            placeholder="Cari nama, ID, divisi, atau role..."
+            autocomplete="off"
+        >
+    </div>
+
+    <select id="quotaStatusFilter">
+        <option value="">Semua status accrual</option>
+        <option value="aktif">Aktif</option>
+        <option value="menunggu_6_bulan">Belum 6 bulan</option>
+        <option value="join_date_kosong">Join date kosong</option>
+        <option value="tidak_otomatis">Tidak otomatis</option>
+    </select>
+
+</section>
+
+<!-- TABLE -->
+<section class="quota-panel">
+
+    <div class="quota-panel-header">
+
+        <div>
+            <h2>Data kuota karyawan</h2>
+
+            <p>
+                <span id="visibleQuotaCount">{{ users|length }}</span>
+                dari {{ users|length }} pengguna ditampilkan.
+            </p>
+        </div>
+
+        <div class="records-total-badge">
+            <i class="bi bi-calendar2-heart"></i>
+            {{ users|length }} akun
+        </div>
+
+    </div>
+
+    <div class="dashboard-table-wrapper">
+
+        <table class="dashboard-table quota-table">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Karyawan</th>
+                    <th>Role/Divisi</th>
+                    <th>Join date</th>
+                    <th>Kuota</th>
+                    <th>Cuti terpakai</th>
+                    <th>Sisa cuti</th>
+                    <th>Accrual berikutnya</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for u in users %}
+
+                    {% set cuti_terpakai = u.kuota - u.sisa %}
+
+                    <tr
+                        class="quota-table-row"
+                        data-search="{{ (
+                            u.id|string ~ ' ' ~
+                            u.username ~ ' ' ~
+                            (u.divisi or '') ~ ' ' ~
+                            (u.role or '')
+                        )|lower|e }}"
+                        data-status="{{ u.status_accrual|e }}"
+                    >
+
+                        <td>
+                            <strong class="user-id">
+                                #{{ u.id }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            <div class="quota-user">
+
+                                <div>
+                                    {{ u.username[:2]|upper }}
+                                </div>
+
+                                <strong>{{ u.username }}</strong>
+
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="quota-role-division">
+
+                                <span class="user-role-chip user-role-{{ u.role }}">
+                                    {% if u.role == 'admin' %}
+                                        Admin / IT
+                                    {% else %}
+                                        {{ u.role|capitalize }}
+                                    {% endif %}
+                                </span>
+
+                                <small>
+                                    {{ u.divisi or 'Tanpa divisi' }}
+                                </small>
+
+                            </div>
+                        </td>
+
+                        <td>
+                            <strong class="quota-date">
+                                {{ u.join_date.strftime('%d/%m/%Y') if u.join_date else '-' }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            <span class="quota-value">
+                                {{ u.kuota }} hari
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="quota-used">
+                                {{ cuti_terpakai }} hari
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="
+                                quota-remaining
+                                {% if u.sisa < 0 %}
+                                    negative
+                                {% elif u.sisa < 3 %}
+                                    warning
+                                {% else %}
+                                    safe
+                                {% endif %}
+                            ">
+                                {{ u.sisa }} hari
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="quota-accrual">
+
+                                {% if u.status_accrual == 'aktif' %}
+                                    <span class="quota-status active">
+                                        <i class="bi bi-check-circle"></i>
+                                        Aktif
+                                    </span>
+
+                                {% elif u.status_accrual == 'menunggu_6_bulan' %}
+                                    <span class="quota-status waiting">
+                                        <i class="bi bi-hourglass"></i>
+                                        Belum 6 bulan
+                                    </span>
+
+                                {% elif u.status_accrual == 'join_date_kosong' %}
+                                    <span class="quota-status missing">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                        Join date kosong
+                                    </span>
+
+                                {% else %}
+                                    <span class="quota-status inactive">
+                                        <i class="bi bi-pause-circle"></i>
+                                        Tidak otomatis
+                                    </span>
+                                {% endif %}
+
+                                {% if u.status_accrual != 'tidak_otomatis' %}
+                                    <strong>
+                                        {{ u.tanggal_accrual_berikutnya.strftime('%d/%m/%Y') if u.tanggal_accrual_berikutnya else '-' }}
+                                    </strong>
+                                {% endif %}
+
+                            </div>
+                        </td>
+
+                        <td>
+                            <button
+                                type="button"
+                                class="quota-edit-button"
+                                data-id="{{ u.id }}"
+                                data-name="{{ u.username|e }}"
+                                data-quota="{{ u.kuota }}"
+                                data-remaining="{{ u.sisa }}"
+                                onclick="openQuotaModal(this)"
+                            >
+                                <i class="bi bi-pencil"></i>
+                                Edit kuota
+                            </button>
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div
+        class="user-filter-empty"
+        id="quotaFilterEmpty"
+        hidden
+    >
+        <i class="bi bi-search"></i>
+        <h3>Data tidak ditemukan</h3>
+        <p>Coba ubah kata pencarian atau filter status.</p>
+    </div>
+
+</section>
+
+<!-- MODAL EDIT KUOTA -->
+<div
+    class="user-modal-backdrop"
+    id="editQuotaModal"
+    onclick="closeUserModalFromBackground(event)"
+>
+
+    <section class="user-modal user-modal-small">
+
+        <div class="user-modal-header">
+
+            <div>
+                <p class="dashboard-eyebrow">
+                    KOREKSI MANUAL
+                </p>
+
+                <h2>Edit kuota cuti</h2>
+
+                <span id="quotaModalUser">
+                    Pilih pengguna
+                </span>
+            </div>
+
+            <button
+                type="button"
+                onclick="closeUserModal('editQuotaModal')"
+                aria-label="Tutup"
+            >
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+        </div>
+
+        <form
+            method="POST"
+            id="editQuotaForm"
+            class="user-modal-form"
+        >
+
+            <div class="quota-modal-summary">
+
+                <div>
+                    <span>Kuota saat ini</span>
+                    <strong id="quotaCurrentValue">0 hari</strong>
                 </div>
-                {% endif %}
-            </td>
-            <td>
-                <button class="btn btn-sm btn-warning"
-                        data-bs-toggle="modal"
-                        data-bs-target="#editModal{{ u.id }}">
-                    Edit
+
+                <div>
+                    <span>Sisa cuti saat ini</span>
+                    <strong id="quotaCurrentRemaining">0 hari</strong>
+                </div>
+
+            </div>
+
+            <label class="user-form-field">
+                <span>Kuota cuti baru <b>*</b></span>
+
+                <input
+                    type="number"
+                    name="kuota"
+                    id="quotaInput"
+                    step="1"
+                    required
+                >
+            </label>
+
+            <div class="user-modal-info quota-modal-info">
+                <i class="bi bi-info-circle"></i>
+
+                <p>
+                    Koreksi ini mengubah kuota dasar secara manual.
+                    Jadwal penambahan otomatis tetap berjalan.
+                </p>
+            </div>
+
+            <div class="user-modal-actions">
+
+                <button
+                    type="button"
+                    class="dashboard-outline-button"
+                    onclick="closeUserModal('editQuotaModal')"
+                >
+                    Batal
                 </button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-        </div>
-    </div>
+
+                <button
+                    type="submit"
+                    class="dashboard-primary-button"
+                >
+                    <i class="bi bi-save"></i>
+                    Simpan Kuota
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
 </div>
 
-{% for u in users %}
-<div class="modal fade" id="editModal{{ u.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="/update_quota/{{ u.id }}" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Kuota Cuti - {{ u.username }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-                </div>
-                <div class="modal-body">
-                    <label class="form-label">Kuota Cuti Saat Ini</label>
-                    <input type="number"
-                           name="kuota"
-                           class="form-control"
-                           value="{{ u.kuota }}"
-                           required>
-                    <small class="text-muted d-block mt-2">
-                        Kuota ini bisa diedit manual oleh HRD/Admin. Sistem tetap
-                        menambah +1 otomatis setiap bulan setelah pegawai melewati
-                        masa kerja 6 bulan. Edit manual tidak mengubah jadwal otomatis.
-                    </small>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endfor %}
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
+
 <script>
-function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("active");
-    document.getElementById("mainContent").classList.toggle("shift");
-}
+    const quotaSearch =
+        document.getElementById("quotaSearch");
+
+    const quotaStatusFilter =
+        document.getElementById("quotaStatusFilter");
+
+    const quotaRows =
+        document.querySelectorAll(".quota-table-row");
+
+    const visibleQuotaCount =
+        document.getElementById("visibleQuotaCount");
+
+    const quotaFilterEmpty =
+        document.getElementById("quotaFilterEmpty");
+
+    function filterQuotaUsers() {
+        const query =
+            quotaSearch.value.trim().toLowerCase();
+
+        const status =
+            quotaStatusFilter.value;
+
+        let visible = 0;
+
+        quotaRows.forEach(function (row) {
+            const matchesSearch =
+                !query ||
+                row.dataset.search.includes(query);
+
+            const matchesStatus =
+                !status ||
+                row.dataset.status === status;
+
+            const shouldShow =
+                matchesSearch && matchesStatus;
+
+            row.hidden = !shouldShow;
+
+            if (shouldShow) {
+                visible += 1;
+            }
+        });
+
+        visibleQuotaCount.textContent = visible;
+        quotaFilterEmpty.hidden = visible !== 0;
+    }
+
+    quotaSearch.addEventListener(
+        "input",
+        filterQuotaUsers
+    );
+
+    quotaStatusFilter.addEventListener(
+        "change",
+        filterQuotaUsers
+    );
+
+    function openUserModal(modalId) {
+        const modal =
+            document.getElementById(modalId);
+
+        modal.classList.add("visible");
+        document.body.classList.add("sidebar-lock");
+    }
+
+    function closeUserModal(modalId) {
+        const modal =
+            document.getElementById(modalId);
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove("visible");
+        document.body.classList.remove("sidebar-lock");
+    }
+
+    function closeUserModalFromBackground(event) {
+        if (
+            event.target.classList.contains(
+                "user-modal-backdrop"
+            )
+        ) {
+            closeUserModal(event.target.id);
+        }
+    }
+
+    function openQuotaModal(button) {
+        document.getElementById(
+            "editQuotaForm"
+        ).action =
+            "/update_quota/" + button.dataset.id;
+
+        document.getElementById(
+            "quotaModalUser"
+        ).textContent =
+            "Kuota untuk " + button.dataset.name;
+
+        document.getElementById(
+            "quotaCurrentValue"
+        ).textContent =
+            button.dataset.quota + " hari";
+
+        document.getElementById(
+            "quotaCurrentRemaining"
+        ).textContent =
+            button.dataset.remaining + " hari";
+
+        document.getElementById(
+            "quotaInput"
+        ).value =
+            button.dataset.quota;
+
+        openUserModal("editQuotaModal");
+    }
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+            if (event.key === "Escape") {
+                closeUserModal("editQuotaModal");
+            }
+        }
+    );
 </script>
-</body>
-</html>
+
+{% endblock %}
