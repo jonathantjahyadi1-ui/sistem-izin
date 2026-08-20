@@ -1,340 +1,1215 @@
-/* ==================================================
-   PERSETUJUAN IZIN
-================================================== */
+{% extends "base_izin.html" %}
 
-.approval-summary {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 18px;
-    padding: 18px 20px;
-    border: 1px solid #fde68a;
-    border-radius: 14px;
-    background:
-        linear-gradient(
-            100deg,
-            #fffbeb 0%,
-            #fffdf6 60%,
-            #ffffff 100%
+{% block title %}Semua Pengajuan{% endblock %}
+{% block header_title %}Semua Pengajuan{% endblock %}
+
+
+{% block content %}
+
+<!-- ==================================================
+     PAGE HEADER
+================================================== -->
+
+<section class="leave-page-heading">
+
+    <div>
+
+        <span class="leave-eyebrow">
+            DATA PENGAJUAN
+        </span>
+
+        <h1>
+            Semua Pengajuan
+        </h1>
+
+        <p>
+            Lihat seluruh riwayat pengajuan izin, cuti,
+            dan sakit karyawan dalam satu tempat.
+        </p>
+
+    </div>
+
+
+    <div class="records-heading-actions">
+
+        <a
+            href="{{ url_for(
+                'export_excel',
+                status=status_filter,
+                jenis=jenis_filter,
+                search=search,
+                divisi=divisi_filter,
+                nama=nama_filter
+            ) }}"
+            class="records-export-button"
+        >
+            <i class="bi bi-file-earmark-excel"></i>
+            Export Excel
+        </a>
+
+    </div>
+
+</section>
+
+
+
+<!-- ==================================================
+     FILTER
+================================================== -->
+
+<section class="records-filter-panel">
+
+    <div class="records-filter-header">
+
+        <div>
+
+            <h2>
+                Filter Pengajuan
+            </h2>
+
+            <p>
+                Cari data berdasarkan alasan, nama,
+                jenis izin, status, atau divisi.
+            </p>
+
+        </div>
+
+        <i class="bi bi-funnel"></i>
+
+    </div>
+
+
+    <form
+        method="GET"
+        action="{{ url_for('semua_izin') }}"
+        class="records-filter-grid"
+    >
+
+
+        <!-- CARI ALASAN -->
+
+        <div class="admin-field">
+
+            <label for="search">
+                Cari Alasan
+            </label>
+
+            <div class="records-input-wrapper">
+
+                <i class="bi bi-search"></i>
+
+                <input
+                    type="text"
+                    id="search"
+                    name="search"
+                    value="{{ search or '' }}"
+                    placeholder="Cari alasan..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </div>
+
+
+
+        <!-- CARI NAMA -->
+
+        <div class="admin-field">
+
+            <label for="nama">
+                Nama Pengaju
+            </label>
+
+            <div class="records-input-wrapper">
+
+                <i class="bi bi-person"></i>
+
+                <input
+                    type="text"
+                    id="nama"
+                    name="nama"
+                    value="{{ nama_filter or '' }}"
+                    placeholder="Cari nama..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </div>
+
+
+
+        <!-- JENIS IZIN -->
+
+        <div class="admin-field">
+
+            <label for="jenis">
+                Jenis Izin
+            </label>
+
+            <select
+                id="jenis"
+                name="jenis"
+            >
+
+                <option value="">
+                    Semua Jenis
+                </option>
+
+                <option
+                    value="cuti"
+                    {% if jenis_filter == 'cuti' %}
+                        selected
+                    {% endif %}
+                >
+                    Cuti
+                </option>
+
+                <option
+                    value="sakit"
+                    {% if jenis_filter == 'sakit' %}
+                        selected
+                    {% endif %}
+                >
+                    Sakit
+                </option>
+
+                <option
+                    value="izin_lain"
+                    {% if jenis_filter == 'izin_lain' %}
+                        selected
+                    {% endif %}
+                >
+                    Izin Lain
+                </option>
+
+            </select>
+
+        </div>
+
+
+
+        <!-- STATUS -->
+
+        <div class="admin-field">
+
+            <label for="status">
+                Status
+            </label>
+
+            <select
+                id="status"
+                name="status"
+            >
+
+                <option value="">
+                    Semua Status
+                </option>
+
+                <option
+                    value="pending"
+                    {% if status_filter == 'pending' %}
+                        selected
+                    {% endif %}
+                >
+                    Pending
+                </option>
+
+                <option
+                    value="approved"
+                    {% if status_filter == 'approved' %}
+                        selected
+                    {% endif %}
+                >
+                    Approved
+                </option>
+
+                <option
+                    value="rejected"
+                    {% if status_filter == 'rejected' %}
+                        selected
+                    {% endif %}
+                >
+                    Rejected
+                </option>
+
+            </select>
+
+        </div>
+
+
+
+        <!-- DIVISI -->
+
+        <div class="admin-field">
+
+            <label for="divisi">
+                Divisi
+            </label>
+
+            <select
+                id="divisi"
+                name="divisi"
+            >
+
+                <option value="">
+                    Semua Divisi
+                </option>
+
+                {% for d in divisi_list %}
+
+                    <option
+                        value="{{ d }}"
+                        {% if divisi_filter == d %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ d }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+
+        <!-- ACTION FILTER -->
+
+        <div class="admin-filter-actions">
+
+            <button
+                type="submit"
+                class="dashboard-primary-button records-filter-button"
+            >
+                <i class="bi bi-search"></i>
+                Filter
+            </button>
+
+
+            <a
+                href="{{ url_for('semua_izin') }}"
+                class="dashboard-secondary-button"
+            >
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Reset
+            </a>
+
+        </div>
+
+
+    </form>
+
+</section>
+
+
+
+<!-- ==================================================
+     DATA PANEL
+================================================== -->
+
+<section class="records-panel">
+
+
+    <div class="records-toolbar">
+
+        <div>
+
+            <h2>
+                Data Pengajuan
+            </h2>
+
+            <p>
+                Menampilkan maksimal 100 pengajuan terbaru.
+            </p>
+
+        </div>
+
+
+        <span class="records-total-badge">
+
+            <i class="bi bi-database"></i>
+
+            {{ data | length }} Data
+
+        </span>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         TABLE
+    ================================================== -->
+
+    {% if data %}
+
+        <div class="dashboard-table-wrapper">
+
+            <table class="dashboard-table records-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            Pengaju
+                        </th>
+
+                        <th>
+                            Jenis
+                        </th>
+
+                        <th>
+                            Tanggal
+                        </th>
+
+                        <th>
+                            Durasi
+                        </th>
+
+                        <th>
+                            Alasan
+                        </th>
+
+                        <th>
+                            Surat
+                        </th>
+
+                        <th>
+                            Bukti Chat
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Aksi
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for i, pengaju in data %}
+
+                        <tr>
+
+
+                            <!-- ==========================================
+                                 ID
+                            ========================================== -->
+
+                            <td>
+
+                                <strong class="user-id">
+                                    #{{ i.id }}
+                                </strong>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 PENGAJU
+                            ========================================== -->
+
+                            <td>
+
+                                {% if pengaju %}
+
+                                    {% set nama_pengaju =
+                                        pengaju.nama_lengkap
+                                        or pengaju.username
+                                    %}
+
+                                    <div class="records-user">
+
+                                        <div class="records-user-avatar">
+
+                                            {{ nama_pengaju[:2] | upper }}
+
+                                        </div>
+
+
+                                        <div>
+
+                                            <strong>
+                                                {{ nama_pengaju }}
+                                            </strong>
+
+                                            <span>
+                                                {{ pengaju.divisi or '-' }}
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="dashboard-empty-file">
+                                        User tidak ditemukan
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 JENIS IZIN
+                            ========================================== -->
+
+                            <td>
+
+                                {% if i.jenis_izin == 'cuti' %}
+
+                                    <span class="request-type request-type-cuti">
+
+                                        <i class="bi bi-calendar2-check"></i>
+                                        Cuti
+
+                                    </span>
+
+
+                                {% elif i.jenis_izin == 'sakit' %}
+
+                                    <span class="request-type request-type-sakit">
+
+                                        <i class="bi bi-bandaid"></i>
+                                        Sakit
+
+                                    </span>
+
+
+                                {% elif i.jenis_izin == 'izin_lain' %}
+
+                                    <span class="request-type request-type-izin">
+
+                                        <i class="bi bi-file-earmark-text"></i>
+                                        Izin Lain
+
+                                    </span>
+
+
+                                {% else %}
+
+                                    <span class="request-type request-type-lainnya">
+
+                                        {{ i.jenis_izin or '-' }}
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 TANGGAL
+                            ========================================== -->
+
+                            <td>
+
+                                <div class="dashboard-date-range">
+
+                                    <strong>
+
+                                        {% if i.tanggal_mulai %}
+
+                                            {{ i.tanggal_mulai.strftime('%d/%m/%Y') }}
+
+                                        {% else %}
+
+                                            -
+
+                                        {% endif %}
+
+                                    </strong>
+
+
+                                    {% if
+                                        i.tanggal_selesai
+                                        and i.tanggal_selesai != i.tanggal_mulai
+                                    %}
+
+                                        <span>
+
+                                            s/d
+                                            {{ i.tanggal_selesai.strftime('%d/%m/%Y') }}
+
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 DURASI
+                            ========================================== -->
+
+                            <td>
+
+                                <span class="records-duration">
+
+                                    <i class="bi bi-clock"></i>
+
+                                    {{ i.durasi or 0 }}
+                                    hari
+
+                                </span>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 ALASAN
+                            ========================================== -->
+
+                            <td>
+
+                                <div class="records-reason">
+
+                                    <p>
+                                        {{ i.alasan or '-' }}
+                                    </p>
+
+
+                                    {% if i.alasan %}
+
+                                        <button
+                                            type="button"
+                                            data-reason="{{ i.alasan | e }}"
+                                            onclick="openReasonModal(this)"
+                                        >
+                                            Lihat lengkap
+                                        </button>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 SURAT
+                            ========================================== -->
+
+                            <td>
+
+                                <div class="records-attachments">
+
+                                    {% if i.file_surat %}
+
+                                        <button
+                                            type="button"
+                                            title="Lihat surat dokter"
+                                            data-file-url="{{ url_for(
+                                                'download_file',
+                                                filename=i.file_surat
+                                            ) }}"
+                                            data-file-title="Surat / Dokumen"
+                                            onclick="openFileModal(this)"
+                                        >
+
+                                            <i class="bi bi-file-earmark-text"></i>
+
+                                        </button>
+
+                                    {% else %}
+
+                                        <span class="dashboard-empty-file">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 CHAT
+                            ========================================== -->
+
+                            <td>
+
+                                <div class="records-attachments">
+
+                                    {% if i.file_chat %}
+
+                                        <button
+                                            type="button"
+                                            title="Lihat bukti chat"
+                                            data-file-url="{{ url_for(
+                                                'download_file',
+                                                filename=i.file_chat
+                                            ) }}"
+                                            data-file-title="Bukti Chat"
+                                            onclick="openFileModal(this)"
+                                        >
+
+                                            <i class="bi bi-chat-square-text"></i>
+
+                                        </button>
+
+                                    {% else %}
+
+                                        <span class="dashboard-empty-file">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 STATUS
+                            ========================================== -->
+
+                            <td>
+
+                                {% if i.status == 'pending' %}
+
+                                    <span class="request-status status-pending">
+
+                                        <i class="bi bi-hourglass-split"></i>
+
+                                        Pending
+
+                                    </span>
+
+
+                                {% elif i.status == 'approved' %}
+
+                                    <span class="request-status status-approved">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                        Approved
+
+                                    </span>
+
+
+                                {% elif i.status == 'rejected' %}
+
+                                    <span class="request-status status-rejected">
+
+                                        <i class="bi bi-x-circle"></i>
+
+                                        Rejected
+
+                                    </span>
+
+
+                                {% else %}
+
+                                    <span class="request-status">
+
+                                        {{ i.status or '-' }}
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+
+                            <!-- ==========================================
+                                 ACTION
+                            ========================================== -->
+
+                            <td>
+
+                                {% if
+                                    user.role in ['admin', 'hrd', 'direktur']
+                                    and i.status == 'pending'
+                                %}
+
+                                    <div class="admin-row-actions">
+
+
+                                        <!-- APPROVE -->
+
+                                        <form
+                                            action="{{ url_for(
+                                                'approve',
+                                                id=i.id
+                                            ) }}"
+                                            method="POST"
+                                        >
+
+                                            <button
+                                                type="submit"
+                                                class="admin-action-button approve"
+                                                title="Approve pengajuan"
+                                                onclick="return confirm(
+                                                    'Yakin ingin menyetujui pengajuan #{{ i.id }}?'
+                                                );"
+                                            >
+
+                                                <i class="bi bi-check-lg"></i>
+
+                                            </button>
+
+                                        </form>
+
+
+
+                                        <!-- REJECT -->
+
+                                        <form
+                                            action="{{ url_for(
+                                                'reject',
+                                                id=i.id
+                                            ) }}"
+                                            method="POST"
+                                        >
+
+                                            <button
+                                                type="submit"
+                                                class="admin-action-button reject"
+                                                title="Reject pengajuan"
+                                                onclick="return confirm(
+                                                    'Yakin ingin menolak pengajuan #{{ i.id }}?'
+                                                );"
+                                            >
+
+                                                <i class="bi bi-x-lg"></i>
+
+                                            </button>
+
+                                        </form>
+
+
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="admin-no-action">
+                                        —
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+
+    {% else %}
+
+
+        <!-- ==================================================
+             EMPTY STATE
+        ================================================== -->
+
+        <div class="records-empty-state">
+
+            <div>
+                <i class="bi bi-inbox"></i>
+            </div>
+
+            <h2>
+                Tidak ada pengajuan
+            </h2>
+
+            <p>
+                Tidak ada data pengajuan yang sesuai
+                dengan filter yang dipilih.
+            </p>
+
+
+            <a
+                href="{{ url_for('semua_izin') }}"
+                class="dashboard-primary-button"
+            >
+
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Reset Filter
+
+            </a>
+
+        </div>
+
+
+    {% endif %}
+
+
+</section>
+
+
+
+<!-- ==================================================
+     FILE PREVIEW MODAL
+================================================== -->
+
+<div
+    class="records-modal-backdrop"
+    id="fileModal"
+>
+
+    <div class="records-modal records-file-modal">
+
+
+        <div class="records-modal-header">
+
+            <div>
+
+                <h2 id="fileModalTitle">
+                    Preview File
+                </h2>
+
+                <span>
+                    Lampiran pengajuan karyawan
+                </span>
+
+            </div>
+
+
+            <button
+                type="button"
+                onclick="closeFileModal()"
+                aria-label="Tutup preview"
+            >
+
+                <i class="bi bi-x-lg"></i>
+
+            </button>
+
+        </div>
+
+
+        <iframe
+            id="filePreviewFrame"
+            title="Preview File"
+        ></iframe>
+
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     REASON MODAL
+================================================== -->
+
+<div
+    class="records-modal-backdrop"
+    id="reasonModal"
+>
+
+    <div class="records-modal">
+
+
+        <div class="records-modal-header">
+
+            <div>
+
+                <h2>
+                    Alasan Pengajuan
+                </h2>
+
+                <span>
+                    Alasan lengkap yang diberikan karyawan
+                </span>
+
+            </div>
+
+
+            <button
+                type="button"
+                onclick="closeReasonModal()"
+                aria-label="Tutup alasan"
+            >
+
+                <i class="bi bi-x-lg"></i>
+
+            </button>
+
+        </div>
+
+
+        <div
+            class="records-reason-content"
+            id="reasonModalText"
+        >
+        </div>
+
+
+    </div>
+
+</div>
+
+
+{% endblock %}
+
+
+
+{% block scripts %}
+
+<script>
+
+    /* ==================================================
+       FILE MODAL
+    ================================================== */
+
+    function openFileModal(button) {
+
+        const fileUrl =
+            button.getAttribute(
+                "data-file-url"
+            );
+
+        const fileTitle =
+            button.getAttribute(
+                "data-file-title"
+            ) || "Preview File";
+
+
+        const modal =
+            document.getElementById(
+                "fileModal"
+            );
+
+
+        const frame =
+            document.getElementById(
+                "filePreviewFrame"
+            );
+
+
+        const title =
+            document.getElementById(
+                "fileModalTitle"
+            );
+
+
+        title.textContent =
+            fileTitle;
+
+
+        frame.src =
+            fileUrl;
+
+
+        modal.classList.add(
+            "visible"
         );
-}
 
-.approval-summary-icon {
-    display: grid;
-    flex: 0 0 auto;
-    width: 45px;
-    height: 45px;
-    place-items: center;
-    border-radius: 12px;
-    color: #d97706;
-    background: #fef3c7;
-    font-size: 19px;
-}
 
-.approval-summary p {
-    margin: 0 0 5px;
-    color: #d97706;
-    font-size: 8px;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-}
+        document.body.style.overflow =
+            "hidden";
 
-.approval-summary h2 {
-    margin: 0;
-    color: #78350f;
-    font-size: 15px;
-}
-
-.approval-summary span {
-    display: block;
-    margin-top: 5px;
-    color: #92400e;
-    font-size: 9px;
-}
-
-.approval-panel {
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    border-radius: 15px;
-    background: #ffffff;
-    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.04);
-}
-
-.approval-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 18px 20px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.approval-panel-header h2 {
-    margin: 0;
-    color: #111827;
-    font-size: 14px;
-}
-
-.approval-panel-header p {
-    margin: 5px 0 0;
-    color: #94a3b8;
-    font-size: 9px;
-}
-
-.approval-header-icon {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    border-radius: 10px;
-    color: #4f46e5;
-    background: #eef2ff;
-    font-size: 16px;
-}
-
-.approval-table {
-    min-width: 1120px;
-}
-
-.approval-user {
-    display: flex;
-    min-width: 190px;
-    align-items: center;
-    gap: 9px;
-}
-
-.approval-user-avatar {
-    display: grid;
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    border-radius: 10px;
-    color: #4338ca;
-    background: #eef2ff;
-    font-size: 8px;
-    font-weight: 800;
-}
-
-.approval-user strong {
-    display: block;
-    color: #1e293b;
-    font-size: 9px;
-}
-
-.approval-user span,
-.approval-user small {
-    display: block;
-    margin-top: 3px;
-    color: #94a3b8;
-    font-size: 7px;
-}
-
-.approval-user small {
-    color: #c0cad8;
-}
-
-.approval-reason-cell {
-    max-width: 230px;
-}
-
-.approval-reason-cell p {
-    max-width: 230px;
-    margin: 0;
-    overflow: hidden;
-    color: #475569;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.approval-reason-button {
-    margin-top: 6px;
-    padding: 0;
-    border: 0;
-    color: #4f46e5;
-    background: transparent;
-    font-family: inherit;
-    font-size: 8px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.approval-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.approval-actions form {
-    margin: 0;
-}
-
-.approval-button {
-    display: inline-flex;
-    min-height: 31px;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 0 9px;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 8px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.approval-button.approve {
-    border: 1px solid #bbf7d0;
-    color: #15803d;
-    background: #f0fdf4;
-}
-
-.approval-button.approve:hover {
-    color: #ffffff;
-    background: #16a34a;
-}
-
-.approval-button.reject {
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    background: #fef2f2;
-}
-
-.approval-button.reject:hover {
-    color: #ffffff;
-    background: #dc2626;
-}
-
-.approval-empty-state {
-    display: grid;
-    min-height: 390px;
-    place-items: center;
-    align-content: center;
-    padding: 35px;
-    text-align: center;
-}
-
-.approval-empty-state > div {
-    display: grid;
-    width: 55px;
-    height: 55px;
-    place-items: center;
-    border-radius: 15px;
-    color: #15803d;
-    background: #f0fdf4;
-    font-size: 24px;
-}
-
-.approval-empty-state h2 {
-    margin: 15px 0 0;
-    color: #1e293b;
-    font-size: 15px;
-}
-
-.approval-empty-state p {
-    margin: 7px 0 18px;
-    color: #94a3b8;
-    font-size: 9px;
-}
-
-/* MODAL ALASAN */
-
-.approval-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    display: none;
-    padding: 20px;
-    place-items: center;
-    background: rgba(15, 23, 42, 0.58);
-    backdrop-filter: blur(3px);
-}
-
-.approval-modal-backdrop.visible {
-    display: grid;
-}
-
-.approval-modal {
-    position: relative;
-    width: min(100%, 520px);
-    padding: 25px;
-    border-radius: 16px;
-    background: #ffffff;
-    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
-}
-
-.approval-modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    display: grid;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    place-items: center;
-    border: 1px solid #e2e8f0;
-    border-radius: 9px;
-    color: #64748b;
-    background: #ffffff;
-    cursor: pointer;
-}
-
-.approval-modal-icon {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    margin-bottom: 17px;
-    place-items: center;
-    border-radius: 12px;
-    color: #4f46e5;
-    background: #eef2ff;
-    font-size: 19px;
-}
-
-.approval-modal h2 {
-    margin: 0;
-    color: #111827;
-    font-size: 19px;
-}
-
-.approval-modal > span {
-    display: block;
-    margin-top: 7px;
-    color: #94a3b8;
-    font-size: 9px;
-}
-
-.approval-modal-reason {
-    max-height: 300px;
-    margin: 20px 0;
-    padding: 15px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 11px;
-    color: #334155;
-    background: #f8fafc;
-    font-size: 11px;
-    line-height: 1.75;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.approval-modal .dashboard-primary-button {
-    width: 100%;
-    border: 1px solid #4f46e5;
-    cursor: pointer;
-}
-
-@media (max-width: 680px) {
-    .approval-summary {
-        align-items: flex-start;
     }
 
-    .approval-summary h2 {
-        font-size: 13px;
+
+
+    function closeFileModal() {
+
+        const modal =
+            document.getElementById(
+                "fileModal"
+            );
+
+
+        const frame =
+            document.getElementById(
+                "filePreviewFrame"
+            );
+
+
+        frame.src = "";
+
+
+        modal.classList.remove(
+            "visible"
+        );
+
+
+        document.body.style.overflow =
+            "";
+
     }
 
-    .approval-modal {
-        padding: 21px;
+
+
+    /* ==================================================
+       REASON MODAL
+    ================================================== */
+
+    function openReasonModal(button) {
+
+        const reason =
+            button.getAttribute(
+                "data-reason"
+            ) || "-";
+
+
+        const modal =
+            document.getElementById(
+                "reasonModal"
+            );
+
+
+        const content =
+            document.getElementById(
+                "reasonModalText"
+            );
+
+
+        content.textContent =
+            reason;
+
+
+        modal.classList.add(
+            "visible"
+        );
+
+
+        document.body.style.overflow =
+            "hidden";
+
     }
-}
+
+
+
+    function closeReasonModal() {
+
+        const modal =
+            document.getElementById(
+                "reasonModal"
+            );
+
+
+        const content =
+            document.getElementById(
+                "reasonModalText"
+            );
+
+
+        content.textContent =
+            "";
+
+
+        modal.classList.remove(
+            "visible"
+        );
+
+
+        document.body.style.overflow =
+            "";
+
+    }
+
+
+
+    /* ==================================================
+       CLOSE WHEN CLICKING BACKDROP
+    ================================================== */
+
+    document
+        .getElementById(
+            "fileModal"
+        )
+        .addEventListener(
+            "click",
+            function (event) {
+
+                if (
+                    event.target === this
+                ) {
+
+                    closeFileModal();
+
+                }
+
+            }
+        );
+
+
+
+    document
+        .getElementById(
+            "reasonModal"
+        )
+        .addEventListener(
+            "click",
+            function (event) {
+
+                if (
+                    event.target === this
+                ) {
+
+                    closeReasonModal();
+
+                }
+
+            }
+        );
+
+
+
+    /* ==================================================
+       CLOSE WITH ESC
+    ================================================== */
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                closeFileModal();
+
+                closeReasonModal();
+
+            }
+
+        }
+    );
+
+</script>
+
+{% endblock %}
