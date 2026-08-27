@@ -187,11 +187,7 @@
                         </td>
 
                         <td>
-                            {% if i.created_at %}
-                                {{ i.created_at.strftime('%d/%m/%Y') }}
-                            {% else %}
-                                -
-                            {% endif %}
+                            {{ i.created_at|tanggal_id if i.created_at else '-' }}
                         </td>
 
                         <td>

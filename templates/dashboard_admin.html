@@ -465,7 +465,7 @@
                             </td>
 
                             <td>
-                                {{ i.created_at.strftime('%d/%m/%Y') if i.created_at else '-' }}
+                                {{ i.created_at|tanggal_id if i.created_at else '-' }}
                             </td>
 
                             <td>

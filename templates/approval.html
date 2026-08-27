@@ -80,6 +80,7 @@
                     <tr>
                         <th>Pengaju</th>
                         <th>Jenis</th>
+                        <th>Tanggal Pengajuan</th>
                         <th>Periode</th>
                         <th>Durasi</th>
                         <th>Alasan</th>
@@ -131,6 +132,13 @@
                                 <span class="request-type request-type-{{ i.jenis_izin|lower }}">
                                     {{ i.jenis_izin|replace('_', ' ')|title }}
                                 </span>
+                            </td>
+
+                            <!-- TANGGAL PENGAJUAN -->
+                            <td>
+                                <strong>
+                                    {{ i.created_at|tanggal_id if i.created_at else '-' }}
+                                </strong>
                             </td>
 
                             <!-- PERIODE -->

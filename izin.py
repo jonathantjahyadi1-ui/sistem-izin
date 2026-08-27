@@ -1313,8 +1313,10 @@ def update_user(id):
     username_input = request.form.get('username') or request.form.get('nama_lengkap')
     username = normalize_full_name(username_input)
 
-    if not is_valid_full_name(username):
-        flash('Nama wajib menggunakan nama lengkap minimal 2 kata.', 'danger')
+    # Khusus Edit User: izinkan nama satu kata (contoh: Martin).
+    # Registrasi dan Tambah User tetap memakai aturan minimal 2 kata.
+    if not username:
+        flash('Nama wajib diisi minimal 1 kata.', 'danger')
         return redirect('/manage_users')
 
     duplicate = User.query.filter(

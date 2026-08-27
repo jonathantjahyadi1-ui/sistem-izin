@@ -358,7 +358,11 @@
                         </th>
 
                         <th>
-                            Tanggal
+                            Tanggal Pengajuan
+                        </th>
+
+                        <th>
+                            Periode Izin
                         </th>
 
                         <th>
@@ -490,6 +494,13 @@
 
                                 {% endif %}
 
+                            </td>
+
+
+                            <td>
+                                <strong>
+                                    {{ i.created_at|tanggal_id if i.created_at else '-' }}
+                                </strong>
                             </td>
 
 
