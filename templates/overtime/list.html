@@ -306,7 +306,7 @@
                         <th>SPV/Manager</th>
                         <th>Diajukan</th>
                         <th>Status</th>
-                        <th>Detail</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
 
@@ -422,16 +422,29 @@
                             </td>
 
                             <td>
-                                <a
-                                    href="{{ url_for(
-                                        'overtime.detail_overtime',
-                                        id=o.id
-                                    ) }}"
-                                    class="overtime-detail-button"
-                                >
-                                    Lihat detail
-                                    <i class="bi bi-arrow-right"></i>
-                                </a>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    {% if o.user_id == user.id and o.status == 'pending' %}
+                                        <a
+                                            href="{{ url_for('overtime.edit_overtime', id=o.id) }}"
+                                            class="overtime-detail-button"
+                                            title="Edit pengajuan lembur"
+                                        >
+                                            <i class="bi bi-pencil-square"></i>
+                                            Edit
+                                        </a>
+                                    {% endif %}
+
+                                    <a
+                                        href="{{ url_for(
+                                            'overtime.detail_overtime',
+                                            id=o.id
+                                        ) }}"
+                                        class="overtime-detail-button"
+                                    >
+                                        Lihat detail
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                </div>
                             </td>
 
                         </tr>

@@ -24,13 +24,25 @@
         </p>
     </div>
 
-    <a
-        href="{{ url_for('overtime.list_overtime') }}"
-        class="dashboard-outline-button"
-    >
-        <i class="bi bi-arrow-left"></i>
-        Kembali
-    </a>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        {% if overtime.user_id == user.id and overtime.status == 'pending' %}
+            <a
+                href="{{ url_for('overtime.edit_overtime', id=overtime.id) }}"
+                class="dashboard-primary-button"
+            >
+                <i class="bi bi-pencil-square"></i>
+                Edit pengajuan
+            </a>
+        {% endif %}
+
+        <a
+            href="{{ url_for('overtime.list_overtime') }}"
+            class="dashboard-outline-button"
+        >
+            <i class="bi bi-arrow-left"></i>
+            Kembali
+        </a>
+    </div>
 
 </section>
 

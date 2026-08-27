@@ -90,6 +90,25 @@ def upload_overtime_to_supabase(file, folder):
     return storage_path
 
 
+
+
+def delete_overtime_storage_files(paths):
+    """Hapus file overtime lama dari Supabase setelah penggantian berhasil."""
+    valid_paths = [
+        path for path in paths
+        if path and path.startswith('overtime/')
+    ]
+
+    if not valid_paths:
+        return
+
+    try:
+        supabase.storage.from_(SUPABASE_STORAGE_BUCKET).remove(valid_paths)
+    except Exception as e:
+        # Gagal cleanup file lama tidak boleh membatalkan perubahan data.
+        print('WARNING CLEANUP FILE OVERTIME:', repr(e))
+
+
 def create_overtime_signed_url(storage_path, expires_in=300):
     response = supabase.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(
         storage_path,
@@ -447,7 +466,119 @@ def submit_overtime():
         flash(f'Pengajuan lembur berhasil dibuat. Total lembur: {format_duration_minutes(duration_minutes)}.', 'success')
         return redirect(url_for('overtime.list_overtime'))
 
-    return render_template('overtime/form.html', user=user)
+    return render_template('overtime/form.html', user=user, editing=False)
+
+@overtime_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_overtime(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = current_logged_user()
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    overtime = OvertimeRequest.query.get_or_404(id)
+
+    # Hanya pengaju asli yang boleh mengedit pengajuan miliknya sendiri.
+    if overtime.user_id != user.id:
+        flash('Kamu hanya bisa mengedit pengajuan lembur milik sendiri.', 'danger')
+        return redirect(url_for('overtime.list_overtime'))
+
+    # Setelah diproses HRD, data dikunci agar histori approval tetap konsisten.
+    if overtime.status != 'pending':
+        flash('Pengajuan lembur yang sudah diproses HRD tidak dapat diedit.', 'warning')
+        return redirect(url_for('overtime.detail_overtime', id=id))
+
+    if request.method == 'POST':
+        try:
+            overtime_date = parse_date(request.form.get('overtime_date', '').strip())
+            start_time = parse_time(request.form.get('start_time', '').strip())
+            end_time = parse_time(request.form.get('end_time', '').strip())
+            duration_minutes = calculate_duration_minutes(
+                overtime_date,
+                start_time,
+                end_time
+            )
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+        except Exception:
+            flash('Tanggal dan jam lembur wajib diisi dengan format yang benar.', 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+
+        supervisor_name = request.form.get('supervisor_name', '').strip()
+        work_description = request.form.get('work_description', '').strip()
+
+        if not work_description:
+            flash('Keterangan pekerjaan selama lembur wajib diisi.', 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+
+        upload_definitions = [
+            ('chat_proof', 'chat_proof', 'chat'),
+            ('overtime_photo', 'overtime_photo', 'work_photo'),
+            ('attendance_photo', 'attendance_photo', 'attendance'),
+        ]
+
+        new_files = {}
+        uploaded_new_paths = []
+
+        try:
+            for form_name, model_field, folder in upload_definitions:
+                file = request.files.get(form_name)
+                if file and file.filename:
+                    new_path = upload_overtime_to_supabase(file, folder)
+                    new_files[model_field] = new_path
+                    uploaded_new_paths.append(new_path)
+        except ValueError as e:
+            delete_overtime_storage_files(uploaded_new_paths)
+            flash(str(e), 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+        except Exception as e:
+            delete_overtime_storage_files(uploaded_new_paths)
+            print('ERROR UPLOAD EDIT OVERTIME:', repr(e))
+            flash('Gagal upload bukti pengganti ke Supabase Storage.', 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+
+        old_replaced_paths = []
+        for model_field, new_path in new_files.items():
+            old_path = getattr(overtime, model_field, None)
+            if old_path and old_path != new_path:
+                old_replaced_paths.append(old_path)
+            setattr(overtime, model_field, new_path)
+
+        overtime.overtime_date = overtime_date
+        overtime.start_time = start_time
+        overtime.end_time = end_time
+        overtime.duration_minutes = duration_minutes
+        overtime.supervisor_name = supervisor_name
+        overtime.work_description = work_description
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            delete_overtime_storage_files(uploaded_new_paths)
+            print('ERROR UPDATE OVERTIME:', repr(e))
+            flash('Perubahan lembur gagal disimpan.', 'danger')
+            return redirect(url_for('overtime.edit_overtime', id=id))
+
+        # File lama dibersihkan hanya setelah perubahan database berhasil.
+        delete_overtime_storage_files(old_replaced_paths)
+
+        flash(
+            f'Pengajuan lembur berhasil diperbarui. Total lembur: '
+            f'{format_duration_minutes(duration_minutes)}.',
+            'success'
+        )
+        return redirect(url_for('overtime.detail_overtime', id=id))
+
+    return render_template(
+        'overtime/form.html',
+        user=user,
+        overtime=overtime,
+        editing=True
+    )
 
 
 @overtime_bp.route('/detail/<int:id>', methods=['GET', 'POST'])

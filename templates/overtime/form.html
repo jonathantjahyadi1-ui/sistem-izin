@@ -1,9 +1,10 @@
 {% extends "base_overtime.html" %}
+{% set is_editing = editing|default(false) %}
 
-{% block title %}Ajukan Lembur{% endblock %}
+{% block title %}{{ 'Edit Lembur' if is_editing else 'Ajukan Lembur' }}{% endblock %}
 
 {% block header_title %}
-    Ajukan Lembur
+    {{ 'Edit Lembur' if is_editing else 'Ajukan Lembur' }}
 {% endblock %}
 
 {% block content %}
@@ -15,10 +16,14 @@
             FORMULIR OVERTIME
         </p>
 
-        <h1>Ajukan lembur baru</h1>
+        <h1>{{ 'Edit pengajuan lembur' if is_editing else 'Ajukan lembur baru' }}</h1>
 
         <p>
-            Lengkapi jadwal, pekerjaan, dan tiga bukti pendukung.
+            {% if is_editing %}
+                Perbaiki data yang salah. Bukti lama tetap dipakai jika tidak diganti.
+            {% else %}
+                Lengkapi jadwal, pekerjaan, dan tiga bukti pendukung.
+            {% endif %}
         </p>
     </div>
 
@@ -89,6 +94,7 @@
                         type="date"
                         name="overtime_date"
                         id="overtimeDate"
+                        value="{{ overtime.overtime_date.strftime('%Y-%m-%d') if is_editing and overtime.overtime_date else '' }}"
                         required
                     >
                 </div>
@@ -105,6 +111,7 @@
                         type="time"
                         name="start_time"
                         id="startTime"
+                        value="{{ overtime.start_time.strftime('%H:%M') if is_editing and overtime.start_time else '' }}"
                         required
                     >
                 </div>
@@ -121,6 +128,7 @@
                         type="time"
                         name="end_time"
                         id="endTime"
+                        value="{{ overtime.end_time.strftime('%H:%M') if is_editing and overtime.end_time else '' }}"
                         required
                     >
                 </div>
@@ -155,6 +163,7 @@
                     <input
                         type="text"
                         name="supervisor_name"
+                        value="{{ overtime.supervisor_name if is_editing and overtime.supervisor_name else '' }}"
                         placeholder="Contoh: Budi Santoso"
                     >
                 </div>
@@ -170,7 +179,7 @@
                     maxlength="1500"
                     placeholder="Jelaskan pekerjaan yang dilakukan selama lembur..."
                     required
-                ></textarea>
+                >{{ overtime.work_description if is_editing and overtime.work_description else '' }}</textarea>
 
                 <small>
                     Jelaskan pekerjaan secara singkat dan jelas.
@@ -182,8 +191,12 @@
                 <i class="bi bi-info-circle"></i>
 
                 <p>
-                    Ketiga bukti wajib dilampirkan. Gabungan seluruh
-                    file maksimal 5 MB dengan format JPG, PNG, atau PDF.
+                    {% if is_editing %}
+                        Upload hanya bukti yang ingin diganti. Jika tidak memilih file baru, bukti lama tetap tersimpan.
+                    {% else %}
+                        Ketiga bukti wajib dilampirkan. Gabungan seluruh
+                        file maksimal 5 MB dengan format JPG, PNG, atau PDF.
+                    {% endif %}
                 </p>
             </div>
 
@@ -193,7 +206,7 @@
                 <div class="leave-upload-heading">
 
                     <div>
-                        <span>Bukti pendukung <b>*</b></span>
+                        <span>Bukti pendukung {% if not is_editing %}<b>*</b>{% endif %}</span>
 
                         <small>
                             Pastikan tulisan dan jam pada bukti dapat terbaca.
@@ -219,7 +232,7 @@
                             name="chat_proof"
                             id="chatProof"
                             accept=".jpg,.jpeg,.png,.pdf"
-                            required
+                            {% if not is_editing %}required{% endif %}
                         >
 
                         <div class="leave-upload-icon">
@@ -231,7 +244,7 @@
                         </strong>
 
                         <span id="chatProofDescription">
-                            Klik untuk memilih file
+                            {{ 'Opsional — pilih jika ingin mengganti' if is_editing else 'Klik untuk memilih file' }}
                         </span>
                     </label>
 
@@ -246,7 +259,7 @@
                             name="overtime_photo"
                             id="overtimePhoto"
                             accept=".jpg,.jpeg,.png,.pdf"
-                            required
+                            {% if not is_editing %}required{% endif %}
                         >
 
                         <div class="leave-upload-icon">
@@ -258,7 +271,7 @@
                         </strong>
 
                         <span id="overtimePhotoDescription">
-                            Klik untuk memilih file
+                            {{ 'Opsional — pilih jika ingin mengganti' if is_editing else 'Klik untuk memilih file' }}
                         </span>
                     </label>
 
@@ -273,7 +286,7 @@
                             name="attendance_photo"
                             id="attendancePhoto"
                             accept=".jpg,.jpeg,.png,.pdf"
-                            required
+                            {% if not is_editing %}required{% endif %}
                         >
 
                         <div class="leave-upload-icon">
@@ -285,14 +298,26 @@
                         </strong>
 
                         <span id="attendancePhotoDescription">
-                            Klik untuk memilih file
+                            {{ 'Opsional — pilih jika ingin mengganti' if is_editing else 'Klik untuk memilih file' }}
                         </span>
                     </label>
 
                 </div>
 
+                {% if is_editing %}
+                    <div class="leave-info-banner" style="margin-top: 16px;">
+                        <i class="bi bi-paperclip"></i>
+                        <p>
+                            Bukti saat ini:
+                            <a href="{{ overtime_file_url(overtime.chat_proof) }}" target="_blank">Chat</a> ·
+                            <a href="{{ overtime_file_url(overtime.overtime_photo) }}" target="_blank">Foto lembur</a> ·
+                            <a href="{{ overtime_file_url(overtime.attendance_photo) }}" target="_blank">Tap absen</a>
+                        </p>
+                    </div>
+                {% endif %}
+
                 <div class="overtime-file-total" id="overtimeFileTotal">
-                    Total file: 0 MB dari maksimal 5 MB
+                    Total file baru: 0 MB dari maksimal 5 MB
                 </div>
 
             </section>
@@ -312,8 +337,8 @@
                     class="dashboard-primary-button"
                     id="overtimeSubmitButton"
                 >
-                    <i class="bi bi-send"></i>
-                    Kirim pengajuan
+                    <i class="bi {{ 'bi-check2-circle' if is_editing else 'bi-send' }}"></i>
+                    {{ 'Simpan perubahan' if is_editing else 'Kirim pengajuan' }}
                 </button>
 
             </div>
@@ -379,11 +404,15 @@
             <i class="bi bi-shield-check"></i>
 
             <div>
-                <strong>Approval Admin/HRD</strong>
+                <strong>{{ 'Edit sebelum diproses' if is_editing else 'Approval Admin/HRD' }}</strong>
 
                 <p>
-                    Pengajuan aktif setelah bukti diperiksa
-                    dan disetujui.
+                    {% if is_editing %}
+                        Pengajuan hanya dapat diedit selama status masih menunggu approval.
+                    {% else %}
+                        Pengajuan aktif setelah bukti diperiksa
+                        dan disetujui.
+                    {% endif %}
                 </p>
             </div>
 
@@ -398,6 +427,8 @@
 {% block scripts %}
 
 <script>
+    const isEditing = {{ 'true' if is_editing else 'false' }};
+
     const overtimeForm =
         document.getElementById("overtimeForm");
 
@@ -596,7 +627,7 @@
             );
 
         totalElement.textContent =
-            "Total file: " +
+            "Total file baru: " +
             sizeInMb.toFixed(2) +
             " MB dari maksimal 5 MB";
 
@@ -619,7 +650,9 @@
                         setting.defaultTitle;
 
                     setting.description.textContent =
-                        "Klik untuk memilih file";
+                        isEditing
+                            ? "Opsional — pilih jika ingin mengganti"
+                            : "Klik untuk memilih file";
 
                     updateCombinedFileSize();
                     return;
@@ -646,6 +679,8 @@
             }
         );
     });
+
+    calculateOvertimeDuration();
 
     overtimeForm.addEventListener(
         "submit",
@@ -684,7 +719,7 @@
 
             submitButton.innerHTML = `
                 <span class="login-spinner"></span>
-                Mengirim pengajuan...
+                ${isEditing ? "Menyimpan perubahan..." : "Mengirim pengajuan..."}
             `;
         }
     );
