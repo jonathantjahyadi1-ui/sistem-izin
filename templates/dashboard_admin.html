@@ -35,6 +35,11 @@
 
     <div class="admin-heading-actions">
 
+        <a href="{{ url_for('arsip_izin') }}" class="dashboard-outline-button">
+            <i class="bi bi-archive"></i>
+            Arsip Izin
+        </a>
+
         <a href="/export_excel" class="dashboard-outline-button">
             <i class="bi bi-file-earmark-excel"></i>
             Export Excel
@@ -399,7 +404,7 @@
 
         <div>
             <h2>Pengajuan terbaru</h2>
-            <p>Sepuluh pengajuan berdasarkan tanggal terbaru.</p>
+            <p>Sepuluh pengajuan aktif terbaru (maksimal 14 hari).</p>
         </div>
 
         <a href="/semua_izin" class="dashboard-text-link">

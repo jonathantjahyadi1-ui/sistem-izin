@@ -14,7 +14,7 @@ from meeting_room.models import MeetingRoom, RoomBooking
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
-from sqlalchemy import case, func, extract
+from sqlalchemy import case, func, extract, or_
 from zoneinfo import ZoneInfo
 
 # =========================
@@ -137,6 +137,43 @@ def format_tanggal_indonesia(value):
 
 
 app.jinja_env.filters['tanggal_id'] = format_tanggal_indonesia
+
+
+def batas_arsip_izin():
+    """Batas 14 hari untuk daftar aktif vs arsip, dihitung berdasarkan WIB."""
+    cutoff_jakarta = datetime.now(JAKARTA_TZ) - timedelta(days=14)
+    return cutoff_jakarta.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def rentang_bulan_pengajuan_utc(tahun, bulan):
+    """Rentang bulan WIB dikonversi ke UTC-naive agar cocok dengan created_at database."""
+    mulai_local = datetime(tahun, bulan, 1, tzinfo=JAKARTA_TZ)
+    if bulan == 12:
+        selesai_local = datetime(tahun + 1, 1, 1, tzinfo=JAKARTA_TZ)
+    else:
+        selesai_local = datetime(tahun, bulan + 1, 1, tzinfo=JAKARTA_TZ)
+
+    mulai_utc = mulai_local.astimezone(timezone.utc).replace(tzinfo=None)
+    selesai_utc = selesai_local.astimezone(timezone.utc).replace(tzinfo=None)
+    return mulai_utc, selesai_utc
+
+
+def filter_izin_aktif(query):
+    """Record <=14 hari tetap aktif; legacy tanpa created_at tidak disembunyikan."""
+    cutoff = batas_arsip_izin()
+    return query.filter(
+        or_(LeaveRequest.created_at >= cutoff, LeaveRequest.created_at.is_(None))
+    )
+
+
+def filter_izin_arsip(query):
+    """Record yang umur pengajuannya sudah lebih dari 14 hari masuk arsip."""
+    cutoff = batas_arsip_izin()
+    return query.filter(
+        LeaveRequest.created_at.isnot(None),
+        LeaveRequest.created_at < cutoff
+    )
+
 
 
 def tambah_bulan(tanggal_awal, jumlah_bulan):
@@ -787,15 +824,20 @@ def dashboard():
 
     if user.role in ['karyawan', 'accounting']:
         page = max(request.args.get('page', 1, type=int) or 1, 1)
-        pagination = LeaveRequest.query.filter_by(user_id=user.id).order_by(
+        query_aktif = filter_izin_aktif(
+            LeaveRequest.query.filter_by(user_id=user.id)
+        )
+        pagination = query_aktif.order_by(
             LeaveRequest.created_at.desc()
         ).paginate(page=page, per_page=25, error_out=False)
         data = pagination.items
-        ringkasan = db.session.query(
+
+        ringkasan_query = db.session.query(
             func.count(LeaveRequest.id),
             func.coalesce(func.sum(case((LeaveRequest.status == 'pending', 1), else_=0)), 0),
             func.coalesce(func.sum(case((LeaveRequest.status == 'approved', 1), else_=0)), 0),
-        ).filter(LeaveRequest.user_id == user.id).one()
+        ).filter(LeaveRequest.user_id == user.id)
+        ringkasan = filter_izin_aktif(ringkasan_query).one()
         sisa_cuti = get_sisa_cuti(user)
         return render_template(
             'dashboard_user.html',
@@ -822,23 +864,30 @@ def dashboard():
         divisi_filter or None,
     )
 
-    data_izin = db.session.query(
+    data_izin_query = db.session.query(
         LeaveRequest,
         User.username.label('pengaju_username')
-    ).outerjoin(User, LeaveRequest.user_id == User.id).order_by(
+    ).outerjoin(User, LeaveRequest.user_id == User.id)
+    data_izin = filter_izin_aktif(data_izin_query).order_by(
         LeaveRequest.created_at.desc()
     ).limit(10).all()
+
     sisa_cuti_pribadi = get_sisa_cuti(user)
-    ringkasan = db.session.query(
+    ringkasan_query = db.session.query(
         func.count(LeaveRequest.id),
         func.coalesce(func.sum(case((LeaveRequest.status == 'pending', 1), else_=0)), 0),
         func.coalesce(func.sum(case((LeaveRequest.status == 'approved', 1), else_=0)), 0),
         func.coalesce(func.sum(case((LeaveRequest.status == 'rejected', 1), else_=0)), 0),
-    ).one()
-    jenis_data = db.session.query(
+    )
+    ringkasan = filter_izin_aktif(ringkasan_query).one()
+
+    jenis_query = db.session.query(
         LeaveRequest.jenis_izin,
         func.count(LeaveRequest.id)
-    ).group_by(LeaveRequest.jenis_izin).all()
+    )
+    jenis_data = filter_izin_aktif(jenis_query).group_by(
+        LeaveRequest.jenis_izin
+    ).all()
     jenis_labels = [j[0] for j in jenis_data]
     jenis_values = [j[1] for j in jenis_data]
 
@@ -1198,6 +1247,7 @@ def semua_izin():
     query = db.session.query(LeaveRequest, User).join(
         User, LeaveRequest.user_id == User.id
     )
+    query = filter_izin_aktif(query)
 
     if status_filter:
         query = query.filter(LeaveRequest.status == status_filter)
@@ -1237,6 +1287,108 @@ def semua_izin():
         divisi_list=divisi_list,
         pagination=pagination
     )
+
+@app.route('/arsip_izin')
+def arsip_izin():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.clear()
+        return redirect('/login')
+
+    today = tanggal_hari_ini_jakarta()
+    bulan_filter = request.args.get('bulan', type=int)
+    tahun_filter = request.args.get('tahun', type=int)
+    status_filter = request.args.get('status', '').strip()
+    jenis_filter = request.args.get('jenis', '').strip()
+    divisi_filter = request.args.get('divisi', '').strip()
+    nama_filter = request.args.get('nama', '').strip()
+
+    if bulan_filter is not None and not 1 <= bulan_filter <= 12:
+        bulan_filter = None
+
+    if tahun_filter is not None and not 2000 <= tahun_filter <= 2100:
+        tahun_filter = None
+
+    query = db.session.query(LeaveRequest, User).join(
+        User, LeaveRequest.user_id == User.id
+    )
+    query = filter_izin_arsip(query)
+
+    is_admin_view = user.role in ['admin', 'hrd', 'direktur']
+    if not is_admin_view:
+        query = query.filter(LeaveRequest.user_id == user.id)
+
+    if bulan_filter and not tahun_filter:
+        tahun_filter = today.year
+
+    if bulan_filter and tahun_filter:
+        mulai_utc, selesai_utc = rentang_bulan_pengajuan_utc(
+            tahun_filter, bulan_filter
+        )
+        query = query.filter(
+            LeaveRequest.created_at >= mulai_utc,
+            LeaveRequest.created_at < selesai_utc
+        )
+    elif tahun_filter:
+        mulai_utc, _ = rentang_bulan_pengajuan_utc(tahun_filter, 1)
+        selesai_utc, _ = rentang_bulan_pengajuan_utc(tahun_filter + 1, 1)
+        query = query.filter(
+            LeaveRequest.created_at >= mulai_utc,
+            LeaveRequest.created_at < selesai_utc
+        )
+
+    if status_filter:
+        query = query.filter(LeaveRequest.status == status_filter)
+
+    if jenis_filter:
+        query = query.filter(LeaveRequest.jenis_izin == jenis_filter)
+
+    if is_admin_view and divisi_filter:
+        query = query.filter(User.divisi == divisi_filter)
+
+    if is_admin_view and nama_filter:
+        query = query.filter(
+            or_(
+                User.username.ilike(f'%{nama_filter}%'),
+                User.nama_lengkap.ilike(f'%{nama_filter}%')
+            )
+        )
+
+    page = max(request.args.get('page', 1, type=int) or 1, 1)
+    pagination = query.order_by(LeaveRequest.created_at.desc()).paginate(
+        page=page,
+        per_page=25,
+        error_out=False
+    )
+
+    divisi_list = []
+    if is_admin_view:
+        divisi_list = [
+            d[0] for d in db.session.query(User.divisi).distinct().all() if d[0]
+        ]
+
+    tahun_sekarang = today.year
+    tahun_opsi = list(range(tahun_sekarang, max(1999, tahun_sekarang - 7), -1))
+
+    return render_template(
+        'arsip_izin.html',
+        data=pagination.items,
+        user=user,
+        pagination=pagination,
+        bulan_filter=bulan_filter,
+        tahun_filter=tahun_filter,
+        status_filter=status_filter,
+        jenis_filter=jenis_filter,
+        divisi_filter=divisi_filter,
+        nama_filter=nama_filter,
+        divisi_list=divisi_list,
+        tahun_opsi=tahun_opsi,
+        is_admin_view=is_admin_view
+    )
+
 
 @app.route('/manage_users')
 def manage_users():
@@ -1481,10 +1633,34 @@ def export_excel():
     search = request.args.get('search', '').strip()
     divisi_filter = request.args.get('divisi', '').strip()
     nama_filter = request.args.get('nama', '').strip()
+    arsip_mode = request.args.get('arsip', '') == '1'
+    bulan_filter = request.args.get('bulan', type=int)
+    tahun_filter = request.args.get('tahun', type=int)
 
     query = db.session.query(LeaveRequest, User).join(
         User, LeaveRequest.user_id == User.id
     )
+    query = filter_izin_arsip(query) if arsip_mode else filter_izin_aktif(query)
+
+    if arsip_mode:
+        if bulan_filter and not tahun_filter:
+            tahun_filter = datetime.now(JAKARTA_TZ).year
+
+        if bulan_filter and tahun_filter and 1 <= bulan_filter <= 12:
+            mulai_utc, selesai_utc = rentang_bulan_pengajuan_utc(
+                tahun_filter, bulan_filter
+            )
+            query = query.filter(
+                LeaveRequest.created_at >= mulai_utc,
+                LeaveRequest.created_at < selesai_utc
+            )
+        elif tahun_filter and 2000 <= tahun_filter <= 2100:
+            mulai_utc, _ = rentang_bulan_pengajuan_utc(tahun_filter, 1)
+            selesai_utc, _ = rentang_bulan_pengajuan_utc(tahun_filter + 1, 1)
+            query = query.filter(
+                LeaveRequest.created_at >= mulai_utc,
+                LeaveRequest.created_at < selesai_utc
+            )
 
     if status_filter:
         query = query.filter(LeaveRequest.status == status_filter)
@@ -1499,7 +1675,12 @@ def export_excel():
         query = query.filter(User.divisi == divisi_filter)
 
     if nama_filter:
-        query = query.filter(User.username.ilike(f'%{nama_filter}%'))
+        query = query.filter(
+            or_(
+                User.username.ilike(f'%{nama_filter}%'),
+                User.nama_lengkap.ilike(f'%{nama_filter}%')
+            )
+        )
 
     data = query.order_by(LeaveRequest.created_at.desc()).all()
 
@@ -1523,8 +1704,8 @@ def export_excel():
 
     return buat_file_excel(
         rows=rows,
-        sheet_name='Data Izin',
-        filename_prefix='Rekap_Izin'
+        sheet_name='Arsip Izin' if arsip_mode else 'Data Izin Aktif',
+        filename_prefix='Arsip_Izin' if arsip_mode else 'Rekap_Izin_Aktif'
     )
 
 @app.context_processor

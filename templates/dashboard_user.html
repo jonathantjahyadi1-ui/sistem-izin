@@ -26,10 +26,17 @@
         </p>
     </div>
 
-    <a href="/form_izin" class="dashboard-primary-button">
-        <i class="bi bi-plus-lg"></i>
-        <span>Ajukan Izin</span>
-    </a>
+    <div class="admin-heading-actions">
+        <a href="{{ url_for('arsip_izin') }}" class="dashboard-outline-button">
+            <i class="bi bi-archive"></i>
+            <span>Arsip</span>
+        </a>
+
+        <a href="/form_izin" class="dashboard-primary-button">
+            <i class="bi bi-plus-lg"></i>
+            <span>Ajukan Izin</span>
+        </a>
+    </div>
 
 </section>
 
@@ -148,7 +155,7 @@
             <h2>Riwayat pengajuan</h2>
 
             <p>
-                Daftar izin, sakit, dan cuti yang pernah Anda ajukan.
+                Pengajuan 14 hari terakhir. Data yang lebih lama tersedia di Arsip.
             </p>
         </div>
 

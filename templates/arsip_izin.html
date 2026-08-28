@@ -1,0 +1,315 @@
+{% extends "base_izin.html" %}
+
+{% block title %}Arsip Izin{% endblock %}
+{% block header_title %}Arsip Izin{% endblock %}
+
+{% block content %}
+
+<section class="leave-page-heading">
+    <div>
+        <span class="leave-eyebrow">ARSIP PENGAJUAN</span>
+        <h1>Arsip Izin</h1>
+        <p>
+            Pengajuan yang sudah lebih dari 14 hari sejak tanggal diajukan
+            otomatis tampil di halaman ini tanpa dihapus dari database.
+        </p>
+    </div>
+
+    <div class="records-heading-actions">
+        {% if is_admin_view %}
+            <a
+                href="{{ url_for(
+                    'export_excel',
+                    arsip=1,
+                    bulan=bulan_filter or '',
+                    tahun=tahun_filter or '',
+                    status=status_filter,
+                    jenis=jenis_filter,
+                    divisi=divisi_filter,
+                    nama=nama_filter
+                ) }}"
+                class="records-export-button"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                Export Arsip
+            </a>
+        {% endif %}
+
+        <a href="{{ url_for('dashboard') }}" class="dashboard-outline-button">
+            <i class="bi bi-arrow-left"></i>
+            Kembali
+        </a>
+    </div>
+</section>
+
+<section class="records-filter-panel">
+    <div class="records-filter-header">
+        <div>
+            <h2>Filter Arsip</h2>
+            <p>Filter bulan mengikuti tanggal saat karyawan mengajukan izin.</p>
+        </div>
+        <i class="bi bi-funnel"></i>
+    </div>
+
+    <form method="GET" action="{{ url_for('arsip_izin') }}" class="records-filter-grid">
+        <div class="admin-field">
+            <label for="bulan">Bulan Pengajuan</label>
+            <select id="bulan" name="bulan">
+                <option value="">Semua Bulan</option>
+                {% for b in range(1, 13) %}
+                    <option value="{{ b }}" {% if bulan_filter == b %}selected{% endif %}>
+                        {{ [
+                            'Januari', 'Februari', 'Maret', 'April',
+                            'Mei', 'Juni', 'Juli', 'Agustus',
+                            'September', 'Oktober', 'November', 'Desember'
+                        ][b - 1] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-field">
+            <label for="tahun">Tahun Pengajuan</label>
+            <select id="tahun" name="tahun">
+                <option value="">Semua Tahun</option>
+                {% for y in tahun_opsi %}
+                    <option value="{{ y }}" {% if tahun_filter == y %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-field">
+            <label for="jenis">Jenis Izin</label>
+            <select id="jenis" name="jenis">
+                <option value="">Semua Jenis</option>
+                <option value="cuti" {% if jenis_filter == 'cuti' %}selected{% endif %}>Cuti</option>
+                <option value="sakit" {% if jenis_filter == 'sakit' %}selected{% endif %}>Sakit</option>
+                <option value="izin_lain" {% if jenis_filter == 'izin_lain' %}selected{% endif %}>Izin Lain</option>
+            </select>
+        </div>
+
+        <div class="admin-field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">Semua Status</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+
+        {% if is_admin_view %}
+            <div class="admin-field">
+                <label for="nama">Nama Pengaju</label>
+                <div class="records-input-wrapper">
+                    <i class="bi bi-person"></i>
+                    <input
+                        type="text"
+                        id="nama"
+                        name="nama"
+                        value="{{ nama_filter or '' }}"
+                        placeholder="Cari nama..."
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div class="admin-field">
+                <label for="divisi">Divisi</label>
+                <select id="divisi" name="divisi">
+                    <option value="">Semua Divisi</option>
+                    {% for d in divisi_list %}
+                        <option value="{{ d }}" {% if divisi_filter == d %}selected{% endif %}>
+                            {{ d }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+
+        <div class="admin-filter-actions">
+            <button type="submit" class="dashboard-primary-button records-filter-button">
+                <i class="bi bi-search"></i>
+                Filter
+            </button>
+
+            <a href="{{ url_for('arsip_izin') }}" class="dashboard-secondary-button">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Reset
+            </a>
+        </div>
+    </form>
+</section>
+
+<section class="records-panel">
+    <div class="records-toolbar">
+        <div>
+            <h2>Data Arsip</h2>
+            <p>Arsip ditentukan dari tanggal pengajuan, bukan tanggal mulai cuti.</p>
+        </div>
+
+        <span class="records-total-badge">
+            <i class="bi bi-archive"></i>
+            {{ pagination.total if pagination else (data | length) }} Data
+        </span>
+    </div>
+
+    {% if data %}
+        <div class="dashboard-table-wrapper">
+            <table class="dashboard-table records-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        {% if is_admin_view %}<th>Pengaju</th>{% endif %}
+                        <th>Jenis</th>
+                        <th>Tanggal Pengajuan</th>
+                        <th>Periode Izin</th>
+                        <th>Durasi</th>
+                        <th>Alasan</th>
+                        <th>Status</th>
+                        <th>Lampiran</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for i, pengaju in data %}
+                        <tr>
+                            <td><strong class="user-id">#{{ i.id }}</strong></td>
+
+                            {% if is_admin_view %}
+                                <td>
+                                    {% set nama_pengaju = (pengaju.nama_lengkap or pengaju.username) if pengaju else '-' %}
+                                    <div class="records-user">
+                                        <div class="records-user-avatar">
+                                            {{ nama_pengaju[:2] | upper }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ nama_pengaju }}</strong>
+                                            <span>{{ pengaju.divisi if pengaju else '-' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            {% endif %}
+
+                            <td>
+                                <span class="request-type request-type-{{ i.jenis_izin|lower }}">
+                                    {{ i.jenis_izin|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <strong>{{ i.created_at|tanggal_id if i.created_at else '-' }}</strong>
+                            </td>
+
+                            <td>
+                                <div class="dashboard-date-range">
+                                    <strong>{{ i.tanggal_mulai.strftime('%d/%m/%Y') if i.tanggal_mulai else '-' }}</strong>
+                                    <span>
+                                        s/d {{ i.tanggal_selesai.strftime('%d/%m/%Y') if i.tanggal_selesai else '-' }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="records-duration">
+                                    <i class="bi bi-clock"></i>
+                                    {{ i.durasi or 0 }} hari
+                                </span>
+                            </td>
+
+                            <td>
+                                <p class="dashboard-reason" title="{{ i.alasan or '-' }}">
+                                    {{ i.alasan or '-' }}
+                                </p>
+                            </td>
+
+                            <td>
+                                {% if i.status == 'pending' %}
+                                    <span class="request-status status-pending">
+                                        <i class="bi bi-hourglass-split"></i> Pending
+                                    </span>
+                                {% elif i.status == 'approved' %}
+                                    <span class="request-status status-approved">
+                                        <i class="bi bi-check-circle"></i> Approved
+                                    </span>
+                                {% elif i.status == 'rejected' %}
+                                    <span class="request-status status-rejected">
+                                        <i class="bi bi-x-circle"></i> Rejected
+                                    </span>
+                                {% else %}
+                                    <span class="request-status">{{ i.status or '-' }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="dashboard-file-actions">
+                                    {% if i.file_surat %}
+                                        <a
+                                            href="{{ url_for('download_file', filename=i.file_surat) }}"
+                                            target="_blank"
+                                            class="dashboard-file-link"
+                                        >
+                                            <i class="bi bi-file-earmark-text"></i> Surat
+                                        </a>
+                                    {% endif %}
+
+                                    {% if i.file_chat %}
+                                        <a
+                                            href="{{ url_for('download_file', filename=i.file_chat) }}"
+                                            target="_blank"
+                                            class="dashboard-file-link"
+                                        >
+                                            <i class="bi bi-chat-left-text"></i> Chat
+                                        </a>
+                                    {% endif %}
+
+                                    {% if not i.file_surat and not i.file_chat %}
+                                        <span class="dashboard-empty-file">Tidak ada</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pagination and pagination.pages > 1 %}
+            <div class="dashboard-pagination">
+                <span>Halaman {{ pagination.page }} dari {{ pagination.pages }}</span>
+                <div>
+                    {% if pagination.has_prev %}
+                        <a href="{{ url_for('arsip_izin', page=pagination.prev_num, bulan=bulan_filter or '', tahun=tahun_filter or '', status=status_filter, jenis=jenis_filter, divisi=divisi_filter, nama=nama_filter) }}">
+                            <i class="bi bi-chevron-left"></i> Sebelumnya
+                        </a>
+                    {% else %}
+                        <span class="disabled"><i class="bi bi-chevron-left"></i> Sebelumnya</span>
+                    {% endif %}
+
+                    {% if pagination.has_next %}
+                        <a href="{{ url_for('arsip_izin', page=pagination.next_num, bulan=bulan_filter or '', tahun=tahun_filter or '', status=status_filter, jenis=jenis_filter, divisi=divisi_filter, nama=nama_filter) }}">
+                            Berikutnya <i class="bi bi-chevron-right"></i>
+                        </a>
+                    {% else %}
+                        <span class="disabled">Berikutnya <i class="bi bi-chevron-right"></i></span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="records-empty-state">
+            <div><i class="bi bi-archive"></i></div>
+            <h2>Belum ada data arsip</h2>
+            <p>Tidak ada pengajuan lebih dari 14 hari yang sesuai filter.</p>
+            <a href="{{ url_for('arsip_izin') }}" class="dashboard-primary-button">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Reset Filter
+            </a>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

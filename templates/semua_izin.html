@@ -23,14 +23,18 @@
         </h1>
 
         <p>
-            Lihat seluruh riwayat pengajuan izin, cuti,
-            dan sakit karyawan dalam satu tempat.
+            Lihat pengajuan izin, cuti, dan sakit yang masih aktif dalam 14 hari terakhir.
         </p>
 
     </div>
 
 
     <div class="records-heading-actions">
+
+        <a href="{{ url_for('arsip_izin') }}" class="dashboard-outline-button">
+            <i class="bi bi-archive"></i>
+            Arsip Izin
+        </a>
 
         <a
             href="{{ url_for(
@@ -317,7 +321,7 @@
             </h2>
 
             <p>
-                Menampilkan maksimal 100 pengajuan terbaru.
+                Menampilkan pengajuan aktif maksimal 14 hari. Data lebih lama otomatis masuk Arsip.
             </p>
 
         </div>
@@ -327,7 +331,7 @@
 
             <i class="bi bi-database"></i>
 
-            {{ data | length }} Data
+            {{ pagination.total if pagination else (data | length) }} Data
 
         </span>
 
@@ -822,6 +826,32 @@
         </div>
 
 
+    {% endif %}
+
+    {% if pagination and pagination.pages > 1 %}
+        <div class="dashboard-pagination">
+            <span>
+                Halaman {{ pagination.page }} dari {{ pagination.pages }}
+            </span>
+
+            <div>
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('semua_izin', page=pagination.prev_num, status=status_filter, jenis=jenis_filter, search=search, divisi=divisi_filter, nama=nama_filter) }}">
+                        <i class="bi bi-chevron-left"></i> Sebelumnya
+                    </a>
+                {% else %}
+                    <span class="disabled"><i class="bi bi-chevron-left"></i> Sebelumnya</span>
+                {% endif %}
+
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('semua_izin', page=pagination.next_num, status=status_filter, jenis=jenis_filter, search=search, divisi=divisi_filter, nama=nama_filter) }}">
+                        Berikutnya <i class="bi bi-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <span class="disabled">Berikutnya <i class="bi bi-chevron-right"></i></span>
+                {% endif %}
+            </div>
+        </div>
     {% endif %}
 
 

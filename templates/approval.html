@@ -23,13 +23,23 @@
         </p>
     </div>
 
-    <a
-        href="/semua_izin?status=pending"
-        class="dashboard-outline-button"
-    >
-        <i class="bi bi-list-ul"></i>
-        Semua data pending
-    </a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a
+            href="{{ url_for('arsip_izin') }}"
+            class="dashboard-outline-button"
+        >
+            <i class="bi bi-archive"></i>
+            Arsip Izin
+        </a>
+
+        <a
+            href="/semua_izin?status=pending"
+            class="dashboard-outline-button"
+        >
+            <i class="bi bi-list-ul"></i>
+            Semua data pending
+        </a>
+    </div>
 
 </section>
 
