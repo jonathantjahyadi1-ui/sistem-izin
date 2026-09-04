@@ -923,7 +923,7 @@ body.system-selector-page {
 
 .system-card-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
 }
 
@@ -974,6 +974,10 @@ body.system-selector-page {
     background: #ecfdf5;
 }
 
+.system-card-rose::before {
+    background: #fff1f2;
+}
+
 .system-card-indigo:hover {
     border-color: #c7d2fe;
 }
@@ -984,6 +988,10 @@ body.system-selector-page {
 
 .system-card-emerald:hover {
     border-color: #a7f3d0;
+}
+
+.system-card-rose:hover {
+    border-color: #fecdd3;
 }
 
 .system-card-top {
@@ -1016,6 +1024,11 @@ body.system-selector-page {
 .system-card-emerald .system-card-icon {
     color: #059669;
     background: #ecfdf5;
+}
+
+.system-card-rose .system-card-icon {
+    color: #be123c;
+    background: #fff1f2;
 }
 
 .system-status {
@@ -4114,6 +4127,11 @@ body.sidebar-lock {
 .user-role-karyawan {
     color: #15803d;
     background: #f0fdf4;
+}
+
+.user-role-leader {
+    color: #6d28d9;
+    background: #f5f3ff;
 }
 
 .user-actions {

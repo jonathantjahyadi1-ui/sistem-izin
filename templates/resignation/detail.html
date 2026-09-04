@@ -1,0 +1,296 @@
+{% extends "resignation/layout.html" %}
+
+{% block title %}Detail {{ resignation.reference_no }}{% endblock %}
+{% block header_title %}Detail Pengajuan{% endblock %}
+
+{% block content %}
+<section class="resignation-page-heading resignation-detail-heading">
+    <div>
+        <p class="dashboard-eyebrow">{{ resignation.reference_no }}</p>
+        <h1>{{ resignation.employee_name or 'Pengajuan Pengunduran Diri' }}</h1>
+        <p>
+            Diajukan melalui akun {{ resignation_display_name(user) if resignation.user_id == user.id else 'karyawan' }}.
+            Seluruh perubahan dan keputusan tersimpan pada riwayat proses.
+        </p>
+    </div>
+    <div class="resignation-heading-actions">
+        <span class="resignation-status large {{ resignation_status_class(resignation.status) }}">
+            {{ resignation_status_label(resignation.status) }}
+        </span>
+        <a href="{{ url_for('resignation.list_requests') }}" class="dashboard-outline-button">
+            <i class="bi bi-arrow-left"></i>
+            Kembali
+        </a>
+    </div>
+</section>
+
+<section class="resignation-process-card">
+    <div class="resignation-process-step complete">
+        <span><i class="bi bi-check"></i></span>
+        <div><strong>Formulir</strong><small>Diisi karyawan</small></div>
+    </div>
+    <i class="bi bi-chevron-right resignation-process-arrow"></i>
+    <div class="resignation-process-step {{ 'complete' if resignation.status == 'approved' else 'current' if resignation.status in ['pending_hrd', 'pending_supervisor'] else '' }}">
+        <span>
+            {% if resignation.status == 'approved' %}<i class="bi bi-check"></i>{% else %}2{% endif %}
+        </span>
+        <div><strong>Review HRD</strong><small>Keputusan dan dokumen final</small></div>
+    </div>
+</section>
+
+{% if resignation.status in ['revision_hrd', 'revision_supervisor'] and resignation.user_id == user.id %}
+<section class="resignation-action-banner revision">
+    <div>
+        <i class="bi bi-pencil-square"></i>
+        <div>
+            <strong>Pengajuan perlu diperbaiki</strong>
+            <p>
+                {{ resignation.hrd_note if resignation.status == 'revision_hrd' else resignation.supervisor_note }}
+            </p>
+        </div>
+    </div>
+    <a href="{{ url_for('resignation.resignation_form', id=resignation.id) }}" class="dashboard-primary-button">
+        Perbaiki Formulir
+    </a>
+</section>
+{% endif %}
+
+<div class="resignation-detail-layout">
+    <div class="resignation-detail-main">
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>A</span>
+                <div><h2>Data Karyawan</h2><p>Data yang diisi pada saat pengajuan.</p></div>
+            </div>
+            <dl class="resignation-definition-grid">
+                <div><dt>Nama Lengkap</dt><dd>{{ resignation.employee_name or '-' }}</dd></div>
+                <div><dt>NIK / ID Karyawan</dt><dd>{{ resignation.employee_nik or '-' }}</dd></div>
+                <div><dt>Jabatan / Posisi</dt><dd>{{ resignation.position or '-' }}</dd></div>
+                <div><dt>Departemen / Divisi</dt><dd>{{ resignation.employee_division or '-' }}</dd></div>
+                <div><dt>Atasan Langsung</dt><dd>{{ resignation.supervisor_name or '-' }}</dd></div>
+                <div>
+                    <dt>Status Kepegawaian</dt>
+                    <dd>{{ 'Tetap (PKWTT)' if resignation.employment_status == 'pkwtt' else 'Kontrak (PKWT)' if resignation.employment_status == 'pkwt' else '-' }}</dd>
+                </div>
+                <div><dt>Tanggal Mulai Bekerja</dt><dd>{{ resignation.start_date.strftime('%d/%m/%Y') if resignation.start_date else '-' }}</dd></div>
+            </dl>
+        </section>
+
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>B</span>
+                <div><h2>Pernyataan Pengunduran Diri</h2><p>Tanggal pengajuan dan tanggal efektif.</p></div>
+            </div>
+            <dl class="resignation-definition-grid three">
+                <div><dt>Tanggal Pengajuan</dt><dd>{{ resignation.submission_date.strftime('%d/%m/%Y') if resignation.submission_date else '-' }}</dd></div>
+                <div><dt>Tanggal Efektif</dt><dd>{{ resignation.effective_date.strftime('%d/%m/%Y') if resignation.effective_date else '-' }}</dd></div>
+                <div>
+                    <dt>Notice Period</dt>
+                    <dd>
+                        <span class="resignation-notice-chip {{ 'short' if resignation.notice_days is not none and resignation.notice_days < 30 else '' }}">
+                            {{ resignation.notice_days if resignation.notice_days is not none else '-' }} hari
+                        </span>
+                    </dd>
+                </div>
+            </dl>
+            {% if resignation.notice_days is not none and resignation.notice_days < 30 %}
+            <div class="resignation-inline-note warning">
+                <strong>Alasan notice kurang dari 30 hari</strong>
+                <p>{{ resignation.short_notice_reason or '-' }}</p>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>C</span>
+                <div><h2>Alasan Pengunduran Diri</h2><p>Informasi ringkas untuk administrasi.</p></div>
+            </div>
+            {% if resignation.reason_codes %}
+                <div class="resignation-reason-tags">
+                    {% for code in resignation.reason_codes %}
+                        <span>{{ reason_options.get(code, code) }}</span>
+                    {% endfor %}
+                </div>
+                {% if 'lainnya' in resignation.reason_codes %}
+                    <p class="resignation-detail-paragraph">{{ resignation.reason_other or '-' }}</p>
+                {% endif %}
+            {% else %}
+                <p class="resignation-detail-muted">Karyawan tidak memilih alasan.</p>
+            {% endif %}
+        </section>
+
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>D</span>
+                <div><h2>Komitmen Serah Terima & Kewajiban</h2><p>Pernyataan yang telah dikonfirmasi karyawan.</p></div>
+            </div>
+            <div class="resignation-confirmed-list">
+                <p><i class="bi bi-check-circle-fill"></i> Menyelesaikan pekerjaan dan tanggung jawab sampai tanggal efektif.</p>
+                <p><i class="bi bi-check-circle-fill"></i> Melakukan serah terima pekerjaan, dokumen, dan proyek.</p>
+                <p><i class="bi bi-check-circle-fill"></i> Mengembalikan aset serta inventaris perusahaan.</p>
+                <p><i class="bi bi-check-circle-fill"></i> Menyelesaikan kewajiban administratif atau finansial.</p>
+                <p><i class="bi bi-check-circle-fill"></i> Tidak sedang terikat ikatan dinas atau telah menyelesaikan kewajibannya.</p>
+            </div>
+        </section>
+
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>E</span>
+                <div><h2>Informasi untuk Keperluan Administrasi</h2><p>Data pribadi dengan akses terbatas.</p></div>
+            </div>
+            {% if can_view_sensitive %}
+            <dl class="resignation-definition-grid">
+                <div class="full"><dt>Alamat Korespondensi</dt><dd>{{ resignation.correspondence_address or '-' }}</dd></div>
+                <div><dt>Telepon / WhatsApp</dt><dd>{{ resignation.phone_number or '-' }}</dd></div>
+                <div><dt>Email Pribadi</dt><dd>{{ resignation.personal_email or '-' }}</dd></div>
+                <div><dt>Bank</dt><dd>{{ resignation.bank_name or '-' }}</dd></div>
+                <div><dt>Nomor Rekening</dt><dd>{{ resignation.bank_account_number or '-' }}</dd></div>
+                <div class="full"><dt>Nama Pemilik Rekening</dt><dd>{{ resignation.bank_account_holder or '-' }}</dd></div>
+            </dl>
+            {% else %}
+            <div class="resignation-private-state">
+                <i class="bi bi-shield-lock"></i>
+                <div>
+                    <strong>Data administrasi dilindungi</strong>
+                    <p>Atasan tidak memiliki akses ke alamat, kontak pribadi, dan informasi rekening karyawan.</p>
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="resignation-detail-card">
+            <div class="resignation-detail-card-header">
+                <span>F</span>
+                <div><h2>Pernyataan & Persetujuan</h2><p>Konfirmasi karyawan dan hasil review.</p></div>
+            </div>
+            <div class="resignation-declaration-box">
+                <i class="bi bi-check2-square"></i>
+                <p>
+                    Karyawan menyatakan keputusan dibuat atas kemauan sendiri,
+                    data yang diisi benar, dan bersedia menjalankan seluruh kewajiban
+                    sampai tanggal efektif pengunduran diri.
+                </p>
+            </div>
+            <div class="resignation-approval-summary">
+                <article>
+                    <span>Atasan Langsung (Informasi)</span>
+                    <strong>{{ resignation.supervisor_name or '-' }}</strong>
+                    <small>Tidak memerlukan approval sistem</small>
+                </article>
+                <article>
+                    <span>HR / Personalia</span>
+                    <strong>{{ 'Sudah divalidasi' if resignation.hrd_by else 'Belum diproses' }}</strong>
+                    <small>{{ resignation_datetime_id(resignation.hrd_at) }}</small>
+                    {% if resignation.hrd_note %}<p>{{ resignation.hrd_note }}</p>{% endif %}
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <aside class="resignation-detail-sidebar">
+        <section class="resignation-side-card">
+            <h3>Dokumen Word</h3>
+            <p>
+                {% if resignation.status == 'approved' %}
+                    Dokumen final telah disimpan setelah validasi HRD.
+                {% else %}
+                    Unduh versi draft dengan penanda belum disetujui.
+                {% endif %}
+            </p>
+            {% if can_view_sensitive %}
+                <a
+                    href="{{ url_for('resignation.download_document', id=resignation.id) if resignation.status == 'approved' else url_for('resignation.preview_document', id=resignation.id) }}"
+                    class="dashboard-primary-button resignation-full-button"
+                >
+                    <i class="bi bi-file-earmark-word"></i>
+                    {{ 'Unduh Word Final' if resignation.status == 'approved' else 'Unduh Draft Word' }}
+                </a>
+            {% else %}
+                <div class="resignation-side-private"><i class="bi bi-lock"></i> Akses HRD dan karyawan</div>
+            {% endif %}
+        </section>
+
+        <section class="resignation-side-card">
+            <h3>Riwayat Proses</h3>
+            <div class="resignation-timeline">
+                {% for log in audit_logs %}
+                <article>
+                    <span></span>
+                    <div>
+                        <strong>{{ resignation_status_label(log.to_status) }}</strong>
+                        <small>{{ log.actor_name }} · {{ resignation_datetime_id(log.created_at) }}</small>
+                        {% if log.note %}<p>{{ log.note }}</p>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if resignation.user_id == user.id and resignation.status in ['draft', 'pending_hrd', 'revision_hrd', 'pending_supervisor', 'revision_supervisor'] %}
+        <section class="resignation-side-card danger-zone">
+            <h3>Batalkan Pengajuan</h3>
+            <p>Pengajuan yang dibatalkan tidak dapat dilanjutkan kembali.</p>
+            <form method="POST" action="{{ url_for('resignation.cancel_request', id=resignation.id) }}" onsubmit="return confirm('Batalkan pengajuan ini?')">
+                <input type="hidden" name="_csrf_token" value="{{ resignation_csrf_token() }}">
+                <textarea name="note" rows="2" placeholder="Alasan pembatalan (opsional)"></textarea>
+                <button type="submit" class="resignation-danger-button">
+                    <i class="bi bi-x-circle"></i>
+                    Batalkan Pengajuan
+                </button>
+            </form>
+        </section>
+        {% endif %}
+    </aside>
+</div>
+
+{% if is_hrd and resignation.status in ['pending_hrd', 'pending_supervisor'] %}
+<section class="resignation-review-panel hrd">
+    <div class="resignation-review-heading">
+        <div class="resignation-review-icon"><i class="bi bi-clipboard2-check"></i></div>
+        <div>
+            <p class="dashboard-eyebrow">TINDAKAN HRD</p>
+            <h2>Validasi administrasi dan dokumen</h2>
+            <p>Setelah disetujui, sistem membuat Word final dan mengunci data pengajuan.</p>
+        </div>
+    </div>
+    <form method="POST" action="{{ url_for('resignation.hrd_decision', id=resignation.id) }}" class="resignation-review-form">
+        <input type="hidden" name="_csrf_token" value="{{ resignation_csrf_token() }}">
+        <label class="resignation-field">
+            <span>Catatan HRD</span>
+            <textarea name="note" rows="4" placeholder="Wajib untuk revisi atau penolakan"></textarea>
+        </label>
+        <div class="resignation-review-actions">
+            <button type="submit" name="action" value="reject" class="resignation-danger-button" data-require-note>
+                <i class="bi bi-x-circle"></i> Tolak
+            </button>
+            <button type="submit" name="action" value="revision" class="dashboard-outline-button" data-require-note>
+                <i class="bi bi-arrow-counterclockwise"></i> Minta Perbaikan
+            </button>
+            <button type="submit" name="action" value="approve" class="dashboard-primary-button">
+                <i class="bi bi-check-circle"></i> Setujui & Buat Word Final
+            </button>
+        </div>
+    </form>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll("[data-require-note]").forEach((button) => {
+        button.addEventListener("click", function (event) {
+            const form = button.closest("form");
+            const note = form.querySelector('textarea[name="note"]');
+            if (!note.value.trim()) {
+                event.preventDefault();
+                note.setCustomValidity("Catatan wajib diisi untuk tindakan ini.");
+                note.reportValidity();
+                note.focus();
+            } else {
+                note.setCustomValidity("");
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -11,6 +11,7 @@ from extensions import db
 from models import User, LeaveRequest
 from overtime.models import OvertimeRequest
 from meeting_room.models import MeetingRoom, RoomBooking
+from resignation.models import ResignationRequest, ResignationAuditLog
 from werkzeug.security import generate_password_hash, check_password_hash
 from calendar import monthrange
 from datetime import date, timedelta
@@ -93,6 +94,7 @@ DIVISI_LIST = [
 # jika nantinya dibuat sebagai role tersendiri.
 ROLE_CUTI_OTOMATIS = (
     'karyawan',
+    'leader',
     'admin',
     'it',
     'hrd',
@@ -505,7 +507,9 @@ def get_rekap_kehadiran(tahun=None, bulan=None, divisi_filter=None):
 
     users = db.session.query(
         User.id, User.username, User.divisi
-    ).filter(User.role == 'karyawan').order_by(User.username.asc()).all()
+    ).filter(
+        func.lower(User.role).in_(('karyawan', 'leader'))
+    ).order_by(User.username.asc()).all()
 
     user_ids = [u.id for u in users]
     izin_rows = []
@@ -784,6 +788,10 @@ def main_dashboard():
         session['active_system'] = 'meeting_room'
         return redirect('/meeting-room/list')
 
+    elif selected_system == 'resignation':
+        session['active_system'] = 'resignation'
+        return redirect('/resignation/list')
+
     # =========================
     # JIKA SUDAH PILIH SISTEM
     # =========================
@@ -798,6 +806,9 @@ def main_dashboard():
 
     elif active_system == 'meeting_room':
         return redirect('/meeting-room/list')
+
+    elif active_system == 'resignation':
+        return redirect('/resignation/list')
 
     # Kalau belum pilih sistem
     return render_template(
@@ -822,7 +833,7 @@ def dashboard():
         session.clear()
         return redirect('/login')
 
-    if user.role in ['karyawan', 'accounting']:
+    if user.role in ['karyawan', 'accounting', 'leader']:
         page = max(request.args.get('page', 1, type=int) or 1, 1)
         query_aktif = filter_izin_aktif(
             LeaveRequest.query.filter_by(user_id=user.id)
@@ -1927,6 +1938,9 @@ app.register_blueprint(overtime_bp, url_prefix='/overtime')
 
 from meeting_room.routes import meeting_room_bp
 app.register_blueprint(meeting_room_bp, url_prefix='/meeting-room')
+
+from resignation.routes import resignation_bp
+app.register_blueprint(resignation_bp, url_prefix='/resignation')
 
 
 if __name__ == "__main__":

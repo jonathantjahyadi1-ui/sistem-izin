@@ -1,0 +1,682 @@
+{% extends "resignation/layout.html" %}
+
+{% block title %}Form Pengunduran Diri{% endblock %}
+{% block header_title %}Form Pengunduran Diri{% endblock %}
+
+{% set selected_reasons = resignation.reason_codes if resignation else [] %}
+
+{% block content %}
+<section class="resignation-page-heading">
+    <div>
+        <p class="dashboard-eyebrow">PENGAJUAN KARYAWAN</p>
+        <h1>Form Pengajuan Pengunduran Diri</h1>
+        <p>
+            Isi bagian A sampai F secara berurutan. Data identitas pada formulir ini
+            diisi sendiri dan tidak diambil otomatis dari profil akun.
+        </p>
+    </div>
+    <a href="{{ url_for('resignation.list_requests') }}" class="dashboard-outline-button">
+        <i class="bi bi-arrow-left"></i>
+        Kembali ke daftar
+    </a>
+</section>
+
+<section class="resignation-notice-card">
+    <div class="resignation-notice-icon">
+        <i class="bi bi-calendar2-week"></i>
+    </div>
+    <div>
+        <strong>Ketentuan notice period</strong>
+        <p>
+            Pengajuan normal dibuat minimal 30 hari sebelum tanggal efektif.
+            Jika kurang dari 30 hari, alasan pengecualian wajib dijelaskan dan akan
+            divalidasi oleh HRD.
+        </p>
+    </div>
+</section>
+
+<section class="resignation-form-shell">
+    <div class="resignation-stepper" aria-label="Tahapan formulir">
+        {% for letter, label in [
+            ('A', 'Data Karyawan'),
+            ('B', 'Tanggal Resign'),
+            ('C', 'Alasan'),
+            ('D', 'Komitmen'),
+            ('E', 'Administrasi'),
+            ('F', 'Konfirmasi')
+        ] %}
+        <div class="resignation-step-pill {{ 'active' if loop.first else '' }}" data-step-indicator="{{ loop.index }}">
+            <span>{{ letter }}</span>
+            <small>{{ label }}</small>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form
+        method="POST"
+        action="{{ url_for('resignation.submit_request') }}"
+        id="resignationForm"
+        novalidate
+    >
+        <input type="hidden" name="_csrf_token" value="{{ resignation_csrf_token() }}">
+        <input
+            type="hidden"
+            name="request_id"
+            id="resignationRequestId"
+            value="{{ resignation.id if resignation else '' }}"
+        >
+
+        <div class="resignation-save-state" id="resignationSaveState">
+            {% if resignation %}
+                Draft {{ resignation.reference_no }} tersimpan.
+            {% else %}
+                Draft baru akan dibuat saat menekan Selanjutnya atau Simpan Draft.
+            {% endif %}
+        </div>
+
+        <div class="resignation-form-error" id="resignationFormError" hidden></div>
+
+        <section class="resignation-form-step active" data-step="1">
+            <div class="resignation-section-title">
+                <span>A</span>
+                <div>
+                    <h2>Data Karyawan</h2>
+                    <p>Isi identitas sesuai data kepegawaian yang benar.</p>
+                </div>
+            </div>
+
+            <div class="resignation-field-grid">
+                <label class="resignation-field">
+                    <span>Nama Lengkap <b>*</b></span>
+                    <input
+                        type="text"
+                        name="employee_name"
+                        maxlength="150"
+                        value="{{ resignation.employee_name if resignation and resignation.employee_name else '' }}"
+                        placeholder="Nama lengkap karyawan"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>NIK / ID Karyawan <b>*</b></span>
+                    <input
+                        type="text"
+                        name="employee_nik"
+                        maxlength="80"
+                        value="{{ resignation.employee_nik if resignation and resignation.employee_nik else '' }}"
+                        placeholder="Contoh: SVR-001"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>Jabatan / Posisi <b>*</b></span>
+                    <input
+                        type="text"
+                        name="position"
+                        maxlength="120"
+                        value="{{ resignation.position if resignation and resignation.position else '' }}"
+                        placeholder="Jabatan saat ini"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>Departemen / Divisi <b>*</b></span>
+                    <select name="employee_division" required>
+                        <option value="">Pilih divisi</option>
+                        {% for division in division_options %}
+                            <option
+                                value="{{ division }}"
+                                {{ 'selected' if resignation and resignation.employee_division == division else '' }}
+                            >{{ division }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="resignation-field">
+                    <span>Nama Atasan Langsung <b>*</b></span>
+                    <input
+                        type="text"
+                        name="supervisor_name"
+                        maxlength="150"
+                        value="{{ resignation.supervisor_name if resignation and resignation.supervisor_name else '' }}"
+                        placeholder="Ketik nama lengkap atasan"
+                        autocomplete="off"
+                        required
+                    >
+                    <small>Nama atasan diisi manual dan tidak memerlukan akun Leader.</small>
+                </label>
+
+                <label class="resignation-field">
+                    <span>Tanggal Mulai Bekerja <b>*</b></span>
+                    <input
+                        type="date"
+                        name="start_date"
+                        value="{{ resignation.start_date.isoformat() if resignation and resignation.start_date else '' }}"
+                        required
+                    >
+                </label>
+
+                <fieldset class="resignation-field resignation-field-full">
+                    <legend>Status Kepegawaian <b>*</b></legend>
+                    <div class="resignation-choice-row">
+                        <label class="resignation-choice-card">
+                            <input
+                                type="radio"
+                                name="employment_status"
+                                value="pkwtt"
+                                {{ 'checked' if resignation and resignation.employment_status == 'pkwtt' else '' }}
+                                required
+                            >
+                            <span>
+                                <strong>Tetap</strong>
+                                <small>PKWTT</small>
+                            </span>
+                        </label>
+                        <label class="resignation-choice-card">
+                            <input
+                                type="radio"
+                                name="employment_status"
+                                value="pkwt"
+                                {{ 'checked' if resignation and resignation.employment_status == 'pkwt' else '' }}
+                                required
+                            >
+                            <span>
+                                <strong>Kontrak</strong>
+                                <small>PKWT</small>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+        </section>
+
+        <section class="resignation-form-step" data-step="2">
+            <div class="resignation-section-title">
+                <span>B</span>
+                <div>
+                    <h2>Pernyataan Pengunduran Diri</h2>
+                    <p>Tentukan tanggal efektif pengunduran diri yang diusulkan.</p>
+                </div>
+            </div>
+
+            <div class="resignation-field-grid">
+                <label class="resignation-field">
+                    <span>Tanggal Pengajuan Surat</span>
+                    <input
+                        type="date"
+                        value="{{ resignation.submission_date.isoformat() if resignation and resignation.submission_date else today.isoformat() }}"
+                        id="submissionDateDisplay"
+                        disabled
+                    >
+                    <small>Ditetapkan otomatis oleh sistem.</small>
+                </label>
+
+                <label class="resignation-field">
+                    <span>Tanggal Efektif Pengunduran Diri <b>*</b></span>
+                    <input
+                        type="date"
+                        name="effective_date"
+                        id="effectiveDate"
+                        value="{{ resignation.effective_date.isoformat() if resignation and resignation.effective_date else '' }}"
+                        required
+                    >
+                </label>
+
+                <div class="resignation-notice-result resignation-field-full" id="noticeResult">
+                    <span>Jumlah Hari Pemberitahuan</span>
+                    <strong id="noticeDays">—</strong>
+                    <small id="noticeMessage">Pilih tanggal efektif untuk menghitung notice period.</small>
+                </div>
+
+                <label
+                    class="resignation-field resignation-field-full"
+                    id="shortNoticeField"
+                    hidden
+                >
+                    <span>Alasan Notice Kurang dari 30 Hari <b>*</b></span>
+                    <textarea
+                        name="short_notice_reason"
+                        rows="4"
+                        maxlength="2000"
+                        placeholder="Jelaskan alasan pengajuan dengan notice kurang dari 30 hari"
+                    >{{ resignation.short_notice_reason if resignation and resignation.short_notice_reason else '' }}</textarea>
+                </label>
+            </div>
+        </section>
+
+        <section class="resignation-form-step" data-step="3">
+            <div class="resignation-section-title">
+                <span>C</span>
+                <div>
+                    <h2>Alasan Pengunduran Diri</h2>
+                    <p>
+                        Bagian ini opsional dan digunakan untuk kelengkapan administrasi.
+                        Lebih dari satu alasan dapat dipilih.
+                    </p>
+                </div>
+            </div>
+
+            <div class="resignation-reason-grid">
+                {% for value, label in reason_options %}
+                    <label class="resignation-check-card">
+                        <input
+                            type="checkbox"
+                            name="reason_codes"
+                            value="{{ value }}"
+                            {{ 'checked' if value in selected_reasons else '' }}
+                        >
+                        <span>
+                            <i class="bi bi-check2"></i>
+                            {{ label }}
+                        </span>
+                    </label>
+                {% endfor %}
+            </div>
+
+            <label class="resignation-field resignation-other-reason" id="otherReasonField" hidden>
+                <span>Keterangan Alasan Lainnya <b>*</b></span>
+                <textarea
+                    name="reason_other"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="Tuliskan alasan lainnya"
+                >{{ resignation.reason_other if resignation and resignation.reason_other else '' }}</textarea>
+            </label>
+        </section>
+
+        <section class="resignation-form-step" data-step="4">
+            <div class="resignation-section-title">
+                <span>D</span>
+                <div>
+                    <h2>Komitmen Serah Terima & Kewajiban</h2>
+                    <p>Semua pernyataan berikut wajib disetujui.</p>
+                </div>
+            </div>
+
+            <div class="resignation-commitment-list">
+                {% set commitments = [
+                    ('work', 'Menyelesaikan seluruh pekerjaan dan tanggung jawab sampai tanggal efektif pengunduran diri.'),
+                    ('handover', 'Melakukan serah terima pekerjaan, dokumen, dan proyek kepada atasan atau pihak yang ditunjuk.'),
+                    ('assets', 'Mengembalikan seluruh aset dan inventaris perusahaan sebelum hari kerja terakhir.'),
+                    ('administration', 'Menyelesaikan kewajiban administratif atau finansial yang masih outstanding kepada perusahaan.')
+                ] %}
+                {% for value, label in commitments %}
+                    <label class="resignation-commitment-item">
+                        <input
+                            type="checkbox"
+                            name="commitment_items"
+                            value="{{ value }}"
+                            {{ 'checked' if resignation and resignation.commitment_accepted else '' }}
+                            required
+                        >
+                        <span class="resignation-check-box"><i class="bi bi-check"></i></span>
+                        <span><strong>{{ loop.index }}.</strong> {{ label }}</span>
+                    </label>
+                {% endfor %}
+
+                <label class="resignation-commitment-item resignation-service-bond">
+                    <input
+                        type="checkbox"
+                        name="no_service_bond_confirmed"
+                        value="1"
+                        {{ 'checked' if resignation and resignation.no_service_bond_confirmed else '' }}
+                        required
+                    >
+                    <span class="resignation-check-box"><i class="bi bi-check"></i></span>
+                    <span>
+                        <strong>5.</strong> Saya tidak sedang terikat ikatan dinas atau telah
+                        menyelesaikan kewajiban ikatan dinas sesuai ketentuan perusahaan.
+                    </span>
+                </label>
+            </div>
+        </section>
+
+        <section class="resignation-form-step" data-step="5">
+            <div class="resignation-section-title">
+                <span>E</span>
+                <div>
+                    <h2>Informasi untuk Keperluan Administrasi</h2>
+                    <p>Data ini hanya ditampilkan kepada karyawan, HRD, dan Admin.</p>
+                </div>
+            </div>
+
+            <div class="resignation-field-grid">
+                <label class="resignation-field resignation-field-full">
+                    <span>Alamat Korespondensi Setelah Resign <b>*</b></span>
+                    <textarea
+                        name="correspondence_address"
+                        rows="4"
+                        maxlength="4000"
+                        placeholder="Alamat lengkap yang masih dapat dihubungi"
+                        required
+                    >{{ resignation.correspondence_address if resignation and resignation.correspondence_address else '' }}</textarea>
+                </label>
+
+                <label class="resignation-field">
+                    <span>Nomor Telepon / WhatsApp Aktif <b>*</b></span>
+                    <input
+                        type="tel"
+                        name="phone_number"
+                        maxlength="40"
+                        value="{{ resignation.phone_number if resignation and resignation.phone_number else '' }}"
+                        placeholder="Contoh: 0812xxxx"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>Email Pribadi Aktif <b>*</b></span>
+                    <input
+                        type="email"
+                        name="personal_email"
+                        maxlength="160"
+                        value="{{ resignation.personal_email if resignation and resignation.personal_email else '' }}"
+                        placeholder="nama@email.com"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>Nama Bank <b>*</b></span>
+                    <input
+                        type="text"
+                        name="bank_name"
+                        maxlength="100"
+                        value="{{ resignation.bank_name if resignation and resignation.bank_name else '' }}"
+                        placeholder="Contoh: BCA"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field">
+                    <span>Nomor Rekening <b>*</b></span>
+                    <input
+                        type="text"
+                        name="bank_account_number"
+                        maxlength="100"
+                        value="{{ resignation.bank_account_number if resignation and resignation.bank_account_number else '' }}"
+                        placeholder="Nomor rekening aktif"
+                        required
+                    >
+                </label>
+
+                <label class="resignation-field resignation-field-full">
+                    <span>Nama Pemilik Rekening <b>*</b></span>
+                    <input
+                        type="text"
+                        name="bank_account_holder"
+                        maxlength="150"
+                        value="{{ resignation.bank_account_holder if resignation and resignation.bank_account_holder else '' }}"
+                        placeholder="Nama sesuai rekening"
+                        required
+                    >
+                </label>
+            </div>
+        </section>
+
+        <section class="resignation-form-step" data-step="6">
+            <div class="resignation-section-title">
+                <span>F</span>
+                <div>
+                    <h2>Pernyataan & Persetujuan</h2>
+                    <p>Periksa kembali ringkasan sebelum mengirim kepada HRD.</p>
+                </div>
+            </div>
+
+            <div class="resignation-summary-grid" id="resignationSummary">
+                <div><span>Nama Karyawan</span><strong data-summary="employee_name">—</strong></div>
+                <div><span>NIK</span><strong data-summary="employee_nik">—</strong></div>
+                <div><span>Jabatan</span><strong data-summary="position">—</strong></div>
+                <div><span>Divisi</span><strong data-summary="employee_division">—</strong></div>
+                <div><span>Atasan</span><strong data-summary="supervisor_name">—</strong></div>
+                <div><span>Tanggal Efektif</span><strong data-summary="effective_date">—</strong></div>
+            </div>
+
+            <label class="resignation-final-declaration">
+                <input
+                    type="checkbox"
+                    name="declaration_accepted"
+                    value="1"
+                    {{ 'checked' if resignation and resignation.declaration_accepted else '' }}
+                    required
+                >
+                <span class="resignation-check-box"><i class="bi bi-check"></i></span>
+                <span>
+                    Saya menyatakan bahwa keputusan pengunduran diri ini murni atas
+                    kemauan saya sendiri, tanpa paksaan dari pihak mana pun, seluruh
+                    data yang saya isi benar, dan saya bersedia menjalankan kewajiban
+                    sampai tanggal efektif pengunduran diri.
+                </span>
+            </label>
+
+            <div class="resignation-submit-note">
+                <i class="bi bi-shield-check"></i>
+                <p>
+                    Setelah dikirim, formulir langsung masuk ke antrean HRD untuk
+                    direview tanpa persetujuan atasan.
+                </p>
+            </div>
+        </section>
+
+        <div class="resignation-form-actions">
+            <button type="button" class="dashboard-outline-button" id="previousStep" hidden>
+                <i class="bi bi-arrow-left"></i>
+                Sebelumnya
+            </button>
+
+            <div class="resignation-form-actions-right">
+                <button type="button" class="dashboard-outline-button" id="saveDraftButton">
+                    <i class="bi bi-cloud-check"></i>
+                    Simpan Draft
+                </button>
+                <button type="button" class="dashboard-primary-button" id="nextStep">
+                    Selanjutnya
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+                <button
+                    type="submit"
+                    class="dashboard-primary-button resignation-submit-button"
+                    id="submitResignation"
+                    hidden
+                >
+                    <i class="bi bi-send-check"></i>
+                    Kirim ke HRD
+                </button>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById("resignationForm");
+    const steps = Array.from(document.querySelectorAll(".resignation-form-step"));
+    const indicators = Array.from(document.querySelectorAll(".resignation-step-pill"));
+    const previousButton = document.getElementById("previousStep");
+    const nextButton = document.getElementById("nextStep");
+    const submitButton = document.getElementById("submitResignation");
+    const saveButton = document.getElementById("saveDraftButton");
+    const saveState = document.getElementById("resignationSaveState");
+    const formError = document.getElementById("resignationFormError");
+    const requestIdInput = document.getElementById("resignationRequestId");
+    const effectiveDate = document.getElementById("effectiveDate");
+    const submissionDate = document.getElementById("submissionDateDisplay");
+    const noticeDays = document.getElementById("noticeDays");
+    const noticeMessage = document.getElementById("noticeMessage");
+    const noticeResult = document.getElementById("noticeResult");
+    const shortNoticeField = document.getElementById("shortNoticeField");
+    const shortNoticeInput = shortNoticeField.querySelector("textarea");
+    const otherReasonCheck = form.querySelector('input[name="reason_codes"][value="lainnya"]');
+    const otherReasonField = document.getElementById("otherReasonField");
+    const otherReasonInput = otherReasonField.querySelector("textarea");
+    let currentStep = 1;
+    let saving = false;
+
+    function showFormError(message) {
+        formError.textContent = message;
+        formError.hidden = !message;
+        if (message) formError.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function setStep(stepNumber) {
+        currentStep = Math.min(Math.max(stepNumber, 1), steps.length);
+        steps.forEach((step) => {
+            step.classList.toggle("active", Number(step.dataset.step) === currentStep);
+        });
+        indicators.forEach((indicator) => {
+            const value = Number(indicator.dataset.stepIndicator);
+            indicator.classList.toggle("active", value === currentStep);
+            indicator.classList.toggle("completed", value < currentStep);
+        });
+        previousButton.hidden = currentStep === 1;
+        nextButton.hidden = currentStep === steps.length;
+        submitButton.hidden = currentStep !== steps.length;
+        showFormError("");
+        if (currentStep === steps.length) updateSummary();
+        document.querySelector(".resignation-form-shell").scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+
+    function validateCurrentStep() {
+        const current = steps[currentStep - 1];
+        const fields = Array.from(current.querySelectorAll("input, select, textarea"));
+        for (const field of fields) {
+            if (!field.checkValidity()) {
+                field.reportValidity();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    async function saveDraft(showConfirmation = false) {
+        if (saving) return false;
+        saving = true;
+        saveButton.disabled = true;
+        nextButton.disabled = true;
+        saveState.textContent = "Menyimpan draft...";
+        showFormError("");
+
+        try {
+            const response = await fetch("{{ url_for('resignation.save_draft') }}", {
+                method: "POST",
+                body: new FormData(form),
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                throw new Error(data.message || "Draft gagal disimpan.");
+            }
+            requestIdInput.value = data.request_id;
+            saveState.textContent = `${data.reference_no} tersimpan · ${data.saved_at}`;
+            if (showConfirmation) {
+                saveState.classList.add("saved");
+                window.setTimeout(() => saveState.classList.remove("saved"), 1800);
+            }
+            return true;
+        } catch (error) {
+            saveState.textContent = "Draft belum tersimpan.";
+            showFormError(error.message || "Draft gagal disimpan.");
+            return false;
+        } finally {
+            saving = false;
+            saveButton.disabled = false;
+            nextButton.disabled = false;
+        }
+    }
+
+    function updateNoticePeriod() {
+        const startValue = submissionDate.value;
+        const endValue = effectiveDate.value;
+        noticeResult.classList.remove("valid", "short", "invalid");
+        shortNoticeField.hidden = true;
+        shortNoticeInput.required = false;
+
+        if (!startValue || !endValue) {
+            noticeDays.textContent = "—";
+            noticeMessage.textContent = "Pilih tanggal efektif untuk menghitung notice period.";
+            return;
+        }
+
+        const start = new Date(`${startValue}T00:00:00`);
+        const end = new Date(`${endValue}T00:00:00`);
+        const days = Math.round((end - start) / 86400000);
+        noticeDays.textContent = `${days} hari`;
+
+        if (days >= 30) {
+            noticeResult.classList.add("valid");
+            noticeMessage.textContent = "Notice period memenuhi ketentuan minimal 30 hari.";
+        } else if (days > 0) {
+            noticeResult.classList.add("short");
+            noticeMessage.textContent = "Notice kurang dari 30 hari dan memerlukan alasan pengecualian.";
+            shortNoticeField.hidden = false;
+            shortNoticeInput.required = true;
+        } else {
+            noticeResult.classList.add("invalid");
+            noticeMessage.textContent = "Tanggal efektif harus setelah tanggal pengajuan.";
+        }
+    }
+
+    function updateOtherReason() {
+        otherReasonField.hidden = !otherReasonCheck.checked;
+        otherReasonInput.required = otherReasonCheck.checked;
+    }
+
+    function valueForSummary(name) {
+        const field = form.elements[name];
+        if (!field) return "—";
+        if (field.tagName === "SELECT") {
+            return field.selectedIndex >= 0
+                ? field.options[field.selectedIndex].text.trim()
+                : "—";
+        }
+        return field.value || "—";
+    }
+
+    function updateSummary() {
+        document.querySelectorAll("[data-summary]").forEach((element) => {
+            element.textContent = valueForSummary(element.dataset.summary);
+        });
+    }
+
+    nextButton.addEventListener("click", async function () {
+        if (!validateCurrentStep()) return;
+        const saved = await saveDraft(false);
+        if (saved) setStep(currentStep + 1);
+    });
+
+    previousButton.addEventListener("click", function () {
+        setStep(currentStep - 1);
+    });
+
+    saveButton.addEventListener("click", function () {
+        saveDraft(true);
+    });
+
+    effectiveDate.addEventListener("change", updateNoticePeriod);
+    otherReasonCheck.addEventListener("change", updateOtherReason);
+
+    form.addEventListener("submit", function (event) {
+        for (let index = 0; index < steps.length; index += 1) {
+            currentStep = index + 1;
+            if (!validateCurrentStep()) {
+                event.preventDefault();
+                setStep(index + 1);
+                return;
+            }
+        }
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Mengirim...';
+    });
+
+    updateNoticePeriod();
+    updateOtherReason();
+    setStep(1);
+</script>
+{% endblock %}

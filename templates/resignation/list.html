@@ -1,0 +1,190 @@
+{% extends "resignation/layout.html" %}
+
+{% block title %}Daftar Pengunduran Diri{% endblock %}
+{% block header_title %}Daftar Pengunduran Diri{% endblock %}
+
+{% block content %}
+<section class="resignation-page-heading">
+    <div>
+        <p class="dashboard-eyebrow">RESIGNATION WORKFLOW</p>
+        <h1>Pengajuan Pengunduran Diri</h1>
+        <p>
+            {% if user.role in ['admin', 'hrd'] %}
+                Pantau seluruh proses, validasi data, dan dokumen resmi karyawan.
+            {% else %}
+                Pantau draft, proses review HRD, dan dokumen final.
+            {% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('resignation.resignation_form') }}" class="dashboard-primary-button">
+        <i class="bi bi-plus-circle"></i>
+        Buat Pengajuan
+    </a>
+</section>
+
+<section class="resignation-stat-grid">
+    <article class="resignation-stat-card">
+        <span class="resignation-stat-icon neutral"><i class="bi bi-files"></i></span>
+        <div><small>Total Data</small><strong>{{ counts.total }}</strong></div>
+    </article>
+    <article class="resignation-stat-card">
+        <span class="resignation-stat-icon amber"><i class="bi bi-pencil-square"></i></span>
+        <div><small>Perlu Perbaikan</small><strong>{{ counts.revision_hrd }}</strong></div>
+    </article>
+    <article class="resignation-stat-card">
+        <span class="resignation-stat-icon blue"><i class="bi bi-clipboard2-check"></i></span>
+        <div><small>Menunggu HRD</small><strong>{{ counts.pending_hrd }}</strong></div>
+    </article>
+    <article class="resignation-stat-card">
+        <span class="resignation-stat-icon green"><i class="bi bi-check-circle"></i></span>
+        <div><small>Disetujui</small><strong>{{ counts.approved }}</strong></div>
+    </article>
+</section>
+
+<section class="resignation-filter-card">
+    <form method="GET" action="{{ url_for('resignation.list_requests') }}">
+        <label class="resignation-field">
+            <span>Status</span>
+            <select name="status">
+                <option value="">Semua status</option>
+                {% for value, label in status_options.items() %}
+                    <option value="{{ value }}" {{ 'selected' if status_filter == value else '' }}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="resignation-field">
+            <span>Nama Karyawan</span>
+            <input
+                type="search"
+                name="name"
+                value="{{ name_filter }}"
+                placeholder="Cari nama karyawan"
+            >
+        </label>
+
+        <div class="resignation-filter-actions">
+            <a href="{{ url_for('resignation.list_requests') }}" class="dashboard-outline-button">
+                Reset
+            </a>
+            <button type="submit" class="dashboard-primary-button">
+                <i class="bi bi-funnel"></i>
+                Terapkan
+            </button>
+        </div>
+    </form>
+</section>
+
+<section class="resignation-table-card">
+    <div class="resignation-table-header">
+        <div>
+            <p class="dashboard-eyebrow">DATA PENGAJUAN</p>
+            <h2>Riwayat dan antrean HRD</h2>
+        </div>
+        <span>{{ pagination.total }} data</span>
+    </div>
+
+    {% if data %}
+    <div class="resignation-table-wrap">
+        <table class="resignation-table">
+            <thead>
+                <tr>
+                    <th>Nomor</th>
+                    <th>Karyawan</th>
+                    <th>Tanggal Efektif</th>
+                    <th>Notice</th>
+                    <th>Status</th>
+                    <th>Dibuat</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data %}
+                <tr>
+                    <td><strong class="resignation-reference">{{ item.reference_no }}</strong></td>
+                    <td>
+                        <div class="resignation-employee-cell">
+                            <span>{{ (item.employee_name or '?')[:2]|upper }}</span>
+                            <div>
+                                <strong>{{ item.employee_name or 'Draft belum lengkap' }}</strong>
+                                <small>{{ item.employee_nik or '-' }} · {{ item.employee_division or '-' }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {{ item.effective_date.strftime('%d/%m/%Y') if item.effective_date else '-' }}
+                    </td>
+                    <td>
+                        {% if item.notice_days is not none %}
+                            <span class="resignation-notice-chip {{ 'short' if item.notice_days < 30 else '' }}">
+                                {{ item.notice_days }} hari
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="resignation-status {{ resignation_status_class(item.status) }}">
+                            {{ resignation_status_label(item.status) }}
+                        </span>
+                    </td>
+                    <td>{{ resignation_datetime_id(item.created_at) }}</td>
+                    <td>
+                        <div class="resignation-row-actions">
+                            {% if item.user_id == user.id and item.status in ['draft', 'revision_hrd', 'revision_supervisor'] %}
+                                <a
+                                    href="{{ url_for('resignation.resignation_form', id=item.id) }}"
+                                    class="resignation-icon-button"
+                                    title="Lanjutkan pengisian"
+                                >
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            {% endif %}
+                            <a
+                                href="{{ url_for('resignation.detail', id=item.id) }}"
+                                class="resignation-icon-button primary"
+                                title="Buka detail"
+                            >
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="resignation-pagination" aria-label="Navigasi halaman">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('resignation.list_requests', page=pagination.prev_num, status=status_filter, name=name_filter) }}">
+                <i class="bi bi-chevron-left"></i> Sebelumnya
+            </a>
+        {% else %}
+            <span></span>
+        {% endif %}
+        <strong>Halaman {{ pagination.page }} dari {{ pagination.pages }}</strong>
+        {% if pagination.has_next %}
+            <a href="{{ url_for('resignation.list_requests', page=pagination.next_num, status=status_filter, name=name_filter) }}">
+                Selanjutnya <i class="bi bi-chevron-right"></i>
+            </a>
+        {% else %}
+            <span></span>
+        {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="resignation-empty-state">
+        <div><i class="bi bi-file-earmark-text"></i></div>
+        <h3>Belum ada pengajuan</h3>
+        <p>Data pengajuan atau antrean review akan tampil di halaman ini.</p>
+        <a href="{{ url_for('resignation.resignation_form') }}" class="dashboard-primary-button">
+            Buat pengajuan pertama
+        </a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
