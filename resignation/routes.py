@@ -385,6 +385,18 @@ def validate_for_submission(resignation):
         )
     if 'lainnya' in resignation.reason_codes and not resignation.reason_other:
         raise ValueError('Isi keterangan untuk alasan lainnya.')
+    if not resignation.notice_days < 30 and not resignation.short_notice_reason:
+        raise ValueError(
+            'Alasan pengajuan notice kurang dari 30 hari wajib diisi.'
+        )
+    if not resignation.reason_codes:
+        raise ValueError(
+            'Pilih setidaknya satu alasan pengunduran diri dari daftar yang tersedia.'
+        )
+    if 'lainnya' in resignation.reason_codes and not resignation.reason_other:
+        raise ValueError(
+            'Isi keterangan untuk alasan lainnya.'
+        )
     if not resignation.commitment_accepted:
         raise ValueError('Seluruh komitmen serah terima wajib disetujui.')
     if not resignation.no_service_bond_confirmed:
