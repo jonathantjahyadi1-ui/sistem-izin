@@ -1,552 +1,590 @@
-/* =========================================================
-   MEETING ROOM WEEKLY SCHEDULE
-========================================================= */
-
-.meeting-schedule-stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.meeting-schedule-stat {
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    padding: 17px;
-    background: #ffffff;
-    border: 1px solid #e5eaf2;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04);
-}
-
-.meeting-stat-icon {
-    display: flex;
-    flex: 0 0 44px;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 13px;
-    font-size: 18px;
-}
-
-.meeting-stat-icon.blue {
-    color: #2563eb;
-    background: #dbeafe;
-}
-
-.meeting-stat-icon.green {
-    color: #059669;
-    background: #d1fae5;
-}
-
-.meeting-stat-icon.orange {
-    color: #d97706;
-    background: #fef3c7;
-}
-
-.meeting-stat-icon.purple {
-    color: #7c3aed;
-    background: #ede9fe;
-}
-
-.meeting-schedule-stat > div:last-child {
-    display: flex;
-    flex-direction: column;
-}
-
-.meeting-schedule-stat span {
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.meeting-schedule-stat strong {
-    color: #0f172a;
-    font-size: 23px;
-    line-height: 1.2;
-}
-
-.meeting-schedule-filter {
-    margin-bottom: 20px;
-    padding: 20px;
-    background: #ffffff;
-    border: 1px solid #e5eaf2;
-    border-radius: 18px;
-    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04);
-}
-
-.meeting-filter-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 17px;
-}
-
-.meeting-filter-heading > div {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
-
-.meeting-filter-heading > div > i {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    color: #2563eb;
-    background: #eff6ff;
-    border-radius: 11px;
-}
-
-.meeting-filter-heading span {
-    display: flex;
-    flex-direction: column;
-}
-
-.meeting-filter-heading strong {
-    color: #0f172a;
-    font-size: 14px;
-}
-
-.meeting-filter-heading small {
-    color: #94a3b8;
-    font-size: 11px;
-}
-
-.meeting-reset-filter {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 700;
-    text-decoration: none;
-}
-
-.meeting-reset-filter:hover {
-    color: #2563eb;
-}
-
-.meeting-filter-form {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-    align-items: end;
-    gap: 14px;
-}
-
-.meeting-filter-button {
-    min-height: 46px;
-    border: 0;
-}
-
-.meeting-week-panel {
-    padding: 20px;
-    background: #ffffff;
-    border: 1px solid #e5eaf2;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-}
-
-.meeting-week-navigation {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.meeting-week-navigation > div:first-child {
-    display: flex;
-    flex-direction: column;
-}
-
-.meeting-week-navigation span {
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.meeting-week-navigation h2 {
-    margin: 3px 0 0;
-    color: #0f172a;
-    font-size: 20px;
-}
-
-.meeting-week-buttons {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.meeting-week-buttons a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    height: 38px;
-    padding: 0 11px;
-    color: #475569;
-    background: #ffffff;
-    border: 1px solid #dbe3ee;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: 0.2s ease;
-}
-
-.meeting-week-buttons a:hover {
-    color: #ffffff;
-    background: #2563eb;
-    border-color: #2563eb;
-}
-
-.meeting-week-buttons .meeting-today-button {
-    min-width: 78px;
-}
-
-.meeting-calendar-scroll {
-    overflow-x: auto;
-    padding-bottom: 8px;
-}
-
-.meeting-week-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(205px, 1fr));
-    gap: 11px;
-    min-width: 1500px;
-}
-
-.meeting-day-column {
-    min-height: 370px;
-    padding: 9px;
-    background: #f8fafc;
-    border: 1px solid #e5eaf2;
-    border-radius: 16px;
-}
-
-.meeting-day-column.is-today {
-    background: #f0f7ff;
-    border-color: #93c5fd;
-}
-
-.meeting-day-column.is-selected {
-    box-shadow: inset 0 0 0 1px #2563eb;
-}
-
-.meeting-day-heading {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    padding: 12px 8px;
-    color: #64748b;
-    background: #ffffff;
-    border: 1px solid #edf0f5;
-    border-radius: 12px;
-    text-decoration: none;
-}
-
-.meeting-day-heading:hover {
-    color: #2563eb;
-    border-color: #bfdbfe;
-}
-
-.meeting-day-heading span {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.meeting-day-heading strong {
-    margin-top: 2px;
-    color: #0f172a;
-    font-size: 25px;
-    line-height: 1.1;
-}
-
-.meeting-day-heading small {
-    color: #94a3b8;
-    font-size: 10px;
-}
-
-.meeting-day-heading em {
-    margin-top: 6px;
-    padding: 3px 7px;
-    color: #1d4ed8;
-    background: #dbeafe;
-    border-radius: 999px;
-    font-size: 9px;
-    font-style: normal;
-    font-weight: 800;
-}
-
-.meeting-day-bookings {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    margin-top: 9px;
-}
-
-.meeting-calendar-booking {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px;
-    color: inherit;
-    background: #ffffff;
-    border: 1px solid #e5eaf2;
-    border-left: 4px solid #94a3b8;
-    border-radius: 12px;
-    text-decoration: none;
-    transition: 0.2s ease;
-}
-
-.meeting-calendar-booking:hover {
-    color: inherit;
-    border-color: #bfdbfe;
-    transform: translateY(-2px);
-    box-shadow: 0 9px 20px rgba(15, 23, 42, 0.08);
-}
-
-.meeting-calendar-booking.status-approved {
-    border-left-color: #10b981;
-}
-
-.meeting-calendar-booking.status-pending {
-    border-left-color: #f59e0b;
-}
-
-.meeting-calendar-booking.status-rejected {
-    border-left-color: #ef4444;
-}
-
-.meeting-calendar-booking.status-cancelled {
-    border-left-color: #94a3b8;
-}
-
-.meeting-booking-time {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #2563eb;
-    font-size: 10px;
-    font-weight: 800;
-}
-
-.meeting-booking-title {
-    overflow: hidden;
-    color: #0f172a;
-    font-size: 12px;
-    line-height: 1.45;
-    text-overflow: ellipsis;
-}
-
-.meeting-booking-room {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #475569;
-    font-size: 10px;
-}
-
-.meeting-booking-requester {
-    display: flex;
-    flex-direction: column;
-    padding-top: 7px;
-    border-top: 1px solid #f1f5f9;
-}
-
-.meeting-booking-requester span {
-    overflow: hidden;
-    color: #334155;
-    font-size: 10px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.meeting-booking-requester small {
-    color: #94a3b8;
-    font-size: 9px;
-}
-
-.meeting-booking-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 7px;
-}
-
-.meeting-booking-footer > span:first-child {
-    color: #64748b;
-    font-size: 9px;
-}
-
-.meeting-calendar-status {
-    padding: 4px 7px;
-    color: #475569;
-    background: #f1f5f9;
-    border-radius: 999px;
-    font-size: 8px;
-    font-weight: 800;
-}
-
-.status-approved .meeting-calendar-status {
-    color: #047857;
-    background: #d1fae5;
-}
-
-.status-pending .meeting-calendar-status {
-    color: #92400e;
-    background: #fef3c7;
-}
-
-.status-rejected .meeting-calendar-status {
-    color: #be123c;
-    background: #ffe4e6;
-}
-
-.meeting-empty-day {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 110px;
-    color: #cbd5e1;
-    text-align: center;
-}
-
-.meeting-empty-day i {
-    font-size: 21px;
-}
-
-.meeting-empty-day span {
-    margin-top: 5px;
-    font-size: 10px;
-}
-
-.meeting-empty-week {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    padding: 35px 20px 20px;
-    text-align: center;
-}
-
-.meeting-empty-week > div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 62px;
-    height: 62px;
-    color: #2563eb;
-    background: #eff6ff;
-    border-radius: 18px;
-    font-size: 27px;
-}
-
-.meeting-empty-week h3 {
-    margin: 14px 0 5px;
-    color: #0f172a;
-    font-size: 17px;
-}
-
-.meeting-empty-week p {
-    max-width: 480px;
-    margin: 0 0 16px;
-    color: #64748b;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-.meeting-status-legend {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 18px;
-    padding-top: 15px;
-    color: #64748b;
-    border-top: 1px solid #edf0f5;
-    font-size: 10px;
-}
-
-.meeting-status-legend > span {
-    color: #334155;
-    font-weight: 800;
-}
-
-.meeting-status-legend > div {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.meeting-status-legend i {
-    display: block;
-    width: 8px;
-    height: 8px;
-    background: #94a3b8;
-    border-radius: 50%;
-}
-
-.meeting-status-legend i.approved {
-    background: #10b981;
-}
-
-.meeting-status-legend i.pending {
-    background: #f59e0b;
-}
-
-.meeting-status-legend i.rejected {
-    background: #ef4444;
-}
-
-.meeting-status-legend i.cancelled {
-    background: #94a3b8;
-}
-
-@media (max-width: 1100px) {
-    .meeting-schedule-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .meeting-filter-form {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 640px) {
-    .meeting-schedule-stats {
-        grid-template-columns: 1fr;
-    }
-
-    .meeting-filter-form {
-        grid-template-columns: 1fr;
-    }
-
-    .meeting-filter-heading,
-    .meeting-week-navigation {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .meeting-week-buttons {
-        width: 100%;
-    }
-
-    .meeting-week-buttons .meeting-today-button {
-        flex: 1;
-    }
-
-    .meeting-week-panel,
-    .meeting-schedule-filter {
-        padding: 15px;
-    }
-}
+{% extends "meeting_room/layout.html" %}
+
+{% block title %}Detail Booking{% endblock %}
+{% block header_title %}Detail Booking{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block content %}
+
+{% set pemohon = meeting_get_user(booking.user_id) %}
+{% set approver = meeting_get_user(booking.approved_by) %}
+
+<!-- =====================================================
+     PAGE HEADING
+===================================================== -->
+
+<section class="leave-page-heading">
+
+    <div>
+        <span class="leave-eyebrow">
+            BOOKING RUANGAN
+        </span>
+
+        <h1>
+            {{ booking.title }}
+        </h1>
+
+        <p>
+            Diajukan oleh {{ meeting_display_name(pemohon) }}
+            pada {{ booking.created_at.strftime('%d %b %Y, %H:%M') if booking.created_at else '-' }}.
+        </p>
+    </div>
+
+    <div class="meeting-detail-heading-actions">
+
+        <a
+            href="{{ url_for('meeting_room.schedule') }}"
+            class="meeting-detail-schedule-button"
+        >
+            <i class="bi bi-calendar-week"></i>
+            Lihat Jadwal
+        </a>
+
+        <a
+            href="{{ url_for('meeting_room.list_booking') }}"
+            class="dashboard-secondary-button"
+        >
+            <i class="bi bi-arrow-left"></i>
+            Kembali
+        </a>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     DETAIL LAYOUT
+===================================================== -->
+
+<div class="meeting-detail-layout">
+
+    <!-- ================= MAIN ================= -->
+    <div class="meeting-detail-main">
+
+        <div class="meeting-detail-card">
+
+            <!-- TITLE -->
+            <div class="meeting-detail-title-section">
+
+                <div class="meeting-detail-title-icon">
+                    <i class="bi bi-calendar2-event"></i>
+                </div>
+
+                <div class="meeting-detail-title-text">
+                    <span>{{ booking.division }}</span>
+                    <h2>{{ booking.title }}</h2>
+                    <small>
+                        {{ booking.room.room_name if booking.room else '-' }}
+                        · {{ booking.meeting_date.strftime('%d %b %Y') if booking.meeting_date else '-' }}
+                    </small>
+                </div>
+
+                {% if booking.status == 'Pending' %}
+                    <span class="meeting-detail-status status-pending">
+                        <i class="bi bi-hourglass-split"></i>
+                        Menunggu
+                    </span>
+                {% elif booking.status == 'Approved' %}
+                    <span class="meeting-detail-status status-approved">
+                        <i class="bi bi-check2-circle"></i>
+                        Disetujui
+                    </span>
+                {% elif booking.status == 'Rejected' %}
+                    <span class="meeting-detail-status status-rejected">
+                        <i class="bi bi-x-circle"></i>
+                        Ditolak
+                    </span>
+                {% else %}
+                    <span class="meeting-detail-status status-cancelled">
+                        <i class="bi bi-slash-circle"></i>
+                        Dibatalkan
+                    </span>
+                {% endif %}
+
+            </div>
+
+            <!-- INFO PEMOHON -->
+            <div class="meeting-detail-section">
+
+                <div class="meeting-detail-section-heading">
+                    <div>
+                        <i class="bi bi-person-badge"></i>
+                        <span>
+                            <strong>Informasi Pemohon</strong>
+                            <small>Pengaju booking ruangan ini</small>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="meeting-detail-info-grid">
+
+                    <div class="meeting-detail-info-item">
+                        <i class="bi bi-person"></i>
+                        <span>
+                            <small>Pemohon</small>
+                            <strong>{{ meeting_display_name(pemohon) }}</strong>
+                        </span>
+                    </div>
+
+                    <div class="meeting-detail-info-item">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>
+                            <small>Divisi</small>
+                            <strong>{{ booking.division }}</strong>
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- JADWAL -->
+            <div class="meeting-detail-section">
+
+                <div class="meeting-detail-section-heading">
+                    <div>
+                        <i class="bi bi-clock-history"></i>
+                        <span>
+                            <strong>Jadwal Meeting</strong>
+                            <small>Tanggal, jam, dan jumlah peserta</small>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="meeting-detail-schedule-grid">
+
+                    <div>
+                        <i class="bi bi-calendar3"></i>
+                        <span>
+                            <small>Tanggal</small>
+                            <strong>{{ booking.meeting_date.strftime('%d %b %Y') if booking.meeting_date else '-' }}</strong>
+                        </span>
+                    </div>
+
+                    <div>
+                        <i class="bi bi-clock"></i>
+                        <span>
+                            <small>Jam Mulai</small>
+                            <strong>{{ booking.start_time.strftime('%H:%M') if booking.start_time else '-' }}</strong>
+                        </span>
+                    </div>
+
+                    <div>
+                        <i class="bi bi-clock-fill"></i>
+                        <span>
+                            <small>Jam Selesai</small>
+                            <strong>{{ booking.end_time.strftime('%H:%M') if booking.end_time else '-' }}</strong>
+                        </span>
+                    </div>
+
+                    <div>
+                        <i class="bi bi-people"></i>
+                        <span>
+                            <small>Peserta</small>
+                            <strong>{{ booking.participant_count }} orang</strong>
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- RUANGAN -->
+            <div class="meeting-detail-section">
+
+                <div class="meeting-detail-section-heading">
+                    <div>
+                        <i class="bi bi-door-open"></i>
+                        <span>
+                            <strong>Ruangan</strong>
+                            <small>Lokasi dan fasilitas ruang meeting</small>
+                        </span>
+                    </div>
+                </div>
+
+                {% if booking.room %}
+
+                    <div class="meeting-detail-room">
+
+                        <div class="meeting-detail-room-heading">
+
+                            <div class="meeting-detail-room-icon">
+                                <i class="bi bi-building"></i>
+                            </div>
+
+                            <div>
+                                <span>{{ booking.room.location }}</span>
+                                <strong>{{ booking.room.room_name }}</strong>
+                                <small>Kapasitas {{ booking.room.capacity }} orang</small>
+                            </div>
+
+                        </div>
+
+                        <div class="meeting-detail-capacity">
+
+                            <div>
+                                <span>Peserta terisi</span>
+                                <strong>{{ booking.participant_count }} / {{ booking.room.capacity }}</strong>
+                            </div>
+
+                            <div class="meeting-capacity-progress">
+                                <span style="width: {{ ([(booking.participant_count / booking.room.capacity * 100) | round(0, 'floor'), 100] | min) if booking.room.capacity else 0 }}%"></span>
+                            </div>
+
+                        </div>
+
+                        {% set facilities = booking.room.get_facilities_list() %}
+
+                        {% if facilities %}
+
+                            <div class="meeting-detail-facilities">
+
+                                <span>FASILITAS</span>
+
+                                <div>
+                                    {% for facility in facilities %}
+                                        <span><i class="bi bi-check-lg"></i> {{ facility }}</span>
+                                    {% endfor %}
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="meeting-detail-text-box">
+                        Ruangan tidak ditemukan atau sudah dihapus.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <!-- KEPERLUAN -->
+            <div class="meeting-detail-section">
+
+                <div class="meeting-detail-section-heading">
+                    <div>
+                        <i class="bi bi-card-text"></i>
+                        <span>
+                            <strong>Keperluan</strong>
+                            <small>Tujuan diadakannya meeting</small>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="meeting-detail-text-box">{{ booking.purpose }}</div>
+
+            </div>
+
+            <!-- CATATAN -->
+            {% if booking.notes %}
+
+                <div class="meeting-detail-section">
+
+                    <div class="meeting-detail-section-heading">
+                        <div>
+                            <i class="bi bi-sticky"></i>
+                            <span>
+                                <strong>Catatan Tambahan</strong>
+                                <small>Informasi tambahan dari pemohon</small>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="meeting-detail-text-box secondary">{{ booking.notes }}</div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="meeting-detail-sidebar">
+
+        <!-- STATUS TIMELINE -->
+        <div class="meeting-detail-card meeting-status-card">
+
+            <div class="meeting-sidebar-card-heading">
+                <i class="bi bi-signpost-split"></i>
+                <div>
+                    <strong>Status Approval</strong>
+                    <small>Riwayat proses booking ini</small>
+                </div>
+            </div>
+
+            <div class="meeting-status-timeline">
+
+                <div class="meeting-timeline-item completed">
+                    <div class="meeting-timeline-dot">
+                        <i class="bi bi-send"></i>
+                    </div>
+                    <div>
+                        <strong>Diajukan</strong>
+                        <small>{{ booking.created_at.strftime('%d %b %Y, %H:%M') if booking.created_at else '-' }}</small>
+                    </div>
+                </div>
+
+                {% if booking.status == 'Pending' %}
+
+                    <div class="meeting-timeline-item current">
+                        <div class="meeting-timeline-dot">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div>
+                            <strong>Menunggu Persetujuan</strong>
+                            <small>Belum diproses HRD</small>
+                        </div>
+                    </div>
+
+                {% elif booking.status == 'Approved' %}
+
+                    <div class="meeting-timeline-item approved">
+                        <div class="meeting-timeline-dot">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div>
+                            <strong>Disetujui</strong>
+                            <small>{{ booking.approved_at.strftime('%d %b %Y, %H:%M') if booking.approved_at else '-' }}</small>
+                        </div>
+                    </div>
+
+                {% elif booking.status == 'Rejected' %}
+
+                    <div class="meeting-timeline-item rejected">
+                        <div class="meeting-timeline-dot">
+                            <i class="bi bi-x-lg"></i>
+                        </div>
+                        <div>
+                            <strong>Ditolak</strong>
+                            <small>{{ booking.approved_at.strftime('%d %b %Y, %H:%M') if booking.approved_at else '-' }}</small>
+                        </div>
+                    </div>
+
+                {% else %}
+
+                    <div class="meeting-timeline-item cancelled">
+                        <div class="meeting-timeline-dot">
+                            <i class="bi bi-slash-lg"></i>
+                        </div>
+                        <div>
+                            <strong>Dibatalkan</strong>
+                            <small>Dibatalkan oleh pemohon</small>
+                        </div>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            {% if booking.approved_by %}
+
+                <div class="meeting-processed-by">
+
+                    <span>DIPROSES OLEH</span>
+
+                    <div>
+                        <div class="meeting-approver-avatar">
+                            {{ meeting_display_name(approver)[:2] | upper }}
+                        </div>
+
+                        <span>
+                            <strong>{{ meeting_display_name(approver) }}</strong>
+                            <small>{{ booking.approved_at.strftime('%d %b %Y, %H:%M') if booking.approved_at else '-' }}</small>
+                        </span>
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+        <!-- ALASAN PENOLAKAN -->
+        {% if booking.status == 'Rejected' and booking.reject_reason %}
+
+            <div class="meeting-rejection-card">
+
+                <div>
+                    <i class="bi bi-x-octagon"></i>
+                    <span>
+                        <strong>Booking Ditolak</strong>
+                        <small>Alasan dari HRD</small>
+                    </span>
+                </div>
+
+                <p>{{ booking.reject_reason }}</p>
+
+            </div>
+
+        {% endif %}
+
+        <!-- AKSI APPROVAL (HRD) -->
+        {% if booking.status == 'Pending' and meeting_is_hrd(user) and booking.user_id != user.id %}
+
+            <div class="meeting-detail-card meeting-status-card">
+
+                <div class="meeting-sidebar-card-heading">
+                    <i class="bi bi-shield-check"></i>
+                    <div>
+                        <strong>Aksi Approval</strong>
+                        <small>Setujui atau tolak booking ini</small>
+                    </div>
+                </div>
+
+                <div class="meeting-approval-actions">
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('meeting_room.approve_booking', booking_id=booking.id) }}"
+                        onsubmit="return confirm('Setujui booking ini?');"
+                    >
+                        <button type="submit" class="meeting-approve-button">
+                            <i class="bi bi-check-lg"></i>
+                            Setujui Booking
+                        </button>
+                    </form>
+
+                    <button
+                        type="button"
+                        class="meeting-reject-button"
+                        onclick="document.getElementById('rejectDialog').showModal();"
+                    >
+                        <i class="bi bi-x-lg"></i>
+                        Tolak Booking
+                    </button>
+
+                </div>
+
+            </div>
+
+        {% elif booking.status == 'Pending' and meeting_is_hrd(user) and booking.user_id == user.id %}
+
+            <div class="meeting-own-booking-notice">
+                <i class="bi bi-info-circle"></i>
+                <div>
+                    <strong>Tidak bisa approve sendiri</strong>
+                    <span>Booking ini milikmu sendiri. HRD lain yang perlu memproses.</span>
+                </div>
+            </div>
+
+        {% endif %}
+
+        <!-- BATALKAN BOOKING (PEMILIK) -->
+        {% if booking.status == 'Pending' and booking.user_id == user.id %}
+
+            <div class="meeting-cancel-card">
+
+                <div>
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>
+                        <strong>Batalkan Booking</strong>
+                        <small>Booking masih menunggu approval</small>
+                    </span>
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{ url_for('meeting_room.cancel_booking', booking_id=booking.id) }}"
+                    onsubmit="return confirm('Batalkan booking ini?');"
+                >
+                    <button type="submit">
+                        <i class="bi bi-x-lg"></i>
+                        Batalkan Booking
+                    </button>
+                </form>
+
+            </div>
+
+        {% endif %}
+
+    </aside>
+
+</div>
+
+
+<!-- =====================================================
+     DIALOG REJECT
+===================================================== -->
+
+{% if booking.status == 'Pending' and meeting_is_hrd(user) and booking.user_id != user.id %}
+
+<dialog id="rejectDialog" class="meeting-reject-dialog">
+
+    <form
+        method="POST"
+        action="{{ url_for('meeting_room.reject_booking', booking_id=booking.id) }}"
+    >
+
+        <div class="meeting-dialog-heading">
+
+            <div>
+                <i class="bi bi-x-octagon"></i>
+            </div>
+
+            <span>
+                <strong>Tolak Booking</strong>
+                <small>{{ booking.title }}</small>
+            </span>
+
+            <button
+                type="button"
+                onclick="document.getElementById('rejectDialog').close();"
+                aria-label="Tutup"
+            >
+                <i class="bi bi-x"></i>
+            </button>
+
+        </div>
+
+        <div class="meeting-dialog-content">
+
+            <label for="reject_reason">
+                Alasan Penolakan <span style="color:#e11d48;">*</span>
+            </label>
+
+            <textarea
+                id="reject_reason"
+                name="reject_reason"
+                rows="4"
+                placeholder="Jelaskan alasan penolakan booking ini..."
+                required
+            ></textarea>
+
+            <small>Alasan ini akan terlihat oleh pemohon.</small>
+
+        </div>
+
+        <div class="meeting-dialog-actions">
+
+            <button
+                type="button"
+                class="dashboard-secondary-button"
+                onclick="document.getElementById('rejectDialog').close();"
+            >
+                Batal
+            </button>
+
+            <button type="submit" class="meeting-reject-confirm-button">
+                <i class="bi bi-x-lg"></i>
+                Tolak Booking
+            </button>
+
+        </div>
+
+    </form>
+
+</dialog>
+
+{% endif %}
+
+{% endblock %}
